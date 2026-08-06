@@ -18,6 +18,7 @@ dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 | **Engineer baru**                            | [`getting-started.md`](getting-started.md) → [`architecture.md`](architecture.md) → [`development.md`](development.md) |
 | **Security / compliance auditor**            | [`security-model.md`](security-model.md) → [`ops/data-retention.md`](ops/data-retention.md) → [`ops/secret-rotation.md`](ops/secret-rotation.md) |
 | **On-call engineer**                         | [`ops/`](ops/) — semua runbooks.                                                    |
+| **QA / QC / Tester**                         | [`qa/`](qa/) — testing strategy, E2E playbook, test catalog, manual smoke, flake triage, a11y, bug reporting. |
 | **Tenant Admin (baru di ControlDesk)**       | [`getting-started.md`](getting-started.md) + [`user-guides/internal-users.md#tenant-admin`](user-guides/internal-users.md#tenant-admin) |
 
 ## Product / business
@@ -76,6 +77,23 @@ Panduan operasional untuk pengguna real.
 | [`user-guides/internal-users.md`](user-guides/internal-users.md)                 | Staff internal — Employee, Supervisor, PM, OM, Director, Finance, HR Admin, Tenant Admin. |
 | [`user-guides/client-portal-users.md`](user-guides/client-portal-users.md)       | Klien eksternal yang login via `/portal`.                                    |
 
+## QA / testing (`qa/`)
+
+Panduan lengkap dari perspektif QA, tester, dan release manager. Semua
+komplemen [`testing.md`](testing.md) (engineer-facing).
+
+| Doc                                                                        | Isi                                                                        |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [`qa/README.md`](qa/README.md)                                             | Index QA docs — masuk sesuai role Anda.                                    |
+| [`qa/testing-strategy.md`](qa/testing-strategy.md)                         | Test pyramid, quality gates, risk-based approach, coverage philosophy.     |
+| [`qa/e2e-playbook.md`](qa/e2e-playbook.md)                                 | Setup + run + debug + extend Playwright, selector best practices.          |
+| [`qa/test-catalog.md`](qa/test-catalog.md)                                 | Matrix lengkap: 52 Vitest + 15 Playwright specs vs feature coverage map.   |
+| [`qa/test-data.md`](qa/test-data.md)                                       | Seed data + demo users + fixtures + isolation contracts.                   |
+| [`qa/manual-smoke-scripts.md`](qa/manual-smoke-scripts.md)                 | Per-module manual smoke + pre-merge + release checklist (staging + prod). |
+| [`qa/flake-triage.md`](qa/flake-triage.md)                                 | 10 kategori flake + fix pattern + quarantine policy.                       |
+| [`qa/accessibility-testing.md`](qa/accessibility-testing.md)               | WCAG 2.2 AAA verification: contrast, keyboard, ARIA, motion, screen reader. |
+| [`qa/bug-reporting.md`](qa/bug-reporting.md)                               | Bug filing template, severity guide, repro playbook, ready-to-use templates. |
+
 ## Ops runbooks (`ops/`)
 
 On-call reading. Print, tab, dan follow literally saat insiden.
@@ -128,6 +146,17 @@ docs/
 │   ├── data-retention.md
 │   ├── observability.md
 │   └── secret-rotation.md
+│
+├── qa/                                  ← QA / QC / Tester playbooks
+│   ├── README.md
+│   ├── testing-strategy.md
+│   ├── e2e-playbook.md
+│   ├── test-catalog.md
+│   ├── test-data.md
+│   ├── manual-smoke-scripts.md
+│   ├── flake-triage.md
+│   ├── accessibility-testing.md
+│   └── bug-reporting.md
 │
 ├── architecture.md                      ← Engineering deep-dive
 ├── security-model.md

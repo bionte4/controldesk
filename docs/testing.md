@@ -8,6 +8,22 @@ ControlDesk enforces the rulebook §21 testing contract:
 
 Everything below is what CI runs. Reproduce locally before pushing.
 
+> **Note untuk QA / QC / Tester**: doc ini engineer-facing (Vitest +
+> Playwright config detail). Untuk **strategi testing**, **E2E playbook
+> operasional**, **test catalog**, **manual smoke scripts**, **flake
+> triage**, **accessibility testing**, dan **bug reporting playbook**,
+> baca folder [`qa/`](qa/):
+>
+> - [`qa/README.md`](qa/README.md) — QA docs index (masuk sesuai role Anda).
+> - [`qa/testing-strategy.md`](qa/testing-strategy.md) — test pyramid + quality gates + risk-based.
+> - [`qa/e2e-playbook.md`](qa/e2e-playbook.md) — comprehensive Playwright playbook.
+> - [`qa/test-catalog.md`](qa/test-catalog.md) — full test matrix per module.
+> - [`qa/test-data.md`](qa/test-data.md) — seed data + fixtures + demo users.
+> - [`qa/manual-smoke-scripts.md`](qa/manual-smoke-scripts.md) — per-module manual scripts + release checklist.
+> - [`qa/flake-triage.md`](qa/flake-triage.md) — 10 kategori flake + fix pattern.
+> - [`qa/accessibility-testing.md`](qa/accessibility-testing.md) — WCAG 2.2 AAA verification.
+> - [`qa/bug-reporting.md`](qa/bug-reporting.md) — bug filing template + repro playbook.
+
 ## The two runners at a glance
 
 | Runner     | Command                        | Runtime | Scope                                    |

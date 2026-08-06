@@ -91,6 +91,7 @@ audience (business owner / end user / engineer / auditor / on-call).
 | [`docs/security-model.md`](docs/security-model.md)             | Before writing any Server Action.                       |
 | [`docs/development.md`](docs/development.md)                   | Every day. Feature folder + Server Action contract.     |
 | [`docs/testing.md`](docs/testing.md)                           | Before you push. Vitest + Playwright + coverage.        |
+| [`docs/qa/README.md`](docs/qa/README.md)                       | QA / QC / Tester playbooks — strategy, E2E, catalog, manual, flake, a11y, bug reporting. |
 | [`docs/deployment.md`](docs/deployment.md)                     | Before you deploy. Vercel + Supabase + CI/CD pipeline.  |
 | [`docs/ops/data-retention.md`](docs/ops/data-retention.md)     | On-call, retention + archive + restore.                 |
 | [`docs/ops/observability.md`](docs/ops/observability.md)       | On-call, Sentry / Axiom configuration.                  |

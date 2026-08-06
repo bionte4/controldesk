@@ -11,6 +11,23 @@ MUST include the `.cursorrules` section it maps to.
 
 ### Added
 
+- **Documentation — QA / QC / Tester playbooks** (rules §21 testing,
+  §23 accessibility). Adds nine new docs under `docs/qa/` yang
+  complement engineer-facing `docs/testing.md` dengan perspektif
+  QA/tester-centric — testing strategy, E2E playbook operasional, test
+  catalog lengkap, test data + fixtures, manual smoke scripts, release
+  checklists, flake triage, WCAG 2.2 AAA testing, dan bug reporting
+  playbook. New docs:
+  - `docs/qa/README.md` — QA docs index (routes by role: QA Lead, QA Engineer, Manual Tester, A11y Auditor, Release Manager).
+  - `docs/qa/testing-strategy.md` — test pyramid (Vitest 50 % / integration 30 % / Playwright 15 % / manual 5 %), 4 CI quality gates, risk-based coverage, bug severity guide.
+  - `docs/qa/e2e-playbook.md` — comprehensive Playwright how-to: setup, run, debug, trace reading, extending tests, selector best practices (getByRole > testid > text > label > CSS), serial vs parallel, CI vs local differences, troubleshooting.
+  - `docs/qa/test-catalog.md` — full matrix of 52 Vitest specs + 15 Playwright specs mapped to feature coverage; gaps + planned coverage table.
+  - `docs/qa/test-data.md` — seed data structure, 11 internal demo users + 3 portal users, deterministic UUID pattern (`11111111-...` tenants → `99999999-...` timesheets), fixture patterns (inline / shared), 4 isolation contracts.
+  - `docs/qa/manual-smoke-scripts.md` — per-module smoke scripts (auth, clients, projects, CA chain, LEAVE chain, weekly timesheet, portal isolation, force-change-password, insights) + pre-merge + release checklists (staging + production) + cross-browser + device.
+  - `docs/qa/flake-triage.md` — 10 kategori flake (timing, race condition, cold compile, auth race, seed drift, realtime, locale, cache, date-dependent, prod-only) dengan fix pattern; quarantine policy; anti-flake best practices.
+  - `docs/qa/accessibility-testing.md` — WCAG 2.2 AAA verification: axe DevTools, Lighthouse, `@axe-core/playwright` (planned), manual keyboard + screen reader audit checklist per page, common fixes (icon button aria-label, contrast, focus trap, reduced-motion, form error binding).
+  - `docs/qa/bug-reporting.md` — bug filing template, S0-S3 severity guide with question tree, 5-step reproduction workflow (isolate → minimize → capture artifacts → cross-check docs → hypothesis), verification workflow, ready-to-use templates (S0, S1-S3, a11y, flake).
+  - `docs/README.md` updated dengan section QA baru + role routing; root `README.md` + `docs/testing.md` cross-link.
 - **Documentation — Full product + module + user-guide expansion** (rules
   §1 code standards, §17 feature folder). Adds thirteen new docs under
   `docs/{product,modules,reference,user-guides}` covering audiences
