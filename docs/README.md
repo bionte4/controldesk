@@ -1,38 +1,87 @@
 # ControlDesk documentation
 
-Welcome. This index is the fastest way into the parts of the codebase
-you need. Everything here is versioned in the repo so it stays in sync
-with the code.
+Selamat datang. Index ini adalah cara tercepat untuk masuk ke bagian
+codebase yang Anda butuhkan. Semua doc di-versioned di repo supaya
+tetap sinkron dengan kode.
 
-The **product + engineering source of truth** is [`.cursorrules`](../.cursorrules).
-The docs in this tree are the "how" — how to run, extend, and operate
-ControlDesk. `.cursorrules` is the "what" and "why".
+**Product + engineering source of truth** adalah [`.cursorrules`](../.cursorrules).
+Docs di tree ini menjelaskan "bagaimana" — cara menjalankan, mengembangkan,
+dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 
-## Onboarding
+## Baca dulu berdasarkan role Anda
 
-| Doc                                            | When to read it                                            |
-| ---------------------------------------------- | ---------------------------------------------------------- |
-| [`getting-started.md`](getting-started.md)     | First day. Boot the app, sign in, understand the seed.     |
-| [`architecture.md`](architecture.md)           | Before making non-trivial changes.                         |
-| [`security-model.md`](security-model.md)       | Before writing any Server Action.                          |
-| [`development.md`](development.md)             | Every day. Feature folder + Server Action + i18n contract. |
-| [`testing.md`](testing.md)                     | Before you push. Coverage gates + Playwright chain suites. |
-| [`deployment.md`](deployment.md)               | Before you deploy. Docker / Vercel / Supabase prod flow.   |
+| Role Anda                                    | Mulai di sini                                                                       |
+| -------------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Business / Product owner**                 | [`product/overview.md`](product/overview.md) → [`product/roles-and-permissions.md`](product/roles-and-permissions.md) → [`product/approval-workflows.md`](product/approval-workflows.md) |
+| **End user (Employee / PM / Finance / HR)**  | [`user-guides/internal-users.md`](user-guides/internal-users.md) — cari section role Anda. |
+| **Client eksternal (Portal user)**           | [`user-guides/client-portal-users.md`](user-guides/client-portal-users.md)          |
+| **Engineer baru**                            | [`getting-started.md`](getting-started.md) → [`architecture.md`](architecture.md) → [`development.md`](development.md) |
+| **Security / compliance auditor**            | [`security-model.md`](security-model.md) → [`ops/data-retention.md`](ops/data-retention.md) → [`ops/secret-rotation.md`](ops/secret-rotation.md) |
+| **On-call engineer**                         | [`ops/`](ops/) — semua runbooks.                                                    |
+| **Tenant Admin (baru di ControlDesk)**       | [`getting-started.md`](getting-started.md) + [`user-guides/internal-users.md#tenant-admin`](user-guides/internal-users.md#tenant-admin) |
+
+## Product / business
+
+Konteks bisnis & fungsional. Baca ini kalau Anda perlu memahami APA
+yang dilakukan ControlDesk dan KENAPA sebelum masuk ke kode.
+
+| Doc                                                                              | Isi                                                                        |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [`product/overview.md`](product/overview.md)                                     | Product overview, personas, feature matrix, non-goals, tech overview.     |
+| [`product/glossary.md`](product/glossary.md)                                     | Istilah bisnis + teknis + akronim (bilingual EN/ID).                       |
+| [`product/roles-and-permissions.md`](product/roles-and-permissions.md)           | 10-role legacy vs 7-role canonical, capability matrix per resource.        |
+| [`product/approval-workflows.md`](product/approval-workflows.md)                 | Threshold matrix, approval chains, state machines per module.              |
+
+## Business modules
+
+Doc bisnis + teknis per modul — struktur folder, state machine, business
+rules, dan tautan ke Server Actions.
+
+| Doc                                                                              | Isi                                                                          |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`modules/clients-and-portal.md`](modules/clients-and-portal.md)                 | Client master, BPO contracts, SLA, Client Portal.                            |
+| [`modules/projects.md`](modules/projects.md)                                     | Projects, assignments, milestones, issues (SLA + escalation), PM handover.  |
+| [`modules/finance.md`](modules/finance.md)                                       | Expenses, Cash Advance (General + Field Ops), Petty Cash, Budget Requests.  |
+| [`modules/hris-and-payroll.md`](modules/hris-and-payroll.md)                     | Employee master (encrypted PII), shifts/roster, HR requests, timesheets, payroll. |
+| [`modules/ai-and-notifications.md`](modules/ai-and-notifications.md)             | AI insights (4 generators + safety), notifications (in-app + email + realtime). |
 
 ## Reference
 
-| Doc                                            | Purpose                                                    |
-| ---------------------------------------------- | ---------------------------------------------------------- |
-| [`env-reference.md`](env-reference.md)         | Every `.env` variable, its default, and its owner.         |
-| [`api-reference.md`](api-reference.md)         | Cron + observability + health endpoints (contract + auth). |
+Data structure + state machines dalam satu tempat.
 
-## Ops runbooks (`docs/ops/`)
+| Doc                                                                              | Isi                                                                          |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`reference/database-schema.md`](reference/database-schema.md)                   | ER diagram, migration timeline, table catalog, enum reference.               |
+| [`reference/state-machines.md`](reference/state-machines.md)                     | Setiap state machine dalam satu diagram visual.                              |
+| [`env-reference.md`](env-reference.md)                                           | Setiap variabel `.env`, default, dan pemilik.                                |
+| [`api-reference.md`](api-reference.md)                                           | Cron + observability + health endpoints (contract + auth).                   |
 
-These are on-call reading. Print them, tab them, follow them literally
-during incidents. They map 1:1 to the rulebook sections that require an
-operational surface.
+## Engineering onboarding
 
-| Runbook                                                 | Covers                                                      |
+| Doc                                                | Kapan baca                                                        |
+| -------------------------------------------------- | ----------------------------------------------------------------- |
+| [`getting-started.md`](getting-started.md)         | Hari pertama. Boot app, sign in, pahami seed.                    |
+| [`architecture.md`](architecture.md)               | Sebelum change non-trivial.                                      |
+| [`security-model.md`](security-model.md)           | Sebelum tulis Server Action apa pun.                             |
+| [`development.md`](development.md)                 | Setiap hari. Feature folder + Server Action + i18n contract.     |
+| [`testing.md`](testing.md)                         | Sebelum push. Coverage gates + Playwright chain suites.          |
+| [`deployment.md`](deployment.md)                   | Sebelum deploy. Docker / Vercel / Supabase + CI/CD pipeline.     |
+
+## User guides
+
+Panduan operasional untuk pengguna real.
+
+| Doc                                                                              | Untuk siapa                                                                  |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`user-guides/internal-users.md`](user-guides/internal-users.md)                 | Staff internal — Employee, Supervisor, PM, OM, Director, Finance, HR Admin, Tenant Admin. |
+| [`user-guides/client-portal-users.md`](user-guides/client-portal-users.md)       | Klien eksternal yang login via `/portal`.                                    |
+
+## Ops runbooks (`ops/`)
+
+On-call reading. Print, tab, dan follow literally saat insiden.
+Mapping 1:1 ke section `.cursorrules` yang butuh operational surface.
+
+| Runbook                                                 | Coverage                                                    |
 | ------------------------------------------------------- | ----------------------------------------------------------- |
 | [`ops/data-retention.md`](ops/data-retention.md)        | 10-year retention, cold archive layout, restore procedure.  |
 | [`ops/observability.md`](ops/observability.md)          | Sentry / Axiom configuration, redaction, request IDs.       |
@@ -40,10 +89,74 @@ operational surface.
 
 ## Community + repo files
 
-| File                                            | Purpose                                                   |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| [`../README.md`](../README.md)                  | Top-level overview + first-run.                           |
-| [`../CONTRIBUTING.md`](../CONTRIBUTING.md)      | How to open a PR that will get merged.                    |
-| [`../SECURITY.md`](../SECURITY.md)              | Vulnerability disclosure policy + response SLAs.          |
-| [`../CHANGELOG.md`](../CHANGELOG.md)            | Every user-visible change, mapped to `.cursorrules`.      |
-| [`../.github/CODEOWNERS`](../.github/CODEOWNERS)| Review routing per surface.                               |
+| File                                                | Purpose                                                       |
+| --------------------------------------------------- | ------------------------------------------------------------- |
+| [`../README.md`](../README.md)                      | Top-level overview + first-run.                               |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md)          | Cara open PR yang akan di-merge.                              |
+| [`../SECURITY.md`](../SECURITY.md)                  | Vulnerability disclosure policy + response SLAs.              |
+| [`../CHANGELOG.md`](../CHANGELOG.md)                | Setiap perubahan user-visible, dimapping ke `.cursorrules`.   |
+| [`../.github/CODEOWNERS`](../.github/CODEOWNERS)    | Review routing per surface.                                   |
+
+## Doc map (visual)
+
+```
+docs/
+├── README.md                            (Anda di sini)
+│
+├── product/                             ← Business + product context
+│   ├── overview.md
+│   ├── glossary.md
+│   ├── roles-and-permissions.md
+│   └── approval-workflows.md
+│
+├── modules/                             ← Per-module business + tech docs
+│   ├── clients-and-portal.md
+│   ├── projects.md
+│   ├── finance.md
+│   ├── hris-and-payroll.md
+│   └── ai-and-notifications.md
+│
+├── reference/                           ← Structured references
+│   ├── database-schema.md
+│   └── state-machines.md
+│
+├── user-guides/                         ← End-user operational guides
+│   ├── internal-users.md
+│   └── client-portal-users.md
+│
+├── ops/                                 ← On-call runbooks
+│   ├── data-retention.md
+│   ├── observability.md
+│   └── secret-rotation.md
+│
+├── architecture.md                      ← Engineering deep-dive
+├── security-model.md
+├── development.md
+├── testing.md
+├── deployment.md
+├── getting-started.md
+├── env-reference.md
+└── api-reference.md
+```
+
+## Contributing to docs
+
+Docs adalah first-class artifact — patch ke docs kena review yang sama
+seriusnya dengan patch ke kode. Aturan:
+
+1. **Struktur folder** — kalau menambah doc baru, pilih folder yang
+   tepat (product / modules / reference / user-guides / ops) dan
+   update index ini.
+2. **Dwibahasa** — istilah bisnis boleh + preferred pakai Bahasa
+   Indonesia. Istilah teknis (Server Action, RSC, RLS, dst) tetap
+   English. Kalau ragu, lihat [`product/glossary.md`](product/glossary.md).
+3. **Grounded pada kode** — kalau doc mendeskripsikan flow, sertakan
+   link ke file + function name. Kalau flow berubah, patch doc di PR
+   yang sama.
+4. **Mermaid untuk diagram** — semua state machine + flow diagram pakai
+   Mermaid, bukan external image. Rendered di GitHub + banyak markdown
+   viewer.
+5. **Test snippet** — kalau ada code sample, sample harus **valid** —
+   yang dieksekusi di test atau kutipan dari kode nyata di repo.
+
+Untuk lint doc + broken links check, ada workflow `.github/workflows/docs.yml` (planned).

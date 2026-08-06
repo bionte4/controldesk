@@ -44,6 +44,46 @@ model (Proxy → Auth → PDP → RLS).
 
 ## Documentation index
 
+Fastest entry point: **[`docs/README.md`](docs/README.md)** — indexed by
+audience (business owner / end user / engineer / auditor / on-call).
+
+### Product & business
+
+| Doc                                                                              | Read when                                               |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`docs/product/overview.md`](docs/product/overview.md)                           | Understand what ControlDesk is and who it's for.       |
+| [`docs/product/glossary.md`](docs/product/glossary.md)                           | Bilingual EN/ID business + technical terms.            |
+| [`docs/product/roles-and-permissions.md`](docs/product/roles-and-permissions.md) | 10-role legacy vs 7-role canonical, capability matrix. |
+| [`docs/product/approval-workflows.md`](docs/product/approval-workflows.md)       | Threshold matrix + state machines per module.          |
+
+### Business modules
+
+| Doc                                                                              | Read when                                               |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`docs/modules/clients-and-portal.md`](docs/modules/clients-and-portal.md)       | Client master, BPO contracts, Client Portal.           |
+| [`docs/modules/projects.md`](docs/modules/projects.md)                           | Projects, assignments, issues, PM handovers.           |
+| [`docs/modules/finance.md`](docs/modules/finance.md)                             | Expenses, Cash Advance, Petty Cash, Budget Requests.   |
+| [`docs/modules/hris-and-payroll.md`](docs/modules/hris-and-payroll.md)           | HR requests, timesheets (daily + weekly), payroll.     |
+| [`docs/modules/ai-and-notifications.md`](docs/modules/ai-and-notifications.md)   | AI insights + notifications system.                    |
+
+### Reference
+
+| Doc                                                                              | Read when                                               |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`docs/reference/database-schema.md`](docs/reference/database-schema.md)         | Schema overview, migration timeline, enums.            |
+| [`docs/reference/state-machines.md`](docs/reference/state-machines.md)           | All state machines in one visual page.                 |
+| [`docs/env-reference.md`](docs/env-reference.md)                                 | Every `.env` variable, default, and owner.             |
+| [`docs/api-reference.md`](docs/api-reference.md)                                 | Cron + health + observability endpoints.               |
+
+### User guides
+
+| Doc                                                                              | Read when                                               |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| [`docs/user-guides/internal-users.md`](docs/user-guides/internal-users.md)       | Panduan per role internal (Employee / PM / Finance / HR / Admin). |
+| [`docs/user-guides/client-portal-users.md`](docs/user-guides/client-portal-users.md) | Panduan untuk klien eksternal yang login via `/portal`. |
+
+### Engineering + ops
+
 | Doc                                                            | Read when                                               |
 | -------------------------------------------------------------- | ------------------------------------------------------- |
 | [`docs/getting-started.md`](docs/getting-started.md)           | First day, boot the app, sign in.                       |
@@ -51,9 +91,7 @@ model (Proxy → Auth → PDP → RLS).
 | [`docs/security-model.md`](docs/security-model.md)             | Before writing any Server Action.                       |
 | [`docs/development.md`](docs/development.md)                   | Every day. Feature folder + Server Action contract.     |
 | [`docs/testing.md`](docs/testing.md)                           | Before you push. Vitest + Playwright + coverage.        |
-| [`docs/deployment.md`](docs/deployment.md)                     | Before you deploy. Vercel + Supabase + Redis + SMTP.    |
-| [`docs/env-reference.md`](docs/env-reference.md)               | Reference for every `.env` variable.                    |
-| [`docs/api-reference.md`](docs/api-reference.md)               | Reference for cron + health + observability endpoints.  |
+| [`docs/deployment.md`](docs/deployment.md)                     | Before you deploy. Vercel + Supabase + CI/CD pipeline.  |
 | [`docs/ops/data-retention.md`](docs/ops/data-retention.md)     | On-call, retention + archive + restore.                 |
 | [`docs/ops/observability.md`](docs/ops/observability.md)       | On-call, Sentry / Axiom configuration.                  |
 | [`docs/ops/secret-rotation.md`](docs/ops/secret-rotation.md)   | Quarterly, secret rotation runbook.                     |

@@ -11,6 +11,25 @@ MUST include the `.cursorrules` section it maps to.
 
 ### Added
 
+- **Documentation — Full product + module + user-guide expansion** (rules
+  §1 code standards, §17 feature folder). Adds thirteen new docs under
+  `docs/{product,modules,reference,user-guides}` covering audiences
+  yang sebelumnya kurang tercover (business owners, end users, external
+  clients, auditors). New docs:
+  - `docs/product/overview.md` — product overview, personas, feature matrix, non-goals.
+  - `docs/product/glossary.md` — bilingual EN/ID business + technical terms.
+  - `docs/product/roles-and-permissions.md` — 10-role legacy vs 7-role canonical, capability matrix per resource.
+  - `docs/product/approval-workflows.md` — full threshold matrix + Mermaid state machines for every approvable resource.
+  - `docs/modules/clients-and-portal.md` — clients, BPO contracts, SLA, Client Portal (auth, isolation contract, notifications, login events audit).
+  - `docs/modules/projects.md` — project lifecycle, assignments (100% allocation guard), milestones, issues (SLA business-hours + escalation ladder), PM handover.
+  - `docs/modules/finance.md` — expenses, Cash Advance (General + Field Ops + 10-day settlement SLA), Petty Cash (Imprest Fund + decision matrix), Budgets + Budget Requests.
+  - `docs/modules/hris-and-payroll.md` — encrypted PII master, shifts + roster, HR requests (3 kinds), daily + weekly timesheets, payroll DLC formula.
+  - `docs/modules/ai-and-notifications.md` — four AI generators + safety (PII redaction, per-tenant token cap), notifications (in-app + email outbox + realtime).
+  - `docs/reference/database-schema.md` — ER diagram, migration timeline 0001-0033, table catalog by concern, enum reference.
+  - `docs/reference/state-machines.md` — every state machine in one visual reference.
+  - `docs/user-guides/internal-users.md` — panduan operasional per role internal.
+  - `docs/user-guides/client-portal-users.md` — panduan untuk klien eksternal.
+  - `docs/README.md` restructured as audience-first index; root `README.md` links updated.
 - **CI/CD — GitHub Actions hardening + branch protection** (rules §2, §21,
   §22). All four workflows (`ci.yml`, `e2e.yml`, `security.yml`,
   `docker.yml`) now: (1) let `pnpm/action-setup@v4` read the version
