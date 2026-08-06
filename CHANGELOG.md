@@ -11,6 +11,43 @@ MUST include the `.cursorrules` section it maps to.
 
 ### Added
 
+- **CI/CD — GitHub Actions hardening + branch protection** (rules §2, §21,
+  §22). All four workflows (`ci.yml`, `e2e.yml`, `security.yml`,
+  `docker.yml`) now: (1) let `pnpm/action-setup@v4` read the version
+  from `package.json`'s `packageManager` field (single source of
+  truth, kills the `Multiple versions of pnpm specified` error), (2)
+  target Node **22** (Node 20 is deprecated on GH-hosted runners), (3)
+  pass `NEXT_PUBLIC_*` build args to the Docker workflow so the
+  multi-stage image builds without a running Supabase. E2E now runs
+  Playwright against `pnpm build && pnpm start` (production bundle)
+  instead of `pnpm dev` — the dev server's cold compiles caused
+  intermittent `waitForURL` timeouts when the whole suite raced. The
+  Supabase teardown step is guarded with `command -v supabase` so an
+  early-fail run doesn't turn the job red on shutdown. Branch
+  protection on `main` requires 1 approving review + all three CI
+  checks green (`lint · typecheck · test · build`, `playwright
+  chromium`, `CodeQL / javascript-typescript`), auto-dismisses stale
+  reviews, blocks force-push and branch deletion, and requires all
+  PR conversations resolved. Repo admins retain a bypass valve for
+  emergency hotfixes per rules §22. Dependabot **security updates**,
+  vulnerability alerts, secret scanning, and push protection are all
+  enabled on the repo. GitHub Environments `staging` and `production`
+  are pre-created (production is locked to `main`). Full contract is
+  documented in [`docs/deployment.md`](docs/deployment.md#cicd-github-actions).
+- **Platform — Next.js 16 header-propagation pattern on (app) branch of
+  proxy** (rules §5, §3). The `(app)` branch of `src/proxy.ts` now
+  mirrors the pattern already used by the portal branch: mutations to
+  request headers happen against a single cloned `Headers`, cookie
+  refreshes from the Supabase auth client are buffered into a
+  `pendingCookies` array, and the final response is built ONCE at the
+  end via `NextResponse.next({ request: { headers: requestHeaders } })`
+  with all buffered cookies flushed onto it. This is the documented
+  Next.js 16 contract for making request-header mutations reach RSC +
+  Server Actions in both dev and production runtimes — previously
+  we were relying on in-place mutation, which is a silent no-op on
+  the Edge runtime and would have broken quietly once we moved out of
+  Node. Verified against `pnpm typecheck` + full Vitest suite
+  (887/887 passing).
 - **HR — Compact approval-chain visual in list view** (rules §12, §14).
   The HR requests list (`/hr/requests`) gains a new `Chain` column that
   renders the compact variant of `ApprovalChainProgress`, mirroring the

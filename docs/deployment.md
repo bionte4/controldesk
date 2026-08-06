@@ -50,7 +50,7 @@ flowchart LR
 1. `vercel link` inside the repo. Assign it to the `controldesk` team.
 2. Set the region to `sin1` (Singapore) in Vercel project settings for
    Indonesia latency.
-3. Set the Node.js version to **20.x** in Settings → General.
+3. Set the Node.js version to **22.x** in Settings → General.
 4. Set the build command to `pnpm build`.
 5. Enable **Automatic HTTPS** for `*.controldesk.app` in Domains.
    Configure a wildcard domain if your registrar supports it; otherwise
@@ -250,6 +250,68 @@ missing columns.
 See [`ops/data-retention.md`](ops/data-retention.md#restore-procedure).
 The fast path is the `/settings/archives` UI — one click per archive,
 signed URL valid for 5 minutes.
+
+## CI/CD (GitHub Actions)
+
+Four workflows live under [`.github/workflows/`](../.github/workflows/):
+
+| Workflow          | Triggers                         | What it does                                                                   |
+| ----------------- | -------------------------------- | ------------------------------------------------------------------------------ |
+| `ci.yml`          | push `main`, PR → `main`         | `pnpm lint` → `pnpm typecheck` → `pnpm test:coverage` → `pnpm build`.          |
+| `e2e.yml`         | push `main`, PR → `main`         | Boots local Supabase, runs migrations + seed, builds prod bundle, runs Playwright. |
+| `security.yml`    | push `main`, PR → `main`, weekly | `pnpm audit --prod` (advisory) + CodeQL semantic analysis.                     |
+| `docker.yml`      | push `main`, tags `v*`, manual   | Verifies the multi-stage image still builds (publish to GHCR is opt-in).       |
+
+### Required checks
+
+`main` is protected — merging a PR requires:
+
+1. 1 approving review (stale reviews are auto-dismissed on new pushes).
+2. All conversations resolved.
+3. Three checks green:
+   - `lint · typecheck · test · build` (from `ci.yml`)
+   - `playwright chromium` (from `e2e.yml`)
+   - `CodeQL / javascript-typescript (javascript-typescript)` (from `security.yml`)
+4. No force-push, no branch deletion.
+
+Repo admins retain a bypass valve for emergency hotfixes
+(`enforce_admins: false`). Rules §22 mandates every bypass is
+documented in the PR body.
+
+### Node + pnpm versions
+
+- Node **22** on all runners (Node 20 is deprecated on GitHub-hosted runners).
+- pnpm version comes from `packageManager` in `package.json` — the
+  `pnpm/action-setup@v4` step deliberately does NOT pin a version so
+  the two never drift.
+
+### Repository secrets
+
+The workflows themselves do not require any GitHub-side secrets — CI
+uses placeholder Supabase env values and E2E boots a local Supabase
+in the runner. Add secrets only when you enable optional publish
+targets (e.g. GHCR push in `docker.yml`) or Vercel deploy hooks.
+
+### GitHub Environments
+
+Two environments are pre-created:
+
+- **`staging`** — no branch restriction, use for preview deploys.
+- **`production`** — only `main` can deploy here.
+
+Fill environment-scoped secrets (`SUPABASE_SERVICE_ROLE_KEY`,
+`APP_ENCRYPTION_KEY`, `CRON_SECRET`, observability tokens) via
+`gh secret set --env production ...` when you wire your deploy
+provider.
+
+### Dependabot + secret scanning
+
+- Weekly grouped npm PRs (prod / dev split), GitHub Actions bumps,
+  and Docker base-image bumps — see [`.github/dependabot.yml`](../.github/dependabot.yml).
+- Dependabot **security updates** are enabled (auto-PRs for known CVEs).
+- Secret scanning + push protection are enabled on the repo — a
+  commit containing a Supabase service-role key will be rejected at
+  `git push` time.
 
 ## Post-deploy checks
 
