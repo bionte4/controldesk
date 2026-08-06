@@ -49,15 +49,16 @@ jobs:
           echo "127.0.0.1 demo.localhost" | sudo tee -a /etc/hosts
           cat /etc/hosts | tail -3
 
+      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # in package.json — do NOT pass a `version:` here or the action
+      # errors with "Multiple versions of pnpm specified".
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: pnpm
 
       - name: Install Supabase CLI
@@ -95,6 +96,13 @@ jobs:
       - name: Apply migrations + seed
         run: pnpm db:reset
 
+      # `playwright.config.ts` boots `pnpm start` under CI, so we need a
+      # production build first. Doing the build here (and not inside the
+      # webServer step) makes the failure mode obvious and lets us cache
+      # `.next` between steps.
+      - name: Build Next.js (production)
+        run: pnpm build
+
       - name: Run Playwright suites
         run: pnpm test:e2e --reporter=github,html
 
@@ -111,4 +119,12 @@ jobs:
 
       - name: Tear down Supabase stack
         if: always()
-        run: supabase stop --no-backup
+        # Guard against early-fail runs where the Supabase CLI never
+        # got installed; otherwise the job goes red from a shutdown
+        # step that had nothing to shut down.
+        run: |
+          if command -v supabase >/dev/null 2>&1; then
+            supabase stop --no-backup || true
+          else
+            echo "supabase CLI not present — nothing to stop"
+          fi

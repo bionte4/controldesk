@@ -77,6 +77,10 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_TELEMETRY_DISABLED=1
+            NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-placeholder-anon-key
+            NEXT_PUBLIC_ROOT_DOMAIN=localhost
+            NEXT_PUBLIC_APP_NAME=ControlDesk
 
       - name: Print image size
         run: |

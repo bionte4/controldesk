@@ -42,9 +42,13 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: "pnpm dev",
+        // On CI we run against a production build for stability — the dev
+        // server's cold compiles cause intermittent `waitForURL` timeouts
+        // when the whole E2E suite races. Locally we keep `pnpm dev` so
+        // iteration remains fast.
+        command: process.env.CI ? "pnpm start" : "pnpm dev",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        timeout: 180_000,
       },
 });

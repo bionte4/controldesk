@@ -159,10 +159,22 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  // Legacy alias for downstream (app) branch below — will be finalized
-  // once auth session refresh is complete.
-  const response = NextResponse.next({ request });
-  response.headers.set("x-request-id", requestId);
+  // --- (app) branch — Supabase auth + tenant guard. ---
+  // Follows the same header-propagation pattern as the portal branch:
+  //   1. Mutate a cloned `requestHeaders` for anything RSC / Server Actions
+  //      need to read via `headers()` / `getTenantContext()`.
+  //   2. Buffer cookie refreshes into `pendingCookies` because the Supabase
+  //      client's `setAll` callback is invoked BEFORE we build the final
+  //      response.
+  //   3. At the end, build ONE response with the mutated headers and flush
+  //      all buffered cookies onto it (rules §3, Next.js 16 proxy docs).
+  requestHeaders.set(TENANT_HEADER, tenant.slug);
+
+  const pendingCookies: Array<{
+    name: string;
+    value: string;
+    options: Parameters<typeof NextResponse.prototype.cookies.set>[2];
+  }> = [];
 
   const supabase = createServerClient<Database>(
     process.env.SUPABASE_SERVER_URL && process.env.SUPABASE_SERVER_URL.trim() !== ""
@@ -176,13 +188,29 @@ export async function proxy(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           for (const { name, value, options } of cookiesToSet) {
+            // Keep the incoming cookie jar in sync so subsequent Supabase
+            // reads within this same request see the refreshed token.
             request.cookies.set(name, value);
-            response.cookies.set(name, value, options);
+            pendingCookies.push({ name, value, options });
           }
         },
       },
     },
   );
+
+  const buildResponse = () => {
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    res.headers.set("x-request-id", requestId);
+    res.headers.set(TENANT_HEADER, tenant.slug);
+    const propagatedTenantId = requestHeaders.get(TENANT_ID_HEADER);
+    if (propagatedTenantId) {
+      res.headers.set(TENANT_ID_HEADER, propagatedTenantId);
+    }
+    for (const c of pendingCookies) {
+      res.cookies.set(c.name, c.value, c.options);
+    }
+    return res;
+  };
 
   // Refresh session (this is what forces cookie rewriting). getUser() also
   // re-verifies the token against the Auth server so we can trust `user.id`.
@@ -200,11 +228,6 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getSession();
   const jwtClaims = session ? decodeJwtPayload(session.access_token) : null;
 
-  // Publish the resolved tenant slug for RSC / Server Actions to consume
-  // via `getTenantContext()`.
-  request.headers.set(TENANT_HEADER, tenant.slug);
-  response.headers.set(TENANT_HEADER, tenant.slug);
-
   // --- Public auth pages: allow through, no tenant/user checks. ---
   if (isPublicPath(pathname)) {
     // If already signed in and hitting /login, punt to /dashboard.
@@ -213,7 +236,7 @@ export async function proxy(request: NextRequest) {
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
-    return response;
+    return buildResponse();
   }
 
   // --- Protected surface: must be signed in. ---
@@ -255,11 +278,10 @@ export async function proxy(request: NextRequest) {
   }
 
   if (claimTenantId) {
-    response.headers.set(TENANT_ID_HEADER, claimTenantId);
-    request.headers.set(TENANT_ID_HEADER, claimTenantId);
+    requestHeaders.set(TENANT_ID_HEADER, claimTenantId);
   }
 
-  return response;
+  return buildResponse();
 }
 
 export const config = {
