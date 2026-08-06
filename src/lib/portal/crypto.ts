@@ -191,15 +191,20 @@ export function generateTempPassword(length = 12): string {
   if (length < 8 || length > 64) {
     throw new Error("generateTempPassword: length must be between 8 and 64");
   }
-  const bytes = randomBytes(length * 2);
+  const alphabetLen = TEMP_PASSWORD_ALPHABET.length;
+  const maxUnbiased = Math.floor(256 / alphabetLen) * alphabetLen;
   const chars: string[] = [];
-  for (let i = 0; chars.length < length && i < bytes.length; i += 1) {
-    const idx = bytes[i] % TEMP_PASSWORD_ALPHABET.length;
-    chars.push(TEMP_PASSWORD_ALPHABET[idx]);
+
+  while (chars.length < length) {
+    const bytes = randomBytes(length);
+    for (let i = 0; chars.length < length && i < bytes.length; i += 1) {
+      const byte = bytes[i];
+      if (byte >= maxUnbiased) continue;
+      const idx = byte % alphabetLen;
+      chars.push(TEMP_PASSWORD_ALPHABET[idx]);
+    }
   }
-  // In the astronomically unlikely case we ran out of bytes, top up with a
-  // safe fallback.
-  while (chars.length < length) chars.push("x");
+
   return chars.join("");
 }
 
