@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security disclosure
+    url: https://github.com/{{OWNER}}/controldesk/security/advisories/new
+    about: Report a vulnerability privately (data leak, RLS bypass, auth issue, PII exposure). Do NOT open a public issue.
+  - name: Ops runbooks
+    url: ../blob/main/docs/ops
+    about: Retention, observability, and secret-rotation runbooks live in `docs/ops/`.
+  - name: Product rulebook (`.cursorrules`)
+    url: ../blob/main/.cursorrules
+    about: The single source of truth for product + engineering rules.

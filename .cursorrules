@@ -1,0 +1,282 @@
+# -----------------------------------------------------------------------------
+# MASTER CURSOR AI RULES & BLUEPRINT FOR MULTI-TENANT BPO/ERP SYSTEM
+# Tech Stack: Next.js 15 (App Router Standalone), TypeScript, Supabase (PostgreSQL + RLS),
+# Tailwind CSS v4, Shadcn UI, Framer Motion, Tremor / Recharts, Vercel AI SDK, Docker
+# -----------------------------------------------------------------------------
+
+---
+description: Complete Master Rules & Blueprint for ERP Multi-tenant (Docker Containerization + Security RBAC/PDP/ABAC + UI/UX Modern Professional Design + PM/Employee Assignment + Client 1-to-Many Projects + HRIS BPO + Lead Finance + Dynamic Approval + Cash Advance + Petty Cash + Overtime/Leave + PM Handover + Operations Hierarchy)
+globs: **/*
+alwaysApply: true
+---
+
+# 1. GENERAL ARCHITECTURE & CODE STANDARDS
+- Framework: Next.js 15 dengan App Router dan React Server Components (RSC) secara default (`output: 'standalone'` pada `next.config.ts`).
+- Gunakan `'use client'` HANYA pada komponen UI interaktif yang membutuhkan Client Hooks / State / Motion.
+- Type Safety: Wajib menggunakan TypeScript ketat dan validasi Zod Schema pada semua Server Actions dan API Routes.
+- Kode Utuh: DILARANG menuliskan placeholder seperti `// TODO: implement this`. Selalu hasilkan kode fungsional yang siap pakai.
+- Security: DILARANG keras menyimpan API Key atau credentials secara hardcode. Gunakan `.env.local` atau Docker Secrets.
+
+# 2. DOCKER & CONTAINERIZATION FRAMEWORK (PRODUCTION & DEV)
+Sistem ini menggunakan kontainerisasi standar produksi:
+- **Next.js Standalone Build Config (`next.config.ts`)**:
+  - `output: 'standalone'` diaktifkan agar Next.js menghasilkan server bundel independen tanpa ketergantungan `node_modules` penuh.
+- **Multi-Stage Dockerfile (`Dockerfile`)**:
+  - `Stage 1: base` -> Node.js 20 Alpine.
+  - `Stage 2: deps` -> Install `node_modules` menggunakan `npm ci`.
+  - `Stage 3: builder` -> Build Next.js standalone (`npm run build`).
+  - `Stage 4: runner` -> Menyalin bundel standalone, membuat non-root system user (`nextjs:nodejs`), mengekspos port 3000, dan mengaktifkan Healthcheck (`/api/health`).
+- **Docker Compose (`docker-compose.yml`)**:
+  - Layanan terintegrasi: `app` (Next.js App), `redis` (Rate Limiting & Cache), `mailpit` (Dev Mail Server), dan `supabase-db` (Local Postgres DB untuk pengujian offline).
+- **Docker Security & Optimization**:
+  - Sertakan file `.dockerignore` untuk mengabaikan `node_modules`, `.next`, `.git`, dan file `.env*` lokal.
+  - Jalankan kontainer dengan hak akses terbatas (`USER nextjs`).
+
+# 3. ENTERPRISE SECURITY FRAMEWORK: RBAC, ABAC, PDP/PEP & AUDIT TRAIL
+- **RBAC (Role-Based Access Control)**:
+  - Role Enum: `['TENANT_ADMIN', 'GM', 'HEAD_MANAGER', 'OPERATIONS_MANAGER', 'PROJECT_MANAGER', 'LEAD_FINANCE', 'SUPERVISOR', 'EMPLOYEE', 'HR_ADMIN', 'PETTY_CASH_CUSTODIAN']`.
+- **ABAC & PDP/PEP Architecture**:
+  - Izin aksi tergantung atribut: `tenant_id`, `project_id`, `project_assignment_status == 'ACTIVE'`, dan nominal `expense_amount`.
+  - PEP di Next.js Middleware & Server Actions. PDP Helper terpusat di `src/lib/security/pdp.ts`. Supabase RLS sebagai benteng PostgreSQL terakhir.
+- **Audit Trail (`security_audit_logs`)**:
+  - Setiap mutasi data sensitif mencatat: `tenant_id`, `actor_id`, `action_type`, `resource_name`, `old_values`, `new_values`, `ip_address`, `user_agent`. Log bersifat *Immutable* (Only INSERT).
+- **Data Protection & Rate Limiting**:
+  - Encrypt data HRIS sensitif (`salary`, `bank_account_number`) menggunakan `pgcrypto`. Masking UI untuk role non-HR/Finance.
+  - Rate Limiting pada API Routes & AI Engine via Redis.
+
+# 4. MODERN, PROFESSIONAL & INTERACTIVE UI/UX DESIGN SYSTEM
+- **Visual Aesthetic**: Light/Dark Mode switchable (`next-themes`), Slate/Zinc neutral base, Indigo primary accent, Emerald success, Amber warning, Rose danger. Glassmorphism subtle borders & backdrop blur.
+- **Interactive Component Standards**: Dynamic Approval Stepper dengan animasi smooth (Framer Motion), Command Palette (`Ctrl+K`), Slide-over Drawer/Sheet untuk Unified Inbox Approval & Nota Struk.
+- **Data Visualization UI**: Recharts / Tremor untuk Sparkline KPI Cards, Shift Roster Heatmap 24/7, dan Progress Budget Rings.
+
+# 5. MULTI-TENANCY RULES (CRITICAL)
+- Single Database, Shared Schema dengan Discriminator `tenant_id UUID REFERENCES tenants(id) NOT NULL` di SETIAP tabel (kecuali global lookup).
+- Row Level Security (RLS) Supabase WAJIB diaktifkan di seluruh tabel. Policy RLS memverifikasi `tenant_id` via JWT Claim.
+- Middleware (`middleware.ts`) mendeteksi `tenant_slug` dari URL/Subdomain.
+- AI Analytics DILARANG KERAS membaca, memproses, atau membocorkan data lintas `tenant_id`.
+
+# 6. ORGANIZATIONAL HIERARCHY & ROLES MANAGEMENT
+**GAS-aligned canonical roles (7 internal + 1 external portal role):**
+- **`EMPLOYEE`**: Staf umum — Developer, QA, Designer, DevOps, Engineer, Consultant, Support. Bisa submit expense/CA/timesheet, view proyek yang di-assign.
+- **`SUPERVISOR`**: Team lead operasional / on-site supervisor. Approver level 1 untuk expense di-bawah PM threshold **DAN** approver awal untuk Cash Advance Field Ops (§27).
+- **`PM` (Project Manager)**: Penanggung jawab proyek. Boleh handle >1 proyek. Approver level 2 untuk expense/CA/budget-request di rentang PM threshold. Assign team, milestone, issue.
+- **`OM` (Operations Manager / Lead PM)**: Membawahi >1 PM. Approver di rentang mid untuk Field Ops CA + settlement Field Ops. Portfolio-level view.
+- **`FINANCE` (Lead Finance / Finance Manager)**: Gatekeeper cashflow. **SELALU** di chain approval expense/CA/budget-request (bukan level, tapi gate paralel). Owner petty cash fund, disburse CA, finalize settlement.
+- **`DIRECTOR`**: Executive tier (~GM/Head of Ops). Approver terminal untuk expense/CA/budget-request di atas Director threshold. Read-all access, executive dashboard.
+- **`ADMIN`**: Full-access system administrator per tenant. User management, master data, konfigurasi threshold, view audit log.
+- **`CLIENT`** *(portal role, external)*: External user milik `clients` row. Login via `/portal/*` route yang terpisah, hanya SELECT read-only ke `projects/milestones/documents` klien mereka. Disimpan di tabel `client_users` terpisah, TIDAK di `employees`. Rate-limit login lebih ketat (§28).
+
+**Struktur reporting**: `employees.reports_to_employee_id UUID REFERENCES employees(id)` — hierarki bebas (Employee→Supervisor→PM→OM→Director→Admin). Tidak wajib linear; satu employee bisa report ke Supervisor DAN struktural ke OM.
+
+**Legacy DB enum aliasing (backward-compat sampai Fase 0 selesai)**: Postgres enum `public.employee_role` sementara masih memuat 10 nilai lama (`TENANT_ADMIN, GENERAL_MANAGER, HEAD_MANAGER, OPERATIONS_MANAGER, PROJECT_MANAGER, LEAD_FINANCE, HR_ADMIN, PETTY_CASH_CUSTODIAN, SUPERVISOR, EMPLOYEE`) — mapping ke canonical role dilakukan di layer aplikasi via `toCanonicalRole()` di `src/lib/rbac/roles.ts`. Migration `0021+_gas_alignment.sql` (Fase 0.2) yang akan menuntaskan enum swap di DB. Kode BARU wajib pakai canonical role names; kode lama boleh masih pakai DB name sampai migration selesai.
+
+# 7. RESOURCE ASSIGNMENT ENGINE (PM & EMPLOYEE ASSIGNMENTS)
+- **PM Assignment (`project_pm_assignments`)**: Menghubungkan PM ke proyek (`ASSIGNMENT_ROLE`: PRIMARY_PM / CO_PM). Ditentukan oleh OM/HM.
+- **Employee Assignment (`project_employee_assignments`)**: Menghubungkan Karyawan ke proyek dengan `allocation_percentage` (e.g. 50% / 100%). Total alokasi di seluruh proyek aktif DILARANG > 100%.
+
+# 8. CLIENT / CUSTOMER MANAGEMENT (1 CLIENT TO MANY PROJECTS)
+- **Relasi 1-to-Many**: Satu `client` dapat memiliki **lebih dari satu proyek** (`projects.client_id REFERENCES clients(id)`).
+- **Executive Client Dashboard**: Tampilan visual mengagregasikan seluruh proyek aktif, alokasi PM & Employee, total anggaran, SLA kumulatif, dan Gross Margin per Klien.
+
+# 9. VALUE-BASED DYNAMIC APPROVAL & DUAL-KEY FINANCE ENGINE
+Approval engine mengikuti pola GAS ERP (3-tier threshold + Finance selalu di chain). Semua threshold dalam **IDR** dan bisa dituning per-tenant via tabel `approval_thresholds` (planned di Fase 0 §26).
+
+**9.1 Expense (`project_expenses`) — 3-tier threshold:**
+| amount | Chain approval |
+|---|---|
+| `amount < 5.000.000` | **Finance only** (submitted → PendingFinance → Approved → Paid) |
+| `5.000.000 ≤ amount < 50.000.000` | **PM → Finance** |
+| `amount ≥ 50.000.000` | **PM → Finance → Director** |
+
+**9.2 Budget (`budgets`) approval — single-step:**
+| totalPlanned | Chain approval |
+|---|---|
+| `totalPlanned < 50.000.000` | **Finance only** |
+| `totalPlanned ≥ 50.000.000` | **Finance → Director** |
+
+**9.3 Cash Advance General (`cash_advances` where `type='General'`):**
+| amount | Chain approval |
+|---|---|
+| `amount < 2.000.000` | Finance only |
+| `2.000.000 ≤ amount < 20.000.000` | PM → Finance |
+| `amount ≥ 20.000.000` | PM → Finance → Director |
+
+**9.4 Cash Advance Field Ops (`cash_advances` where `type='FieldOps'`) — separate chain, §27:**
+| amount | Chain approval |
+|---|---|
+| Semua Field Ops (base) | **Supervisor** (selalu — validasi lapangan) → Finance |
+| `amount ≥ 5.000.000` | + PM slot |
+| `amount ≥ 20.000.000` | + OM slot |
+| `amount ≥ 50.000.000` | + Director slot |
+Chain lengkap: `Supervisor → PM? → OM? → Finance → Director?` (`?` = conditional by threshold).
+
+**9.5 Petty Cash Entry:**
+| amount | Chain approval |
+|---|---|
+| `amount < 200.000` | **Auto-approve** (langsung Approved → Posted, custodian tetap perlu attach receipt kalau > 100k per Config.PETTY_CASH.RECEIPT_REQUIRED_ABOVE) |
+| `200.000 ≤ amount ≤ 2.000.000` | **Finance approval** (hard ceiling — di atas 2M harus lewat Expense flow) |
+
+**9.6 Budget Request (Increase/Decrease/Transfer, §26):**
+Threshold sama dengan Expense (PM 5M, Director 50M). Approved → Applied (mutate `budget_details` + roll up `budgets.total_planned` di transaction yang sama).
+
+**9.7 Enforcement:**
+- Server-side PDP (`src/lib/security/pdp.ts`) resolve chain dari `amount` + `type` + `resource_kind`.
+- Setiap step tercatat di `expense_approval_logs` / `ca_approval_logs` / `budget_request_approval_logs` dengan `actor_id`, `actor_role`, `decision`, `comment`, `decided_at`.
+- Finance step disebut **parallel gate** karena bisa berjalan bareng dengan PM step (tidak harus PM dulu baru Finance). UI tampilkan sebagai timeline dengan `pending / approved / rejected` per slot.
+- Override: `ADMIN` role dapat approve step manapun (audit log tetap tercatat). `DIRECTOR` bisa short-circuit chain di bawahnya kalau perlu (dengan justification wajib ≥ 20 karakter).
+- **Legacy 5-tier chain (BPO) DEPRECATED per Fase 0**. Semua Server Action baru wajib panggil helper baru `expenseApprovalChain()` / `caGeneralApprovalChain()` / `caFieldOpsApprovalChain()` di `roles.ts`.
+
+# 10. PETTY CASH MODULE (KAS KECIL OPERASIONAL)
+Metode **Imprest Fund System** (GAS ERP §PETTY_CASH). Tabel:
+- `petty_cash_funds` — 1 fund per lokasi/cabang, `opening_balance`, `current_balance`, `custodian_employee_id`, `min_threshold`, `status: Active|Suspended|Closed`.
+- `petty_cash_entries` — Spend / Replenishment / Adjustment, `status: Draft|Submitted|Approved|Rejected|Posted`. Hanya `Posted` yang menggeser `current_balance`.
+- `petty_cash_attachments` — receipt files.
+- `petty_cash_reconciliations` — periodic (mingguan/bulanan) counted-physical vs ledger; `variance = physical − ledger`; kalau `|variance| > 5000` (`Config.PETTY_CASH.VARIANCE_TOLERANCE`), wajib `variance_reason` teks.
+
+**Business rules:**
+- Spend `< 200.000` → auto-approve (langsung `Approved`, custodian bisa langsung `Post`). Attach receipt tetap direkomendasikan.
+- Spend `≥ 100.000` → **receipt wajib** sebelum submit (`Config.PETTY_CASH.RECEIPT_REQUIRED_ABOVE`).
+- Spend `> 2.000.000` **DILARANG** di petty cash — harus lewat Expense flow full approval (`Config.PETTY_CASH.MAX_SPEND_AMOUNT`).
+- Daily sweep: kalau `current_balance < opening_balance × 0.2` → notifikasi `PETTY_CASH_REPLENISH_NEEDED` ke custodian + Finance.
+- Recon overdue: kalau `Submitted` recon tidak diselesaikan `> 3` hari setelah `period_end` → notif ke custodian + Finance.
+- Custodian assignment via kolom `petty_cash_funds.custodian_employee_id` — TIDAK lagi via role `PETTY_CASH_CUSTODIAN` (role tersebut deprecated, custodian bisa role apa saja, biasanya EMPLOYEE atau FINANCE staff).
+
+# 11. CASH ADVANCE & SETTLEMENT MODULE (UANG MUKA KERJA)
+Dua varian per `cash_advances.type`:
+
+**11.1 General (`type='General'`)** — request umum untuk keperluan proyek/operasional:
+- Fields: `project_id`, `budget_detail_id` (opsional link ke line MA), `amount`, `purpose`, `expected_settlement_date`.
+- Chain: 3-tier threshold per §9.3.
+- Settlement: `Disbursed → PendingSettlement → Settled` (Finance finalize).
+- Line items (nota struk) via `cash_advance_line_items` — nominal per item, kategori, receipt attachment.
+- Realisasi: `actual_amount = sum(line_items.amount)`; kalau `< advance_amount` → refund; kalau `>` → reimbursement top-up.
+
+**11.2 Field Ops (`type='FieldOps'`)** — request site visit dari engineer/junior/supervisor (§27 detail):
+- Fields tambahan: `ticket_ref`, `site_location`, `justification` enum (Maintenance/IncidentResponse/PreventiveMaintenance/NewInstallation/Investigation/SiteSurvey/Other), `vehicle_type` enum (MobilRentcar/MobilKantor/Motor/Ojek/Taksi/PublicTransport/Kapal/Pesawat/Other), `rab_line_items[]` (kategori: Mobil/Motor/Toll/Parkir/Bensin/Makan/Menginap/Kunci/Komunikasi/Material/LainLain).
+- Chain: **Supervisor selalu di rung 0** → PM (≥5M) → OM (≥20M) → Finance (selalu) → Director (≥50M) per §9.4.
+- Settlement multi-step: `PendingSettlementSupervisor → PendingSettlementOM → PendingSettlement (Finance) → Settled`.
+- SLA settlement: `settlement_due_date = disbursed_at + 10 hari kalender` (`FIELD_OPS_SETTLEMENT_SLA_DAYS`); reminders di offset `[-3, 0, 1, 3, 7]` hari.
+
+# 12. TIMESHEET MODULE (WEEKLY, GAS Phase 3a)
+Menggantikan HRIS BPO full chain (overtime/cuti/sakit) yang **DEPRECATED per Fase 0**. Model GAS ERP:
+- `timesheets` — satu row per (`employee_id`, `week_start_date`, ISO week). `status: Draft|Submitted|Approved|Rejected|Locked`.
+- `timesheet_entries` — per-day per-project, `hours numeric(5,2)`, `billable boolean`, `notes`, `date`.
+- Week start = Monday (ISO). Max `24` jam per hari (guard typo). Step `0.25` jam (15 menit).
+- Submit deadline: Friday 15:00 WIB (reminder otomatis via daily cron).
+- Approval chain: Employee → **PM atau Supervisor** (single-step). Approved auto-lock setelah `AUTO_LOCK_AFTER_DAYS` (default 0 = disabled).
+- Internal hours (tanpa `project_id`) diperbolehkan kalau `Config.TIMESHEET.ALLOW_INTERNAL_HOURS=true`.
+- Overtime dihitung derived (tidak butuh `hr_requests`): `overtime_hours = max(0, sum(entries.hours per week) − 40)`.
+- Leave/Sick: **TIDAK ada request formal** di Fase 0. Employee cukup input timesheet dengan hours=0 di hari libur/sakit + tag internal category "leave" atau "sick" via free-text notes. Kalau butuh formal leave request, tunggu Fase 12+.
+
+# 13. PM HANDOVER — DEPRECATED per Fase 0
+GAS ERP tidak punya modul PM handover terpisah. Perubahan PM cukup:
+1. Edit `project_employee_assignments` — set old PM `status='Completed'`, insert new row untuk new PM dengan `role='ProjectManager'`, `status='Active'`.
+2. Audit trigger otomatis mencatat old/new value di `security_audit_logs`.
+3. Notifikasi kirim manual via UI action "Notify handover" atau kirim otomatis lewat trigger DB.
+
+Tabel `pm_handovers` **akan di-drop** di migration Fase 0.4. Existing rows di-archive ke cold storage.
+
+# 14. BPO & MANAGED SERVICES — DEPRECATED per Fase 0
+GAS ERP fokus IT Services / Software House, bukan BPO. Rules lama tentang Direct Labor Cost + Gross Margin BPO + SLA Commitments tidak lagi berlaku. Sebagai gantinya:
+- **Utilization KPI**: `sum(assignments.allocation_percentage) per employee / 100` — target 70-85% (`Config.KPI.UTILIZATION_TARGET`).
+- **Project profitability** = `contract_value − sum(project_expenses.approved) − sum(cash_advances.settled)`. Real-time di project detail page.
+- SLA commitments module **di-drop** — akan diganti Issues module dengan SLA breach (§26).
+
+# 15b. GAS-IMPORTED MODULES (Fase 1+ ROADMAP)
+Modul yang perlu di-port dari GAS ERP repo (`bontiharyanto/erp-system`):
+- **§25 Milestones** — first-class dengan `weight` 0-100, project `progress` auto-calc.
+- **§26 Issues + SLA escalation** — issue register dengan Business-Hours SLA (Critical 1h, High 4h, Medium 8h, Low 24h business hours). Auto-escalation ladder `Supervisor → PM → OM → Director` setiap 15 menit sweep.
+- **§27 Cash Advance Field Ops** — sudah ditulis di §11.2.
+- **§28 Client Portal** — external users, read-only, separate auth/session.
+- **§29 Budget Request** — Increase/Decrease/Transfer dengan approval chain (§9.6).
+- **§30 CSV Import + Report Export + Advanced Filter + Calendar Sync + Multi-channel Notif (Telegram/Google Chat)** — cross-cutting fitur di Fase 8-9.
+Detail lengkap: `docs/gas-migration-plan.md` (akan dibuat di Fase 0.3).
+
+# 15. ISOLATED AI ANALYTICS ENGINE
+Vercel AI SDK Structured Outputs (`generateObject` + Zod):
+1. `predict-expense-impact`: Prediksi dampak biaya terhadap gross margin.
+2. `analyze-resource-utilization`: Progress bar alokasi PM & Karyawan.
+3. `analyze-client-health`: Insight score kesehatan hubungan klien.
+4. `analyze-sla-breach`: Warning banner risiko penalti SLA 24-48 jam ke depan.
+- **AI Safety**: Sebelum mengirim payload ke LLM, WAJIB redact PII sensitif (nama karyawan → hash, `salary` → range, `bank_account` → last-4, `ktp/npwp` → dihilangkan). Terapkan cost cap per `tenant_id` per hari (default 10.000 tokens output / hari) via Redis counter. Simpan `prompt_version` + `model_id` di `ai_insights` untuk audit reproducibility.
+
+# 16. DATABASE SCHEMA BLUEPRINT (REFERENCE SQL)
+- `tenants`, `users`, `employees`, `clients`, `bpo_contracts`, `sla_commitments`, `projects`, `project_pm_assignments`, `project_employee_assignments`, `work_shifts`, `employee_rosters`, `hr_requests`, `hr_approval_logs`, `pm_handovers`, `tasks`, `timesheets`, `project_budgets`, `project_expenses`, `cash_advances`, `cash_advance_settlements`, `petty_cash_funds`, `petty_cash_vouchers`, `petty_cash_replenishments`, `approval_workflows`, `approval_steps`, `expense_approval_logs`, `notifications`, `attachments`, `security_audit_logs`, `ai_insights`.
+
+# 17. FEATURE FOLDER & SERVER ACTION CONTRACT (DEVELOPMENT STANDARD)
+Setiap modul bisnis (Projects, Cash Advance, Petty Cash, HRIS, Approvals, dll.) WAJIB mengikuti struktur folder terkolokasi:
+- **Route Group**: `src/app/(app)/[module]/` — halaman + subroute + `loading.tsx` + `error.tsx`.
+- **Server Actions**: `src/app/(app)/[module]/actions.ts` — semua mutasi via `withSecureAction()` dari `src/lib/security/action-wrapper.ts`.
+- **Zod Schemas**: `src/lib/validation/[module].ts` — single source of truth validasi.
+- **Data Access**: `src/lib/data/[module].ts` — query helper Supabase (RSC-safe, tenant-scoped otomatis via RLS). Wrap query yang dipakai berulang dalam satu request dengan `React.cache()` untuk deduping.
+- **UI Components**: `src/components/[module]/` — client component modul (form, card, table, drawer, dst).
+
+**Server Action Contract (WAJIB)**:
+- Setiap Server Action mutasi WAJIB menggunakan `withSecureAction({ schema, resource, action, auditAction, ... })`. DILARANG menulis Server Action mutasi tanpa wrapper ini.
+- Return type WAJIB `ActionResult<T> = { ok: true, data: T } | { ok: false, code, reason }`. DILARANG throw error langsung ke client.
+- Setelah mutasi sukses, panggil `revalidatePath()` / `revalidateTag()` scope tenant, bukan global.
+- **State Management**: Default RSC + Server Actions. `useState`/`useReducer` hanya untuk UI interaktif lokal. DILARANG menambah Redux/Zustand/Jotai kecuali ada justifikasi tertulis di PR.
+
+# 18. MONEY, TIME & LOCALE HYGIENE
+- **Money**: Semua nilai uang di database WAJIB `numeric(18,2)` (IDR). DILARANG floating-point arithmetic di TypeScript untuk uang — gunakan `bigint` cents atau library `decimal.js` untuk kalkulasi runtime. Display via `Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 })` — helper terpusat di `src/lib/format/money.ts`.
+- **Time**: Semua kolom timestamp di database WAJIB `timestamptz` (UTC di storage). Aplikasi menyimpan zona waktu tenant di `tenants.timezone` (default `Asia/Jakarta`). UI konversi via `date-fns-tz` — helper di `src/lib/format/date.ts`. DILARANG `new Date().toISOString().split('T')[0]` untuk tanggal bisnis; gunakan `formatInTimeZone`.
+- **Locale & i18n**: Default UI locale `id-ID` dengan fallback `en-US`. `next-intl` sudah terpasang; user memilih locale via `LanguageToggle` di Topbar (persist di cookie `NEXT_LOCALE`, TTL 1 tahun). Semua string user-facing WAJIB via `useTranslations()` (client) atau `getTranslations()` (RSC). Kunci disimpan di `messages/{id,en}.json`. DILARANG hardcode string bahasa apa pun di JSX. Untuk kolom nav / label yang stabil, gunakan `titleKey` / `labelKey` di config (contoh: `src/lib/nav/config.ts`) yang di-resolve di render site.
+- **Business Time**: Perhitungan jam kerja / lembur / shift crossing midnight WAJIB menggunakan `interval` di Postgres, bukan sub-datetime di TypeScript.
+
+# 19. FILE STORAGE & ATTACHMENTS (SUPABASE STORAGE)
+Setiap attachment (`receipt_url`, `surat_dokter`, `contract_pdf`, `avatar`, `nota_struk`) disimpan di Supabase Storage:
+- **Bucket**: `tenant-attachments` (private, satu bucket untuk semua tenant).
+- **Path Convention**: `{tenant_id}/{resource_type}/{resource_id}/{filename_uuid.ext}`.
+- **MIME Allowlist**: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`. Maksimal 10 MB per file (kecuali `contract_pdf` — 25 MB).
+- **RLS Policy**: SELECT/INSERT/DELETE hanya jika `name` (path) diawali dengan `current_tenant_id()`.
+- **Download**: Selalu via signed URL (TTL 300 detik) yang di-generate di Server Action. DILARANG expose public URL.
+- **Registry**: Tabel `attachments (id, tenant_id, resource_type, resource_id, storage_path, mime_type, size_bytes, uploaded_by, created_at)` untuk cross-reference audit.
+
+# 20. NOTIFICATIONS, REALTIME & DIGEST
+- **Bell In-App**: Tabel `notifications (id, tenant_id, user_id, kind, title, body, action_url, payload, read_at, created_at)`. Badge unread di Topbar dengan Supabase Realtime subscription.
+- **Realtime Channel**: `tenant:{tenant_id}:approvals` — Unified Approval Inbox auto-refresh saat ada state change baru.
+- **Email**: Approver menerima email via SMTP (dev: mailpit port 1025, prod: transactional provider Resend/Postmark). Template Indonesia + deep-link ke approval drawer.
+- **Digest**: HR Admin & Lead Finance menerima daily digest jam 08:00 WIB via `pg_cron` atau Vercel Cron: (1) pending approvals ≥24 jam, (2) petty cash mendekati min threshold, (3) SLA breach risk.
+
+# 21. OBSERVABILITY, LOGGING & TESTING
+- **Structured Logging**: DILARANG `console.log` di production path. Gunakan wrapper `src/lib/observability/log.ts` (JSON output dengan `tenant_id`, `user_id`, `request_id`, `level`, `msg`). Level: `debug|info|warn|error`.
+- **Health Endpoints**: `/api/health` (liveness — sudah tersedia), `/api/ready` (readiness — cek DB + Redis reachability). `/api/version` (build hash + release tag).
+- **Testing (WAJIB per modul)**:
+  - Unit: **Vitest** untuk PDP decisions, threshold matrix, Zod schemas, format helpers.
+  - Integration: SQL test untuk RLS enforcement per role — file `supabase/tests/*.sql` dijalankan via `pg_prove`.
+  - E2E: **Playwright** untuk critical flows (login lintas tenant, submit expense, approval chain end-to-end, cash advance disbursement).
+- **Coverage Target**: 80% di `src/lib/security/**` (WAJIB, gating merge), 60% untuk business logic per modul.
+- **Error Boundary**: Setiap route group WAJIB memiliki `error.tsx` dengan pesan Indonesia + tombol retry. Client-side error dilaporkan ke observability sink (Sentry / Axiom siap diintegrasikan).
+
+# 22. DATA RETENTION, MIGRATIONS & DEPLOYMENT
+- **Retention**:
+  - `security_audit_logs`: retensi minimum **7 tahun** (kompliance keuangan Indonesia — PPh, PPN audit trail).
+  - HR data karyawan terminated: **anonymize** (bukan hard delete) setelah 5 tahun — kolom PII di-replace dengan hash, referensi FK tetap valid.
+  - Financial records (`project_expenses`, `cash_advances`, `petty_cash_vouchers`): retensi 10 tahun sesuai UU KUP.
+- **Migrations**:
+  - Naming: `NNNN_short_snake_case.sql` (4-digit increment).
+  - DILARANG edit migrasi yang sudah landing di `main`. Selalu append migrasi baru untuk perubahan skema.
+  - Setiap migrasi tabel baru WAJIB include (1) `tenant_id` column, (2) RLS enable + policy, (3) index `(tenant_id, ...)`, (4) header comment berisi rollback SQL.
+- **Deployment Environments**: `dev` (localhost), `staging` (`staging.controldesk.app`), `production` (`controldesk.app`). Tenant provisioning di production men-generate DNS record subdomain otomatis.
+- **Secret Rotation**: `APP_ENCRYPTION_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, SMTP creds, LLM API keys rotasi **minimum tiap 90 hari**. Rotation runbook di `docs/ops/secret-rotation.md`.
+
+# 23. ACCESSIBILITY (WCAG 2.2 AAA) — ENFORCED
+- **Kontras**: Minimum 7:1 untuk text, 4.5:1 untuk large text. WAJIB divalidasi di light & dark mode via Storybook / manual audit.
+- **Keyboard**: Semua interaksi (approve/reject, buka drawer, close modal, Command Palette) WAJIB reachable via keyboard. Focus indicator konsisten (`focus-visible:ring-2 focus-visible:ring-indigo-500`). Tab order logis.
+- **ARIA**: Setiap `Button` icon-only WAJIB `aria-label`. Setiap `Dialog` / `Sheet` WAJIB `aria-labelledby` mengarah ke title. Tabel data WAJIB `<caption>` atau `aria-label`.
+- **Motion**: WAJIB respect `prefers-reduced-motion` — semua Framer Motion animasi menggunakan `useReducedMotion()` guard.
+- **Screen Reader**: Toast notifications (Sonner) menggunakan `aria-live="polite"` (info/success) atau `aria-live="assertive"` (error).
+- **Form Errors**: Setiap error validasi di-bind via `aria-describedby` ke input yang gagal.
+
+# 24. WORKFLOW INSTRUCTIONS FOR CURSOR AGENT
+Ketika diminta membangun fitur apa pun di aplikasi ini:
+1. Pastikan konfigurasi `Dockerfile` dan `docker-compose.yml` disiapkan saat membuat struktur proyek awal (rules §2).
+2. Ikuti Feature Folder & Server Action Contract di rules §17. Setiap Server Action mutasi WAJIB `withSecureAction()`.
+3. Jalankan pengecekan keamanan RBAC/ABAC melalui PDP Helper (`src/lib/security/pdp.ts`) sebelum memproses Server Action — wrapper §17 sudah mengurus ini.
+4. Catat seluruh aksi mutasi data ke dalam `security_audit_logs` via `recordAudit()` (rules §3) — wrapper §17 sudah mengurus ini.
+5. Terapkan hygiene money/time/locale rules §18 pada setiap kolom uang, timestamp, dan string user-facing.
+6. Untuk fitur dengan attachment, ikuti path convention + RLS Supabase Storage rules §19.
+7. Untuk fitur approval, wire notifikasi in-app + email + realtime subscription per rules §20.
+8. Tulis test Vitest untuk PDP decisions, threshold matrix, dan Zod schemas modul rules §21. Tambahkan Playwright test untuk critical flow.
+9. Terapkan UI/UX modern, profesional, dan interaktif (Shadcn UI + Framer Motion + Recharts) dengan Accessibility rules §23.
+10. Migrasi baru MUST mengikuti convention rules §22 (naming, RLS mandatory, tenant_id column, rollback comment).

@@ -1,0 +1,1588 @@
+{
+  "common": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "loading": "Loading…",
+    "back": "Back",
+    "search": "Search…",
+    "profile": "Profile",
+    "noResults": "No results found.",
+    "comingSoon": "Coming soon"
+  },
+  "brand": {
+    "name": "ControlDesk",
+    "tagline": "One workspace for projects, people, cash, and clients."
+  },
+  "marketing": {
+    "badge": "Multi-tenant BPO / ERP",
+    "heroLead": "The operations desk for",
+    "heroAccent": "Managed Services",
+    "heroBody": "Approvals, cash advance, petty cash, HRIS, SLA analytics and AI-assisted forecasting — one workspace per tenant, isolated by design.",
+    "ctaPrimary": "Create your workspace",
+    "ctaSecondary": "I already have one",
+    "ctaOpenDashboard": "Open dashboard",
+    "ctaCreateWorkspace": "Create workspace",
+    "signIn": "Sign in",
+    "cards": {
+      "approvals": {
+        "title": "Dynamic Approvals",
+        "body": "Value-based routing across Supervisor → PM → OM → HM → GM with parallel Finance gate."
+      },
+      "margins": {
+        "title": "Real-time Margins",
+        "body": "Direct labor, overtime, and SLA penalties reconciled to a live gross margin."
+      },
+      "ai": {
+        "title": "AI Insights",
+        "body": "Expense impact, resource utilization, client health & SLA-breach predictions."
+      }
+    },
+    "subdomainHint": "Subdomain routing: {tenant}.{root}"
+  },
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "welcomeBackSubtitle": "Sign in to your ControlDesk workspace to continue.",
+    "email": "Email",
+    "password": "Password",
+    "passwordPlaceholder": "Your password",
+    "emailPlaceholder": "you@company.com",
+    "signIn": "Sign in",
+    "sendMagicLink": "Send magic link",
+    "magicLink": "Magic Link",
+    "magicLinkSent": "Magic link sent.",
+    "newToControlDesk": "New to ControlDesk?",
+    "createAccount": "Create an account",
+    "alreadyHaveWorkspace": "Already have a workspace?",
+    "wrongTenant": "You were signed out because your account belongs to a different tenant.",
+    "createWorkspace": "Create a workspace",
+    "createWorkspaceSubtitle": "Spin up a new ControlDesk tenant. You'll be the first Tenant Admin.",
+    "invitationOnly": "Invitation-only workspace",
+    "invitationOnlySubtitle": "Employees are added to the {slug} workspace by an HR or Tenant admin.",
+    "needAccess": "Need access?",
+    "needAccessBody": "Contact your HR admin to receive a workspace invitation.",
+    "alreadyHaveInvite": "Already have an invite?",
+    "tenantPrefix": "Tenant",
+    "workspaceReady": "Workspace \"{slug}\" is ready.",
+    "registerForm": {
+      "workspaceName": "Workspace name",
+      "workspaceNamePlaceholder": "Acme BPO",
+      "workspaceUrl": "Workspace URL",
+      "workspaceUrlPlaceholder": "acme",
+      "fullName": "Your name",
+      "fullNamePlaceholder": "Ada Lovelace",
+      "emailPlaceholderRegister": "ada@acme.com",
+      "passwordMinLength": "At least 8 characters",
+      "submit": "Create workspace"
+    }
+  },
+  "authLayout": {
+    "sideKicker": "Enterprise BPO Operations",
+    "sideHeadline": "One workspace for projects, people, cash, and clients.",
+    "sideBody": "Multi-tenant approvals · Cash advance & petty cash · HRIS · SLA analytics · AI-assisted forecasting."
+  },
+  "nav": {
+    "openUserMenu": "Open user menu",
+    "sections": {
+      "overview": "Overview",
+      "delivery": "Delivery",
+      "finance": "Finance",
+      "people": "People",
+      "analytics": "Analytics",
+      "settings": "Settings",
+      "navigation": "Navigation",
+      "appearance": "Appearance",
+      "session": "Session",
+      "language": "Language"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "insights": "AI Insights",
+      "clients": "Clients",
+      "projects": "Projects",
+      "team": "Team",
+      "handovers": "PM Handovers",
+      "expenses": "Expenses",
+      "cashAdvance": "Cash Advance",
+      "pettyCash": "Petty Cash",
+      "budgets": "Budgets",
+      "approvals": "Approvals",
+      "roster": "Roster",
+      "timesheets": "Timesheets",
+      "leaveOvertime": "Leave & Overtime",
+      "payroll": "Payroll",
+      "reports": "Reports",
+      "archives": "Data Archives",
+      "secrets": "Secret Rotation"
+    },
+    "sidebarFooter": "AI Insights update every 15 min.",
+    "commandPlaceholder": "Search commands, jump to a page…",
+    "theme": {
+      "light": "Light mode",
+      "dark": "Dark mode",
+      "system": "System"
+    },
+    "language": {
+      "label": "Language",
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    }
+  },
+  "topbar": {
+    "breadcrumbDashboard": "Dashboard",
+    "notifications": {
+      "label": "Notifications",
+      "unread": "{count} unread",
+      "empty": "You're all caught up",
+      "emptyBody": "New approvals and mentions will show up here in real time.",
+      "markAllRead": "Mark all as read",
+      "viewAll": "View all",
+      "justNow": "Just now"
+    },
+    "aiInsights": {
+      "ariaLabel": "AI Insights ({count} unread)"
+    }
+  },
+  "dashboard": {
+    "overview": "Overview",
+    "welcome": "Welcome back, {firstName}",
+    "signedInAs": "{role} · Signed in to {tenant}",
+    "updatedAt": "Updated {time}",
+    "kpiSection": "Key performance indicators",
+    "deliveryPulseTitle": "Delivery pulse",
+    "deliveryPulseDescription": "Real-time SLA, roster coverage, and margin data will land here once the Operations module ships (rules §5, §12).",
+    "chartsPlaceholder": "Charts coming soon — Recharts scaffold is in place.",
+    "approvalInboxTitle": "Approval inbox",
+    "approvalInboxDescription": "Value-based dynamic approvals (rules §9) will surface here.",
+    "approvalInboxEmpty": "No pending items — the Approvals engine has not been scaffolded in this skeleton yet.",
+    "kpis": {
+      "activeProjects": "Active Projects",
+      "approvedBudget": "Approved Budget",
+      "milestoneDone": "Milestones Done",
+      "pendingApprovals": "Pending Approvals",
+      "issuesAtRisk": "Issues At Risk"
+    },
+    "portfolio": {
+      "title": "Portfolio snapshot",
+      "subtitle": "Health rings per project — milestone progress vs. budget utilisation.",
+      "empty": "No active projects yet",
+      "emptyBody": "Once a project is created and moved to Active, its milestone progress and budget utilisation will appear here.",
+      "totals": {
+        "activeProjects": "Active projects",
+        "totalPlanned": "Total planned",
+        "totalRealised": "Realised",
+        "totalOutstanding": "Outstanding",
+        "averageProgress": "Average progress"
+      },
+      "ring": {
+        "progress": "Milestone",
+        "budget": "Budget"
+      },
+      "labels": {
+        "client": "Client",
+        "budget": "Budget",
+        "noBudget": "No budget",
+        "planned": "Planned",
+        "realised": "Realised",
+        "outstanding": "Outstanding",
+        "utilisation": "Utilisation",
+        "milestones": "Milestones",
+        "over": "Over budget",
+        "onTrack": "On track"
+      }
+    }
+  },
+  "comingSoon": {
+    "title": "{module} — coming soon",
+    "titleFallback": "Module — coming soon",
+    "body": "This module is scaffolded in the roadmap and will land in a future release. The platform skeleton (auth, tenancy, RLS, shell, RBAC) is already in place.",
+    "backToDashboard": "Back to dashboard"
+  },
+  "clients": {
+    "title": "Clients",
+    "subtitle": "Your tenant's client directory. One client can hold many projects (rules §6).",
+    "kicker": "Directory",
+    "newClient": "New client",
+    "empty": "No clients yet",
+    "emptyBody": "The client directory is empty. Add your first client to start tracking BPO contracts and delivery projects.",
+    "columns": {
+      "name": "Name",
+      "industry": "Industry",
+      "status": "Status",
+      "projects": "Projects",
+      "contact": "Contact",
+      "onboardedAt": "Onboarded"
+    },
+    "status": {
+      "PROSPECT": "Prospect",
+      "ACTIVE": "Active",
+      "ON_HOLD": "On Hold",
+      "CHURNED": "Churned"
+    },
+    "form": {
+      "createTitle": "Add a new client",
+      "createDescription": "Client data will be available to every project and BPO contract in this tenant.",
+      "name": "Client name",
+      "namePlaceholder": "Acme Corporation",
+      "industry": "Industry",
+      "industryPlaceholder": "Banking, Retail, Fintech…",
+      "status": "Status",
+      "contactName": "Contact name",
+      "contactNamePlaceholder": "Ada Lovelace",
+      "contactEmail": "Contact email",
+      "contactPhone": "Phone",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal context, onboarding notes, negotiation points…",
+      "submit": "Create client",
+      "created": "Client \"{name}\" created."
+    },
+    "detail": {
+      "kicker": "Client",
+      "back": "Back to clients",
+      "onboardedOn": "Onboarded on {date}",
+      "activeProjects": "Active projects",
+      "totalProjects": "of {count} total",
+      "activeMrr": "Active MRR",
+      "mrrHint": "Recurring monthly (contracts)",
+      "totalBudget": "Total budget",
+      "totalSpent": "Spent {amount}",
+      "grossMarginProxy": "Gross margin (approx)",
+      "grossMarginNote": "= (MRR × 12 − total spent) / (MRR × 12)",
+      "projectsTitle": "Projects",
+      "projectsEmpty": "No projects yet for this client.",
+      "contractsTitle": "BPO contracts",
+      "contractsEmpty": "No contracts recorded yet.",
+      "notesTitle": "Notes",
+      "code": "Code",
+      "name": "Project",
+      "status": "Status",
+      "budget": "Budget",
+      "managePortalUsers": "Manage portal users"
+    },
+    "portalUsers": {
+      "kicker": "Client · Portal users",
+      "title": "Portal users",
+      "subtitle": "External contacts at {client} who have read-only access to their projects.",
+      "back": "Back to client",
+      "listTitle": "Registered users",
+      "listSubtitle": "Newest first. Only OM+ / TENANT_ADMIN can invite or revoke access.",
+      "empty": "No portal users yet.",
+      "cols": {
+        "name": "Name",
+        "email": "Email",
+        "status": "Status",
+        "lastLogin": "Last sign-in",
+        "actions": "Actions"
+      },
+      "status": {
+        "ACTIVE": "Active",
+        "PENDING_ACTIVATION": "Pending",
+        "DISABLED": "Disabled",
+        "LOCKED": "Locked"
+      },
+      "create": {
+        "cta": "Invite portal user",
+        "title": "Invite portal user",
+        "subtitle": "We'll create the account and generate a one-time password you can share.",
+        "name": "Full name",
+        "email": "Email",
+        "submit": "Create user",
+        "submitting": "Creating…"
+      },
+      "row": {
+        "resetPassword": "Reset password",
+        "resetTitle": "Reset password?",
+        "resetSubtitle": "Rotate the password for {email}. All existing sessions will be revoked.",
+        "confirmReset": "Reset password",
+        "enable": "Enable",
+        "disable": "Disable",
+        "enabled": "Portal user enabled.",
+        "disabled": "Portal user disabled.",
+        "enableTitle": "Enable portal user?",
+        "enableSubtitle": "{email} will be able to sign in again.",
+        "disableTitle": "Disable portal user?",
+        "disableSubtitle": "{email} will be signed out immediately and blocked from signing in.",
+        "confirmEnable": "Enable",
+        "confirmDisable": "Disable",
+        "cancel": "Cancel",
+        "submitting": "Working…"
+      },
+      "events": {
+        "title": "Recent login events",
+        "subtitle": "Last 25 authentication events from portal users at this client. Immutable audit trail (7 year retention).",
+        "empty": "No login events recorded for this client yet.",
+        "tableAriaLabel": "Portal login events",
+        "cols": {
+          "event": "Event",
+          "user": "User",
+          "ip": "IP",
+          "userAgent": "User agent",
+          "when": "When"
+        },
+        "kinds": {
+          "SUCCESS": "Signed in",
+          "FAILURE_UNKNOWN_USER": "Unknown user",
+          "FAILURE_BAD_PASSWORD": "Bad password",
+          "FAILURE_LOCKED": "Account locked",
+          "LOGOUT": "Signed out",
+          "SESSION_EXPIRED": "Session expired"
+        }
+      },
+      "tempPassword": {
+        "warning": "This password will not be shown again. Copy it and share it with the client via a secure channel.",
+        "emailLabel": "Email",
+        "passwordLabel": "Temporary password",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyFailed": "Copy failed — select the password manually.",
+        "done": "Done"
+      }
+    }
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Active delivery projects across all clients. Each project rolls up to a single Primary PM (rules §7).",
+    "kicker": "Delivery",
+    "newProject": "New project",
+    "empty": "No projects yet",
+    "emptyBody": "Add a client first, then create your first project to enable roster, timesheets, and expense approvals.",
+    "columns": {
+      "code": "Code",
+      "name": "Project",
+      "client": "Client",
+      "status": "Status",
+      "budget": "Budget",
+      "startDate": "Start"
+    },
+    "status": {
+      "PLANNING": "Planning",
+      "ACTIVE": "Active",
+      "ON_HOLD": "On Hold",
+      "COMPLETED": "Completed",
+      "ARCHIVED": "Archived"
+    },
+    "form": {
+      "createTitle": "Add a new project",
+      "createDescription": "A project is scoped to a single client and can carry multiple PMs and allocated team members.",
+      "needsClient": "You need at least one client before creating a project.",
+      "client": "Client",
+      "clientPlaceholder": "Pick a client…",
+      "code": "Code",
+      "name": "Project name",
+      "status": "Status",
+      "startDate": "Start",
+      "endDate": "End",
+      "description": "Description",
+      "descriptionPlaceholder": "Scope, service type, notable points…",
+      "submit": "Create project",
+      "created": "Project \"{name}\" created."
+    },
+    "detail": {
+      "kicker": "Project",
+      "back": "Back to projects",
+      "budgetTitle": "Budget",
+      "budgetEmpty": "No budget has been set for this project yet.",
+      "budgetSpent": "Spent",
+      "budgetOf": "of",
+      "budgetUsed": "used",
+      "primaryPmTitle": "Primary PM",
+      "noPrimaryPm": "No Primary PM has been assigned yet.",
+      "since": "Since {date}",
+      "teamTitle": "Team & Allocation",
+      "teamEmpty": "No employees are assigned to this project yet.",
+      "expensesTitle": "Recent expenses",
+      "expensesEmpty": "No expense submissions yet.",
+      "descriptionTitle": "Description"
+    },
+    "directLabor": {
+      "title": "Direct Labor Cost",
+      "subtitle": "Approved hours × hourly rate for {period}. Overtime at 1.5x.",
+      "total": "Total DLC",
+      "baseCost": "Base cost",
+      "overtimeCost": "Overtime cost",
+      "weeklyShare": "Weekly-approved share",
+      "weeklyShareHelp": "{weekly}h from weekly packets vs {daily}h daily-only",
+      "empty": "No approved hours yet for this month.",
+      "weekly": "weekly",
+      "columns": {
+        "employee": "Employee",
+        "hoursWorked": "Hours",
+        "hoursOvertime": "Overtime",
+        "rate": "Rate",
+        "cost": "Cost",
+        "source": "Source"
+      }
+    }
+  },
+  "contracts": {
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "ENDED": "Ended",
+      "RENEWED": "Renewed",
+      "TERMINATED": "Terminated"
+    }
+  },
+  "milestones": {
+    "title": "Milestones",
+    "subtitle": "Project progress rolls up from weighted milestones. Currently {progress}% complete, {used}% of weight budget assigned.",
+    "new": "Add milestone",
+    "empty": "No milestones defined yet. Add one to start tracking progress.",
+    "progressLabel": "Project progress",
+    "weightBudget": "{used}% of 100% assigned · {remaining}% remaining",
+    "columns": {
+      "name": "Milestone",
+      "weight": "Weight",
+      "owner": "Owner",
+      "dueDate": "Due",
+      "status": "Status"
+    },
+    "status": {
+      "PLANNED": "Planned",
+      "IN_PROGRESS": "In progress",
+      "AT_RISK": "At risk",
+      "DONE": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "title": "Add a milestone",
+      "description": "Milestones are weighted deliverables. Together they must sum to 100% of the project. {remaining}% still available.",
+      "seq": "#",
+      "name": "Name",
+      "namePlaceholder": "e.g. Alpha release, UAT sign-off…",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What does this milestone deliver?",
+      "weight": "Weight (%)",
+      "weightHint": "0.00–100.00% · {remaining}% still available",
+      "weightBudgetError": "Only {remaining}% of the weight budget is still available.",
+      "plannedStart": "Planned start",
+      "plannedEnd": "Planned end",
+      "owner": "Owner (optional)",
+      "ownerPlaceholder": "Assign an owner…",
+      "submit": "Add milestone",
+      "created": "Milestone added."
+    },
+    "actions": {
+      "openMenu": "Open milestone actions",
+      "moveTo": "Move to {status}",
+      "delete": "Delete milestone",
+      "noActions": "No actions available",
+      "statusUpdated": "Milestone status updated.",
+      "deleted": "Milestone removed."
+    }
+  },
+  "issues": {
+    "title": "Issues",
+    "subtitle": "{count, plural, =0 {No issues raised yet.} one {# open or historical issue.} other {# issues tracked here.}}",
+    "new": "New issue",
+    "empty": "No issues raised for this project yet.",
+    "tableAria": "Project issues",
+    "columns": {
+      "title": "Title",
+      "severity": "Severity",
+      "status": "Status",
+      "sla": "SLA",
+      "assignee": "Assignee",
+      "created": "Created"
+    },
+    "severity": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low"
+    },
+    "status": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "RESOLVED": "Resolved",
+      "CLOSED": "Closed",
+      "REOPENED": "Reopened"
+    },
+    "sla": {
+      "onTrack": "On track",
+      "atRisk": "{minutes} min left",
+      "breached": "Breached {hours}h"
+    },
+    "form": {
+      "title": "Raise a new issue",
+      "description": "Log a defect, blocker, or risk against this project. Severity drives the business-hours SLA (Critical 1h · High 4h · Medium 8h · Low 24h).",
+      "issueTitle": "Title",
+      "issueTitlePlaceholder": "Login fails after 2 attempts…",
+      "severity": "Severity",
+      "assignee": "Assignee",
+      "assigneeUnassigned": "Assign later…",
+      "descriptionField": "Description",
+      "submit": "Create issue",
+      "createdToast": "Issue raised."
+    },
+    "actions": {
+      "openMenu": "Open issue actions",
+      "transitionTo": "Transition to…",
+      "transitionedToast": "Issue moved to {status}."
+    },
+    "kpi": {
+      "breached": "SLA breached",
+      "atRisk": "At risk",
+      "active": "Active issues"
+    }
+  },
+  "budgetRequests": {
+    "title": "Budget requests",
+    "subtitle": "Mid-cycle changes (Increase / Decrease / Transfer) to this budget. Approved requests are applied to line items atomically.",
+    "new": "New request",
+    "empty": "No budget requests raised yet.",
+    "columns": {
+      "kind": "Kind",
+      "amount": "Amount",
+      "status": "Status",
+      "chain": "Chain",
+      "requester": "Requester",
+      "createdAt": "Created"
+    },
+    "kind": {
+      "INCREASE": "Increase",
+      "DECREASE": "Decrease",
+      "TRANSFER": "Transfer"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_PM": "Awaiting PM",
+      "PENDING_FINANCE": "Awaiting Finance",
+      "PENDING_DIRECTOR": "Awaiting Director",
+      "APPROVED": "Approved",
+      "APPLIED": "Applied",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "title": "Submit budget request",
+      "description": "Route Increase / Decrease / Transfer through the approval chain. Amount drives which approvers must sign off.",
+      "kind": "Request kind",
+      "kindHint": {
+        "INCREASE": "Add funds to a specific line item.",
+        "DECREASE": "Release unspent funds from a specific line item.",
+        "TRANSFER": "Move funds between two line items (net-zero to the budget)."
+      },
+      "amount": "Amount (IDR)",
+      "amountHint": "Whole rupiah, no decimals.",
+      "chainPreview": "Approval chain: {chain}",
+      "sourceLine": "From line item",
+      "targetLine": "To line item",
+      "linePickerPlaceholder": "Pick a line…",
+      "remaining": "remaining",
+      "justification": "Justification",
+      "justificationPlaceholder": "Explain why this change is needed (minimum 20 characters).",
+      "justificationHint": "At least 20 characters — helps the approvers review faster.",
+      "submit": "Submit request",
+      "createdToast": "Budget request submitted for approval."
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "apply": "Apply",
+      "approvedToast": "Budget request approved.",
+      "rejectedToast": "Budget request rejected.",
+      "cancelledToast": "Budget request cancelled.",
+      "appliedToast": "Budget request applied to line items.",
+      "rejectTitle": "Reject budget request",
+      "rejectDescription": "Provide a short reason. The requester will see this in their notification.",
+      "rejectPlaceholder": "Reason for rejection…",
+      "rejectConfirm": "Reject request",
+      "cancelTitle": "Cancel budget request",
+      "cancelDescription": "Withdraw this request. This action cannot be undone.",
+      "cancelPlaceholder": "Optional comment…",
+      "cancelConfirm": "Cancel request"
+    }
+  },
+  "expenses": {
+    "title": "Expenses",
+    "subtitle": "Project reimbursements flow through the tiered approval matrix (rules §9).",
+    "kicker": "Finance",
+    "new": "New submission",
+    "empty": "No expenses submitted yet",
+    "emptyBody": "Submit your first expense to kick off the tiered approval flow.",
+    "columns": {
+      "date": "Date",
+      "project": "Project",
+      "description": "Description",
+      "category": "Category",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "categories": {
+      "TRAVEL": "Travel",
+      "ONSITE_MEAL": "Onsite Meal",
+      "IT_SUPPLIES": "IT Supplies",
+      "SOFTWARE_LICENSE": "Software License",
+      "TRAINING": "Training",
+      "COMMUNICATION": "Communication",
+      "MISC": "Miscellaneous"
+    },
+    "form": {
+      "title": "Submit an expense",
+      "description": "Request a project expense reimbursement. The amount determines which approval chain is required.",
+      "needsProject": "You need an active project before submitting expenses.",
+      "project": "Project",
+      "projectPlaceholder": "Pick a project…",
+      "amount": "Amount (IDR)",
+      "amountHint": "Whole rupiah, no decimals.",
+      "category": "Category",
+      "incurredOn": "Date incurred",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Short summary of the expense…",
+      "receiptUrl": "Receipt URL (optional)",
+      "submit": "Submit for approval",
+      "submitted": "Expense submitted for approval."
+    },
+    "detail": {
+      "back": "Back to list",
+      "kicker": "Expense",
+      "amount": "Amount",
+      "incurredOn": "Incurred on {date}",
+      "submitterTitle": "Submitter",
+      "submittedAt": "Submitted {date}",
+      "openReceipt": "Open receipt",
+      "timelineTitle": "Approval history",
+      "timelineEmpty": "No approval activity yet.",
+      "rejectionReasonTitle": "Rejection reason"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "approveTitle": "Approve this expense?",
+      "approveDescription": "This will advance the expense to the next level in the approval matrix.",
+      "rejectTitle": "Reject this expense?",
+      "rejectDescription": "Rejected expenses cannot be re-opened. Provide a clear rationale.",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Note for auditors…",
+      "reason": "Rejection reason",
+      "reasonPlaceholder": "Explain the reason for rejection…",
+      "confirmApprove": "Confirm & approve",
+      "confirmReject": "Confirm reject",
+      "approvedToast": "Expense approved.",
+      "rejectedToast": "Expense rejected."
+    }
+  },
+  "budgets": {
+    "kicker": "Finance",
+    "title": "Budgets",
+    "subtitle": "Project budgets per fiscal year. Route to Finance and Director for approval (rules §9.2).",
+    "new": "New budget",
+    "empty": "No budgets drafted yet",
+    "emptyBody": "Draft your first project budget to unlock cash-flow forecasting and approval routing.",
+    "columns": {
+      "fiscalYear": "FY",
+      "project": "Project",
+      "title": "Title",
+      "totalPlanned": "Planned",
+      "status": "Status",
+      "createdAt": "Created"
+    },
+    "categories": {
+      "DIRECT_LABOUR": "Direct labour",
+      "SUBCONTRACTOR": "Subcontractor",
+      "INFRASTRUCTURE": "Infrastructure",
+      "TOOLING": "Tooling",
+      "TRAVEL": "Travel",
+      "TRAINING": "Training",
+      "MARKETING": "Marketing",
+      "OPERATIONS": "Operations",
+      "CONTINGENCY": "Contingency",
+      "OTHER": "Other"
+    },
+    "form": {
+      "title": "Create budget",
+      "description": "Header info only. Add line items after the budget is created.",
+      "needsProject": "Create or activate a project before drafting a budget.",
+      "project": "Project",
+      "projectPlaceholder": "Pick a project…",
+      "fiscalYear": "Fiscal year",
+      "titleField": "Title",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Context or assumptions for reviewers…",
+      "submit": "Create budget",
+      "created": "Budget draft created."
+    },
+    "lineItems": {
+      "addRow": "Add line item",
+      "seq": "#",
+      "category": "Category",
+      "plannedAmount": "Planned (IDR)",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "What does this line pay for?",
+      "cancel": "Cancel",
+      "save": "Save",
+      "added": "Line item added.",
+      "deleted": "Line item removed.",
+      "delete": "Delete line item"
+    },
+    "detail": {
+      "back": "Back to budgets",
+      "kicker": "Budget",
+      "awaiting": "Awaiting approval from {slot}.",
+      "totalPlanned": "Total planned",
+      "totalRealized": "Realized",
+      "totalOutstanding": "Outstanding",
+      "totalRemaining": "Remaining",
+      "utilizationTitle": "Utilization",
+      "utilizationSubtitle": "{percent}% of planned budget committed (realized + outstanding).",
+      "lineItemsTitle": "Line items",
+      "lineItemsSubtitle": "Planned vs realized vs outstanding. Remaining is auto-computed.",
+      "noLineItems": "No line items yet. Add at least one before submitting.",
+      "columns": {
+        "category": "Category",
+        "description": "Description",
+        "planned": "Planned",
+        "realized": "Realized",
+        "outstanding": "Outstanding",
+        "remaining": "Remaining"
+      },
+      "metadataTitle": "Metadata",
+      "createdBy": "Created by",
+      "createdAt": "Created at",
+      "approvedBy": "Approved by",
+      "approvedAt": "Approved at",
+      "notes": "Notes"
+    },
+    "actions": {
+      "submit": "Submit for approval",
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancelBudget": "Cancel budget",
+      "cancel": "Cancel",
+      "approveTitle": "Approve this budget?",
+      "approveDescription": "Advances the budget to the next approver (or finalizes it if no further slot).",
+      "rejectTitle": "Reject this budget?",
+      "rejectDescription": "Sends the budget back to CANCELLED with your reason recorded in the audit trail.",
+      "cancelTitle": "Cancel this budget?",
+      "cancelDescription": "Only the submitter (or ADMIN) can cancel a budget while it's still open.",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Add context for the next approver…",
+      "reason": "Reason",
+      "reasonPlaceholder": "Explain the reason for rejection…",
+      "cancelReason": "Reason (optional)",
+      "cancelReasonPlaceholder": "Why cancel?",
+      "confirmApprove": "Confirm & approve",
+      "confirmReject": "Confirm reject",
+      "confirmCancel": "Confirm cancel",
+      "submittedToast": "Budget submitted for approval.",
+      "approvedToast": "Budget approved.",
+      "rejectedToast": "Budget rejected.",
+      "cancelledToast": "Budget cancelled."
+    }
+  },
+  "hrRequests": {
+    "kicker": "HRIS",
+    "title": "Leave, overtime & sick",
+    "subtitle": "HRIS requests routed via Supervisor → PM → OM → HR Admin (SICK skips PM/OM to HR).",
+    "new": "New request",
+    "empty": "No HR requests yet",
+    "emptyBody": "File your first leave, overtime, or sick request to trigger the approval chain.",
+    "columns": {
+      "kind": "Kind",
+      "requester": "Requester",
+      "window": "Window",
+      "reason": "Reason",
+      "status": "Status",
+      "chain": "Chain"
+    },
+    "kinds": {
+      "LEAVE": "Leave",
+      "OVERTIME": "Overtime",
+      "SICK": "Sick"
+    },
+    "leaveTypes": {
+      "ANNUAL": "Annual leave",
+      "UNPAID": "Unpaid leave",
+      "MATERNITY": "Maternity leave",
+      "PATERNITY": "Paternity leave",
+      "BEREAVEMENT": "Bereavement leave",
+      "MARRIAGE": "Marriage leave",
+      "OTHER": "Other"
+    },
+    "form": {
+      "title": "New HR request",
+      "description": "Submit a leave, overtime, or sick request. Sick requests require a doctor's note.",
+      "submitted": "Request submitted for approval.",
+      "kind": "Kind",
+      "leaveType": "Leave type",
+      "startAt": "Start",
+      "endAt": "End",
+      "hoursEstimate": "Hours (est.)",
+      "reason": "Reason",
+      "reasonPlaceholder": "Short justification…",
+      "doctorNote": "Doctor's note (URL)",
+      "attachment": "Attachment URL (optional)",
+      "submit": "Submit request"
+    },
+    "detail": {
+      "kicker": "Request",
+      "back": "Back to requests",
+      "window": "Window",
+      "hours": "{hours} hours",
+      "requesterTitle": "Requester",
+      "submittedAt": "Submitted {date}",
+      "openAttachment": "Open attachment",
+      "approvalChainTitle": "Approval chain",
+      "timelineTitle": "Approval timeline",
+      "timelineEmpty": "No approval activity yet.",
+      "rejectionReasonTitle": "Rejection reason"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "approveTitle": "Approve this request?",
+      "approveDescription": "This will advance to the next role in the approval chain.",
+      "rejectTitle": "Reject this request?",
+      "rejectDescription": "Rejected requests cannot be re-opened.",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Note for auditors…",
+      "reason": "Rejection reason",
+      "reasonPlaceholder": "Explain the reason for rejection…",
+      "confirmApprove": "Confirm & approve",
+      "confirmReject": "Confirm reject",
+      "approvedToast": "Request approved.",
+      "rejectedToast": "Request rejected."
+    }
+  },
+  "cashAdvances": {
+    "kicker": "Finance",
+    "title": "Cash advances",
+    "subtitle": "Cash advances (uang muka kerja) with the same value-based approval chain as expenses.",
+    "new": "New request",
+    "empty": "No cash advances yet",
+    "emptyBody": "File your first cash advance request to trigger the approval chain.",
+    "columns": {
+      "project": "Project",
+      "requester": "Requester",
+      "purpose": "Purpose",
+      "amount": "Amount",
+      "neededBy": "Needed by",
+      "status": "Status",
+      "type": "Type"
+    },
+    "form": {
+      "title": "New cash advance",
+      "description": "Request an operational cash advance. Type and amount drive the approval chain.",
+      "needsProject": "You need at least one active project assignment to request an advance.",
+      "type": "Type",
+      "project": "Project",
+      "projectPlaceholder": "Pick a project…",
+      "amount": "Amount (IDR)",
+      "amountHint": "Whole rupiah, no decimals.",
+      "neededBy": "Needed by",
+      "purposeLabel": "Purpose",
+      "purposePlaceholder": "What is the advance for?…",
+      "chainPreviewTitle": "Approval chain",
+      "chainPreviewEmpty": "Enter an amount to preview approvers.",
+      "chainPreviewAuto": "Instant approval (below thresholds).",
+      "submit": "Submit for approval",
+      "submitted": "Cash advance submitted."
+    },
+    "chainSlot": {
+      "SUPERVISOR": "Supervisor",
+      "PM": "Project Manager",
+      "OM": "Operations Manager",
+      "FINANCE": "Finance",
+      "DIRECTOR": "Director"
+    },
+    "detail": {
+      "kicker": "Cash advance",
+      "back": "Back to list",
+      "amount": "Amount",
+      "neededBy": "Needed by {date}",
+      "requesterTitle": "Requester",
+      "submittedAt": "Submitted {date}",
+      "timelineTitle": "Approval timeline",
+      "timelineEmpty": "No approval activity yet.",
+      "chainTitle": "Approval chain (based on amount)",
+      "chainEmpty": "Instant approval — no approvers required.",
+      "settlementsTitle": "Settlements",
+      "settlementsEmpty": "No settlements submitted yet.",
+      "returnedReason": "Returned: {reason}",
+      "netSettlementTitle": "Net settlement",
+      "netRefund": "Employee to refund the difference back to company cash.",
+      "netTopUp": "Company owes employee a top-up.",
+      "netZero": "Fully reconciled.",
+      "rejectionReasonTitle": "Rejection reason",
+      "type": {
+        "GENERAL": "General",
+        "FIELD_OPS": "Field ops"
+      }
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "disburse": "Disburse",
+      "cancel": "Cancel",
+      "approveTitle": "Approve this cash advance?",
+      "approveDescription": "This will advance to the next level in the approval chain.",
+      "rejectTitle": "Reject this cash advance?",
+      "rejectDescription": "Rejected requests cannot be re-opened.",
+      "disburseTitle": "Disburse funds?",
+      "disburseDescription": "Record the disbursement reference and release funds to the requester.",
+      "disbursementRef": "Disbursement reference",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Note for auditors…",
+      "reason": "Rejection reason",
+      "reasonPlaceholder": "Explain the reason for rejection…",
+      "confirmApprove": "Confirm & approve",
+      "confirmReject": "Confirm reject",
+      "confirmDisburse": "Confirm disburse",
+      "approvedToast": "Cash advance approved.",
+      "rejectedToast": "Cash advance rejected.",
+      "disbursedToast": "Cash advance disbursed."
+    },
+    "settlement": {
+      "submit": "Submit settlement",
+      "submitTitle": "Submit settlement",
+      "submitDescription": "Upload nota/struk totals so Finance can reconcile the advance.",
+      "totalSpent": "Total spent (IDR)",
+      "notes": "Notes (optional)",
+      "confirmSubmit": "Submit",
+      "submitted": "Settlement submitted.",
+      "review": {
+        "accept": "Accept",
+        "acceptTitle": "Accept settlement?",
+        "acceptDescription": "The cash advance will move to SETTLED and post to the project budget.",
+        "confirmAccept": "Confirm accept",
+        "acceptedToast": "Settlement accepted.",
+        "return": "Return",
+        "returnTitle": "Return settlement?",
+        "returnDescription": "The requester can edit attachments and resubmit.",
+        "reason": "Return reason",
+        "reasonPlaceholder": "Explain what needs revising…",
+        "confirmReturn": "Confirm return",
+        "returnedToast": "Settlement returned to requester."
+      }
+    },
+    "types": {
+      "general": "General",
+      "generalHint": "Any project member may request. Approval: PM (≥ IDR 2M) → Finance → Director (≥ IDR 20M).",
+      "fieldOps": "Field ops",
+      "fieldOpsHint": "Supervisor-initiated for field visits. Approval always starts at Supervisor; escalates to PM / OM / Director based on amount."
+    },
+    "canonicalStatus": {
+      "DRAFT": "Draft",
+      "PENDING_SUPERVISOR": "Pending · Supervisor",
+      "PENDING_PM": "Pending · Project Manager",
+      "PENDING_OM": "Pending · Operations Manager",
+      "PENDING_FINANCE": "Pending · Finance",
+      "PENDING_DIRECTOR": "Pending · Director",
+      "APPROVED": "Awaiting disbursement",
+      "DISBURSED": "Disbursed · awaiting settlement",
+      "SETTLED": "Settled",
+      "REJECTED": "Rejected",
+      "CANCELLED": "Cancelled"
+    }
+  },
+  "pettyCash": {
+    "kicker": "Finance",
+    "title": "Petty cash",
+    "subtitle": "Imprest funds per location. Vouchers below Rp 1.000.000 · replenishments via Lead Finance.",
+    "newFund": "New fund",
+    "newVoucher": "New voucher",
+    "empty": "No petty cash funds",
+    "emptyBody": "Create your first imprest fund per site to start recording vouchers.",
+    "belowMinBadge": "Below min",
+    "balance": "Balance",
+    "ofImprest": "of {amount} imprest",
+    "categories": {
+      "SUPPLIES": "Supplies",
+      "REFRESHMENT": "Refreshment",
+      "TRANSPORT": "Transport",
+      "PARKING": "Parking",
+      "COURIER": "Courier",
+      "MISC": "Miscellaneous"
+    },
+    "fundForm": {
+      "title": "New petty cash fund",
+      "description": "Set the imprest ceiling, minimum balance, and assign a custodian.",
+      "needsCustodian": "You need at least one PETTY_CASH_CUSTODIAN or LEAD_FINANCE user.",
+      "location": "Location / branch",
+      "locationPlaceholder": "Jakarta HQ",
+      "custodian": "Custodian",
+      "custodianPlaceholder": "Pick a custodian…",
+      "imprest": "Imprest (IDR)",
+      "minBalance": "Min balance",
+      "openingBalance": "Opening balance",
+      "openingBalanceHint": "Defaults to imprest if left blank",
+      "submit": "Create fund",
+      "created": "Fund created."
+    },
+    "voucherForm": {
+      "title": "New petty cash voucher",
+      "description": "Record a spend against the fund. Max Rp 999.999.",
+      "amount": "Amount (IDR)",
+      "amountHint": "< Rp 1.000.000 per voucher",
+      "category": "Category",
+      "incurredOn": "Date",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Short note about the purchase…",
+      "receiptUrl": "Receipt URL (optional)",
+      "submit": "Record voucher",
+      "recorded": "Voucher recorded."
+    },
+    "detail": {
+      "kicker": "Fund",
+      "back": "Back to funds",
+      "balanceTitle": "Balance",
+      "ofImprest": "Imprest {amount}",
+      "minBalanceLabel": "Minimum balance {amount}",
+      "belowMin": "Below minimum threshold",
+      "vouchersTitle": "Recent vouchers",
+      "vouchersEmpty": "No vouchers recorded.",
+      "replenishmentsTitle": "Replenishment requests",
+      "replenishmentsEmpty": "No replenishments requested.",
+      "cols": {
+        "date": "Date",
+        "category": "Category",
+        "description": "Description",
+        "amount": "Amount",
+        "status": "Status"
+      }
+    },
+    "replenishment": {
+      "open": "Request top-up",
+      "title": "Request replenishment",
+      "description": "Ask Lead Finance to top up the fund back to the imprest ceiling.",
+      "amount": "Amount (IDR)",
+      "reason": "Reason (optional)",
+      "confirm": "Send request",
+      "submitted": "Replenishment request submitted.",
+      "actions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "disburse": "Disburse",
+        "cancel": "Cancel",
+        "approveTitle": "Approve replenishment?",
+        "approveDescription": "This will unlock disbursement by Lead Finance.",
+        "rejectTitle": "Reject replenishment?",
+        "rejectDescription": "Rejected requests cannot be re-opened.",
+        "disburseTitle": "Disburse replenishment?",
+        "disburseDescription": "Enter a disbursement reference to credit the fund.",
+        "disbursementRef": "Disbursement reference",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Note for auditors…",
+        "reason": "Rejection reason",
+        "confirmApprove": "Confirm approve",
+        "confirmReject": "Confirm reject",
+        "confirmDisburse": "Confirm disburse",
+        "approvedToast": "Replenishment approved.",
+        "rejectedToast": "Replenishment rejected.",
+        "disbursedToast": "Replenishment disbursed."
+      }
+    }
+  },
+  "settings": {
+    "secrets": {
+      "kicker": "Ops · Rotation",
+      "title": "Infrastructure Secret Rotation",
+      "description": "Every long-lived secret must rotate on a 90-day cadence (rules §22). This page tracks `last_rotated_at` per credential and flags OVERDUE when the window closes. Cron `/api/cron/rotation-check` runs every Monday morning (WIB).",
+      "back": "Back to Dashboard",
+      "registryTitle": "Rotation registry",
+      "registryDescription": "{count} secrets tracked.",
+      "empty": "No secrets registered. Run migration 0018_secret_rotations.sql.",
+      "tableAriaLabel": "Secret rotation registry",
+      "colName": "Name",
+      "colPriority": "Priority",
+      "colSeverity": "Status",
+      "colDaysUntil": "Days until due",
+      "colRotatedAt": "Last rotated",
+      "colActions": "Actions",
+      "daysLeft": "{count} day(s) left",
+      "daysOverdue": "{count} day(s) overdue",
+      "interval": "{days}-day interval",
+      "agoDays": "{count} day(s) ago",
+      "summary": {
+        "overdue": "Overdue",
+        "warn": "Warning",
+        "ok": "Healthy"
+      },
+      "actions": {
+        "markRotated": "Mark rotated",
+        "markRotatedTitle": "Mark {name} as rotated?",
+        "markRotatedDescription": "This sets `last_rotated_at = now()` and records you as `last_rotated_by`. Only do this after the new credential is live in every environment.",
+        "notesLabel": "Notes (optional)",
+        "notesPlaceholder": "e.g. ticket number, maintenance window, buddy engineer",
+        "confirmMarkRotated": "Confirm rotation",
+        "markSuccess": "{name} marked as freshly rotated.",
+        "markFailed": "Failed to mark as rotated."
+      }
+    },
+    "archives": {
+      "kicker": "Ops · Retention",
+      "title": "Cold-Storage Archives",
+      "description": "Registry of gzip'd NDJSON archives held in the `tenant-archives` bucket. Financial data has a 10-year retention (rules §22); after 2 years it is exported to cold storage. Source rows are only purged after a successful checksum verification.",
+      "back": "Back to Dashboard",
+      "registryTitle": "Archive registry",
+      "registryDescription": "{count} batches recorded for this tenant.",
+      "empty": "No batches archived yet. The `/api/cron/archive` job runs weekly on Sunday night (UTC).",
+      "tableAriaLabel": "Cold-storage archive registry",
+      "colSource": "Source",
+      "colYear": "Batch year",
+      "colRows": "Rows",
+      "colBytes": "Size",
+      "colStatus": "Status",
+      "colChecksum": "Checksum",
+      "colVerified": "Verified",
+      "colActions": "Actions",
+      "purgedRowCount": "{count} source rows purged",
+      "purgedAt": "Purged {date}",
+      "actions": {
+        "download": "Download",
+        "verify": "Verify",
+        "downloadStarted": "Signed URL opened. Expires in 5 min.",
+        "downloadFailed": "Failed to mint download URL.",
+        "verifySuccess": "Checksum matches ({checksum}…). Marked RESTORED.",
+        "verifyFailed": "Checksum verification failed."
+      }
+    }
+  },
+  "insights": {
+    "kicker": "AI",
+    "title": "AI Insights",
+    "subtitle": "Tenant-scoped, PII-redacted AI signals for gross margin, resource utilisation, client health, and SLA risk.",
+    "noRunYet": "No insight generated yet. Click Run to trigger a fresh analysis.",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "meta": {
+      "model": "Model",
+      "tokens": "Tokens in/out",
+      "latency": "Latency",
+      "generatedAt": "Generated {date}"
+    },
+    "actions": {
+      "runAll": "Run all insights",
+      "runThis": "Run",
+      "runAllOk": "Generated {count} fresh insights.",
+      "partialSuccess": "{ok} succeeded, {fail} failed.",
+      "ranOne": "Insight refreshed."
+    },
+    "kinds": {
+      "PREDICT_EXPENSE_IMPACT": {
+        "title": "Expense impact",
+        "description": "Effect of pending expenses on project gross margin.",
+        "empty": "Not yet generated"
+      },
+      "ANALYZE_RESOURCE_UTILIZATION": {
+        "title": "Resource utilisation",
+        "description": "PM load + employee allocation over/under-utilisation.",
+        "empty": "Not yet generated"
+      },
+      "ANALYZE_CLIENT_HEALTH": {
+        "title": "Client health",
+        "description": "Health score per client using contract + project signals.",
+        "empty": "Not yet generated"
+      },
+      "ANALYZE_SLA_BREACH": {
+        "title": "SLA breach risk",
+        "description": "24-48h SLA breach forecast + preventive actions.",
+        "empty": "Not yet generated"
+      }
+    }
+  },
+  "handovers": {
+    "kicker": "Delivery",
+    "title": "PM handovers",
+    "subtitle": "Transition Primary PM assignment across projects. Requires OM + HM approval, then atomic execution.",
+    "empty": "No PM handovers filed",
+    "emptyBody": "Initiate the first handover to formally transfer ownership of a project.",
+    "columns": {
+      "project": "Project",
+      "from": "Outgoing PM",
+      "to": "Incoming PM",
+      "effectiveAt": "Effective",
+      "status": "Status"
+    },
+    "form": {
+      "new": "New handover",
+      "title": "New PM handover",
+      "description": "Fill in the transition details. Approval chain: OM → HM → Execute.",
+      "needsPrereqs": "You need at least one active project and two Project Manager employees.",
+      "project": "Project",
+      "projectPlaceholder": "Pick a project…",
+      "fromPm": "Outgoing PM",
+      "fromPmPlaceholder": "Pick outgoing PM…",
+      "toPm": "Incoming PM",
+      "toPmPlaceholder": "Pick incoming PM…",
+      "effectiveAt": "Effective at",
+      "reason": "Reason",
+      "reasonPlaceholder": "Rationale for handover…",
+      "notes": "Handover notes",
+      "notesPlaceholder": "Context, open items, pending approvals to be aware of…",
+      "cancel": "Cancel",
+      "submit": "Submit for approval",
+      "submitted": "Handover submitted."
+    },
+    "detail": {
+      "kicker": "Handover",
+      "back": "Back to handovers",
+      "effectiveAt": "Effective {date}",
+      "transferTitle": "Transition",
+      "transferDescription": "Assignment moves from the outgoing PM to the incoming PM on execution.",
+      "fromPm": "Outgoing PM",
+      "toPm": "Incoming PM",
+      "reason": "Reason",
+      "notes": "Handover notes",
+      "initiatedBy": "Initiated by {name} ({role}) · {date}",
+      "timelineTitle": "Approval timeline",
+      "timelineEmpty": "No approval activity yet.",
+      "rejectionReasonTitle": "Rejection reason"
+    },
+    "actions": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "cancel": "Cancel",
+      "execute": "Execute now",
+      "approveTitle": "Approve this handover?",
+      "approveDescription": "Advances to the next role in the approval chain.",
+      "rejectTitle": "Reject this handover?",
+      "rejectDescription": "Rejected handovers cannot be re-opened.",
+      "executeTitle": "Execute handover?",
+      "executeDescription": "This will atomically transfer the Primary PM assignment and end the outgoing PM's active assignment.",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Note for auditors…",
+      "reason": "Rejection reason",
+      "reasonPlaceholder": "Explain the reason for rejection…",
+      "confirmApprove": "Confirm & approve",
+      "confirmReject": "Confirm reject",
+      "confirmExecute": "Confirm execute",
+      "approvedToast": "Handover approved.",
+      "rejectedToast": "Handover rejected.",
+      "executedToast": "Handover executed. Assignment transferred."
+    }
+  },
+  "approvals": {
+    "kicker": "Inbox",
+    "title": "Approvals — {role}",
+    "subtitle": "Approval queue for your role. Click any item to open the details and take action.",
+    "empty": "Approvals inbox is empty",
+    "emptyBody": "You have nothing pending review right now.",
+    "noRoleTitle": "Your role isn't an approver",
+    "noRoleBody": "Only Supervisor, PM, OM, Finance, Director, and Admin surface in the approvals inbox.",
+    "submittedBy": "by {name} ({role})",
+    "amount": "Amount",
+    "weeklyTotals": "Weekly totals",
+    "sections": {
+      "expenses": "Expenses",
+      "cashAdvances": "Cash advances",
+      "hrRequests": "HR requests",
+      "pettyCash": "Petty cash replenishments",
+      "budgets": "Budgets",
+      "budgetRequests": "Budget requests",
+      "weeklyTimesheets": "Weekly timesheets"
+    }
+  },
+  "roster": {
+    "kicker": "HR",
+    "title": "Shift roster",
+    "subtitle": "Daily shift plan per employee — source of truth for timesheets and real-time gross margin.",
+    "empty": "No roster entries yet",
+    "emptyBody": "Create your first entry to start scheduling shifts.",
+    "columns": {
+      "date": "Date",
+      "employee": "Employee",
+      "shift": "Shift",
+      "project": "Project",
+      "status": "Status"
+    },
+    "statuses": {
+      "PLANNED": "Planned",
+      "LEAVE": "On leave",
+      "SICK": "Sick",
+      "OFF": "Off"
+    },
+    "actions": {
+      "new": "Add entry"
+    },
+    "form": {
+      "title": "Create / update roster entry",
+      "description": "One entry per (employee, date). Conflicts are updated in place.",
+      "employee": "Employee",
+      "shift": "Shift",
+      "project": "Project",
+      "workDate": "Work date",
+      "status": "Status",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Additional notes…",
+      "unassigned": "— Unassigned —",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "successToast": "Roster entry saved.",
+      "errorToast": "Failed to save roster entry."
+    }
+  },
+  "timesheets": {
+    "kicker": "HR",
+    "title": "Timesheets",
+    "subtitle": "Actual hours worked per day. Feeds direct labour cost and payroll.",
+    "empty": "No timesheets yet",
+    "emptyBody": "Submit your first timesheet to start the approval and payroll flow.",
+    "columns": {
+      "date": "Date",
+      "employee": "Employee",
+      "project": "Project",
+      "hours": "Hours",
+      "overtime": "Overtime",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "actions": {
+      "new": "Submit timesheet",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveTitle": "Approve timesheet?",
+      "approveDescription": "Once approved, these hours enter payroll aggregation.",
+      "rejectTitle": "Reject timesheet?",
+      "rejectDescription": "The employee can edit and resubmit.",
+      "comment": "Comment (optional)",
+      "commentPlaceholder": "Notes for auditors…",
+      "reason": "Rejection reason",
+      "reasonPlaceholder": "Explain the reason…",
+      "confirmApprove": "Confirm approve",
+      "confirmReject": "Confirm reject",
+      "approvedToast": "Timesheet approved.",
+      "rejectedToast": "Timesheet rejected."
+    },
+    "form": {
+      "title": "Submit timesheet",
+      "description": "Enter actual hours. You can edit while status is Draft or Rejected.",
+      "employee": "Employee",
+      "project": "Project",
+      "workDate": "Work date",
+      "hoursWorked": "Hours worked",
+      "hoursOvertime": "Overtime hours",
+      "notes": "Notes (optional)",
+      "notesPlaceholder": "Additional notes…",
+      "unassigned": "— Unassigned —",
+      "cancel": "Cancel",
+      "submit": "Submit",
+      "submitting": "Submitting…",
+      "successToast": "Timesheet submitted.",
+      "errorToast": "Failed to submit timesheet."
+    },
+    "weekly": {
+      "viewLink": "Weekly view",
+      "dailyView": "Daily view",
+      "title": "Weekly timesheets",
+      "subtitle": "Submit a full week (Mon-Sun) in one packet. Your PM approves the packet as a unit.",
+      "empty": "No weekly packets yet",
+      "emptyBody": "Fill in your current week to trigger PM approval.",
+      "open": "Open",
+      "newForCurrentWeek": "Fill week of {week}",
+      "columns": {
+        "week": "Week",
+        "employee": "Employee",
+        "hours": "Hours",
+        "overtime": "Overtime",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "editor": {
+        "title": "Week {start} → {end}",
+        "subtitle": "Enter hours per day. Submit to route the whole week to your PM for approval.",
+        "back": "Back to weekly list",
+        "day": "Day",
+        "project": "Project",
+        "hours": "Hours",
+        "overtime": "Overtime",
+        "notes": "Notes",
+        "totals": "Totals",
+        "unassigned": "— Unassigned —",
+        "dayNotesPlaceholder": "Notes for the day…",
+        "notesPlaceholder": "Weekly notes for the reviewer…",
+        "submit": "Submit week for approval",
+        "submitting": "Submitting…",
+        "submittedToast": "Weekly packet submitted for approval.",
+        "errorToast": "Failed to submit weekly packet.",
+        "rejectionTitle": "Rejected — please revise",
+        "timelineTitle": "Approval history"
+      },
+      "actions": {
+        "approve": "Approve week",
+        "reject": "Reject week",
+        "approveTitle": "Approve weekly packet?",
+        "approveDescription": "Approves the whole week (all daily rows). Hours will enter payroll aggregation.",
+        "rejectTitle": "Reject weekly packet?",
+        "rejectDescription": "The employee can edit and resubmit. Include a specific reason.",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Notes for auditors…",
+        "reason": "Rejection reason",
+        "reasonPlaceholder": "Explain what needs fixing…",
+        "confirmApprove": "Confirm approve",
+        "confirmReject": "Confirm reject",
+        "approvedToast": "Weekly packet approved.",
+        "rejectedToast": "Weekly packet rejected."
+      }
+    }
+  },
+  "payroll": {
+    "kicker": "HR + Finance",
+    "title": "Payroll",
+    "subtitle": "Monthly aggregation of salary, overtime, and shift allowance per employee.",
+    "empty": "No payroll periods yet",
+    "emptyBody": "Click the generate button to process the current period.",
+    "columns": {
+      "employee": "Employee",
+      "hours": "Hours",
+      "overtime": "Overtime",
+      "base": "Base salary",
+      "overtimePay": "Overtime pay",
+      "allowance": "Shift allowance",
+      "gross": "Gross",
+      "net": "Net"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "FINALIZED": "Finalized"
+    },
+    "period": {
+      "summary": "{count} employees · gross {gross} · net {net}"
+    },
+    "weeklyShareBadge": "{pct}% weekly",
+    "weeklyShareTooltip": "{weekly}h from approved weekly packets · {daily}h daily-only",
+    "actions": {
+      "generate": "Generate {month} {year}",
+      "generating": "Processing…",
+      "generateSuccess": "Payroll period processed.",
+      "generateError": "Failed to process payroll.",
+      "finalize": "Finalize",
+      "finalizeSuccess": "Period finalized.",
+      "finalizeError": "Failed to finalize period."
+    }
+  },
+  "portal": {
+    "brand": "ControlDesk Portal",
+    "workspacePrefix": "Workspace",
+    "signOut": "Sign out",
+    "footer": "Read-only client portal · Powered by ControlDesk",
+    "projectStatus": {
+      "PLANNING": "Planning",
+      "ACTIVE": "Active",
+      "ON_HOLD": "On hold",
+      "COMPLETED": "Completed",
+      "ARCHIVED": "Archived"
+    },
+    "changePassword": {
+      "kicker": "Client portal",
+      "title": "Change your password",
+      "subtitle": "Signed in as {email}. Please set a permanent password to continue.",
+      "cardTitle": "Set a new password",
+      "cardSubtitle": "This is required on first sign-in and after an admin has reset your password.",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "policyHint": "At least 10 characters, with letters and digits. Must differ from your current password.",
+      "submit": "Update password",
+      "submitting": "Updating…",
+      "successToast": "Password updated. Welcome to the portal."
+    },
+    "login": {
+      "title": "Client portal sign in",
+      "subtitle": "Use the credentials your account manager provided.",
+      "email": "Email",
+      "emailPlaceholder": "you@company.com",
+      "emailRequired": "Email is required.",
+      "password": "Password",
+      "passwordPlaceholder": "Your password",
+      "passwordRequired": "Password is required.",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "successToast": "Welcome back."
+    },
+    "dashboard": {
+      "kicker": "Client portal",
+      "title": "Hello, {client}",
+      "subtitle": "Live status of every project we're delivering for you.",
+      "kpi": {
+        "totalProjects": "Total projects",
+        "activeProjects": "Active projects",
+        "avgProgress": "Average progress"
+      },
+      "projectsSection": {
+        "title": "Recent projects",
+        "subtitle": "The six most recently started deliveries.",
+        "viewAll": "View all",
+        "empty": "No projects assigned yet."
+      }
+    },
+    "projectList": {
+      "kicker": "Client portal",
+      "title": "Projects",
+      "subtitle": "All projects assigned to {client}.",
+      "empty": "No projects yet",
+      "emptyBody": "When we open a new project for you, it will appear here."
+    },
+    "projectDetail": {
+      "kicker": "Client portal · Project",
+      "backToList": "Back to projects",
+      "summary": {
+        "title": "Summary",
+        "progress": "Overall progress",
+        "startDate": "Start",
+        "endDate": "End",
+        "contractType": "Contract type"
+      },
+      "milestones": {
+        "title": "Milestone timeline",
+        "subtitle": "Weight-based deliverables. Percentages reflect each milestone's contribution to overall progress.",
+        "empty": "No milestones defined yet."
+      }
+    },
+    "milestoneStatus": {
+      "PLANNED": "Planned",
+      "IN_PROGRESS": "In progress",
+      "AT_RISK": "At risk",
+      "DONE": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "notifications": {
+      "kicker": "Client portal · Notifications",
+      "title": "Notifications",
+      "subtitle": "Updates about {client}'s projects and milestones.",
+      "empty": "You're all caught up",
+      "emptyBody": "New milestone updates and announcements will appear here.",
+      "unreadBadge": "Unread",
+      "markRead": "Mark read",
+      "markAllRead": "Mark all as read ({count})",
+      "bellLabel": "Notifications",
+      "bellLabelWithCount": "{count} unread notifications"
+    },
+    "notificationKind": {
+      "MILESTONE_UPDATE": "Milestone",
+      "PROJECT_UPDATE": "Project",
+      "ANNOUNCEMENT": "Announcement",
+      "SYSTEM": "System"
+    },
+    "projectFinance": {
+      "title": "Financials",
+      "subtitle": "Budget utilization and active contracts that cover this engagement.",
+      "budget": {
+        "utilization": "Budget utilization",
+        "utilizationPct": "{pct}% used",
+        "allocated": "Allocated",
+        "spent": "Spent to date",
+        "remaining": "Remaining",
+        "empty": "No budget has been assigned to this project yet."
+      },
+      "contracts": {
+        "title": "Related contracts",
+        "empty": "No active contracts overlap this project.",
+        "mrr": "MRR",
+        "active": "Active",
+        "draft": "Draft"
+      },
+      "privacyFootnote": "Individual cost items are not shared. Totals are updated whenever an approved settlement lands."
+    }
+  }
+}

@@ -1,0 +1,41 @@
+# ControlDesk code ownership map.
+#
+# Replace `@controldesk-eng` and the surface-specific teams with the
+# actual GitHub team slugs before merging to `main`. GitHub validates
+# CODEOWNERS on push — invalid entries silently disable the file, so
+# check the "Rules" tab under the repo's settings after any edit.
+#
+# Precedence: last matching pattern wins. Broad-scope entries go first,
+# narrow overrides at the bottom.
+
+# --- Global default -----------------------------------------------------
+*                                             @controldesk-eng
+
+# --- Security-sensitive infrastructure (rules §3 / §22) ----------------
+/.github/workflows/                           @controldesk-eng @controldesk-devops
+/Dockerfile                                   @controldesk-devops
+/docker-compose.yml                           @controldesk-devops
+/vercel.json                                  @controldesk-devops
+/proxy.ts                                     @controldesk-security @controldesk-eng
+/src/lib/security/                            @controldesk-security
+/src/lib/observability/                       @controldesk-security @controldesk-devops
+/src/lib/retention/                           @controldesk-security @controldesk-devops
+/supabase/migrations/                         @controldesk-eng @controldesk-security
+/docs/ops/                                    @controldesk-devops @controldesk-security
+
+# --- Cross-cutting product surface -------------------------------------
+/src/app/(app)/                               @controldesk-eng @controldesk-product
+/messages/                                    @controldesk-eng @controldesk-product
+/src/lib/nav/                                 @controldesk-eng @controldesk-product
+
+# --- Domain modules -----------------------------------------------------
+/src/app/(app)/finance/                       @controldesk-eng @controldesk-finance
+/src/app/(app)/hr/                            @controldesk-eng @controldesk-people
+/src/app/(app)/insights/                      @controldesk-eng @controldesk-data
+/src/app/(app)/settings/                      @controldesk-devops @controldesk-eng
+/src/app/(app)/handovers/                     @controldesk-eng @controldesk-product
+
+# --- E2E + tests -------------------------------------------------------
+/e2e/                                         @controldesk-qa @controldesk-eng
+/playwright.config.ts                         @controldesk-qa
+/vitest.config.ts                             @controldesk-eng

@@ -1,0 +1,117 @@
+# ControlDesk — docker-compose per rules §2.
+#
+# NOTE: Postgres remains managed by the Supabase CLI (`pnpm db:start`) so
+# GoTrue, PostgREST, Realtime, Storage, and the Studio all come along for
+# free. This file only ships the app + supporting services that Supabase CLI
+# does not provide.
+#
+# Bring the stack up:
+#
+#   pnpm db:start          # Supabase in the background (uses its own Docker)
+#   docker compose up -d   # ControlDesk app + redis + mailpit
+#
+# Rate limiting (rules §3) uses `redis` and dev mail relaying (magic link
+# preview during development) uses `mailpit`.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://host.docker.internal:54321}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-localhost:3000}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ControlDesk}
+    image: controldesk/app:latest
+    container_name: controldesk-app
+    restart: unless-stopped
+    # Load local secrets from .env.local so `docker compose up` inherits the
+    # same values `pnpm dev` sees. Compose default `.env` file is not enough
+    # because Next.js convention keeps local secrets in `.env.local` only.
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      NODE_ENV: production
+      # Runtime overrides not present in .env.local. Anything defined here
+      # takes precedence over `env_file`, so keep this block to a minimum —
+      # tenant secrets live in .env.local.
+      #
+      # `NEXT_PUBLIC_SUPABASE_URL` is baked into the browser bundle at build
+      # time, so it MUST point at a URL the user's browser can reach
+      # (e.g. `http://127.0.0.1:54321` when the Supabase CLI is running on
+      # the host). `SUPABASE_SERVER_URL` overrides that value **only** for
+      # server-side Supabase clients running inside this container, so
+      # RSC / Server Actions / Route Handlers reach Supabase across the
+      # shared `supabase_network_<project>` bridge (Kong alias).
+      SUPABASE_SERVER_URL: http://kong:8000
+      NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:-localhost:3000}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ControlDesk}
+      REDIS_URL: redis://redis:6379
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+    ports:
+      - "3000:3000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    # Enables reaching the host-side Supabase CLI stack from inside the
+    # container on Linux (macOS / Windows already resolve this automatically).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - controldesk
+      # Join the Supabase-CLI-managed bridge network so we can reach the
+      # Kong gateway via its container alias (`http://kong:8000`).
+      - supabase_network_controldesk
+
+  redis:
+    image: redis:7-alpine
+    container_name: controldesk-redis
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - controldesk
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: controldesk-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: "5000"
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI at http://localhost:8025
+    networks:
+      - controldesk
+
+volumes:
+  redis-data:
+
+networks:
+  controldesk:
+    driver: bridge
+  # Managed by `supabase start` — must exist before `docker compose up`.
+  # Marked external so compose doesn't try to (re)create it.
+  supabase_network_controldesk:
+    external: true

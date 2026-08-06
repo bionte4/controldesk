@@ -1,0 +1,83 @@
+version: 2
+
+# ControlDesk dependency automation.
+# - npm (via pnpm): weekly grouped PRs — one for prod deps, one for dev.
+# - GitHub Actions: weekly rollup so pinned action versions stay fresh.
+#
+# The `open-pull-requests-limit` caps queue depth so a burst of upstream
+# releases doesn't drown the review flow.
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels:
+      - dependencies
+      - javascript
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: scope
+    groups:
+      next-ecosystem:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+      supabase:
+        patterns:
+          - "@supabase/*"
+          - "supabase"
+      shadcn-ui:
+        patterns:
+          - "@radix-ui/*"
+          - "@base-ui/*"
+          - "class-variance-authority"
+          - "lucide-react"
+          - "tailwind*"
+          - "shadcn-ui"
+      testing:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@playwright/*"
+          - "playwright"
+      types:
+        patterns:
+          - "@types/*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 3
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "chore(ci)"
+      include: scope
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 2
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "chore(docker)"
+      include: scope
