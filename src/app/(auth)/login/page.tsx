@@ -10,7 +10,9 @@ export const metadata: Metadata = {
 
 export default async function LoginPage({
   searchParams,
-}: PageProps<"/login">) {
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const params = await searchParams;
   const errorParam = typeof params.error === "string" ? params.error : undefined;
   const t = await getTranslations("auth");

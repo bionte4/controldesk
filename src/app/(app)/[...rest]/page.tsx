@@ -18,7 +18,9 @@ export const metadata: Metadata = {
 
 export default async function ComingSoonPage({
   params,
-}: PageProps<"/[...rest]">) {
+}: {
+  params: Promise<{ rest: string | string[] }>;
+}) {
   const { rest } = await params;
   const t = await getTranslations("comingSoon");
   const segments = Array.isArray(rest) ? rest : [rest].filter(Boolean);

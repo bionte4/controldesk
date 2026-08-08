@@ -24,14 +24,26 @@
 --   alter role authenticator reset app.enc_key;
 --   alter role service_role   reset app.enc_key;
 
+-- NOTE: migration 0042 supersedes this bootstrap by pivoting to Node-side
+-- AES-256-GCM (src/lib/security/token-crypto.ts). Under managed Postgres
+-- (Supabase pooled / CI), the ALTER ROLE ... SET statement below fails
+-- with `permission denied to set parameter "app.enc_key" (SQLSTATE 42501)`
+-- because the migration runner is not a superuser. The GUC is no longer
+-- required at runtime — the Node service-role client encrypts/decrypts
+-- directly — so we swallow the permission error and continue.
 do $$
 begin
-  if exists (select 1 from pg_roles where rolname = 'authenticator') then
-    execute 'alter role authenticator set app.enc_key = ' || quote_literal('bootstrap-placeholder-please-rotate');
-  end if;
-  if exists (select 1 from pg_roles where rolname = 'service_role') then
-    execute 'alter role service_role set app.enc_key = ' || quote_literal('bootstrap-placeholder-please-rotate');
-  end if;
+  begin
+    if exists (select 1 from pg_roles where rolname = 'authenticator') then
+      execute 'alter role authenticator set app.enc_key = ' || quote_literal('bootstrap-placeholder-please-rotate');
+    end if;
+    if exists (select 1 from pg_roles where rolname = 'service_role') then
+      execute 'alter role service_role set app.enc_key = ' || quote_literal('bootstrap-placeholder-please-rotate');
+    end if;
+  exception
+    when insufficient_privilege then
+      raise notice 'skipping app.enc_key role default (insufficient privilege); node-side crypto in 0042 handles this at runtime';
+  end;
 end $$;
 
 comment on function public.set_google_credential_refresh_token(uuid, text, text, text) is

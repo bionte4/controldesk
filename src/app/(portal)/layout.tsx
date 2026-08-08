@@ -13,7 +13,9 @@ import { PortalSignOutButton } from "./portal-signout-button";
 
 export default async function PortalLayout({
   children,
-}: LayoutProps<"/">) {
+}: {
+  children: React.ReactNode;
+}) {
   const [{ slug }, session, t] = await Promise.all([
     getTenantContext(),
     getCurrentPortalSession(),

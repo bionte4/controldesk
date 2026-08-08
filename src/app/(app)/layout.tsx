@@ -27,7 +27,11 @@ const AI_INSIGHT_ROLES: readonly AnyDbEmployeeRole[] = [
   "LEAD_FINANCE",
 ];
 
-export default async function AppLayout({ children }: LayoutProps<"/">) {
+export default async function AppLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const employee = await requireCurrentEmployee();
 
   const supabase = await createClient();

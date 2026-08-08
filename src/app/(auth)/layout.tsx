@@ -8,7 +8,9 @@ import { LanguageToggle } from "@/components/i18n/language-toggle";
 
 export default async function AuthLayout({
   children,
-}: LayoutProps<"/">) {
+}: {
+  children: React.ReactNode;
+}) {
   const { slug } = await getTenantContext();
   const t = await getTranslations("authLayout");
   const tAuth = await getTranslations("auth");
