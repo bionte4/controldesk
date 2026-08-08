@@ -5,6 +5,7 @@ import { generateObject } from "ai";
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentEmployee } from "@/lib/auth/session";
 import { parseMoneyFromDb } from "@/lib/format/money";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import type {
   AnalyzeClientHealth,
   AnalyzeResourceUtilization,
@@ -39,7 +40,43 @@ import { assertTenantScope } from "./index";
  * Return shape: the raw insight object + telemetry (tokens + latency).
  */
 
-export const PROMPT_VERSION = "v1";
+export const PROMPT_VERSION = "v2-locale";
+
+/**
+ * Language directive appended to every system prompt so the model emits
+ * every string field (headline, summary, drivers, action items, signals,
+ * …) in the tenant's active UI locale (rules §18: locale hygiene).
+ *
+ * We use a strict directive because Gemini sometimes ignores subtle hints
+ * once the surrounding context is heavily English. Explicit "MUST" plus
+ * concrete field-level examples reduces regression to English mid-object.
+ */
+/**
+ * Small helper to pick a localised fallback string. Kept inline so the
+ * generators stay self-contained (no need to plug into next-intl for the
+ * mock path — these strings never reach a real translator).
+ */
+function pick(locale: Locale, id: string, en: string): string {
+  return locale === "id" ? id : en;
+}
+
+function languageDirective(locale: Locale): string {
+  if (locale === "id") {
+    return [
+      "Jawab HANYA dalam Bahasa Indonesia — register bisnis formal.",
+      "Setiap nilai teks pada objek keluaran (headline, summary, drivers, actions, signals, reasons)",
+      "WAJIB dalam Bahasa Indonesia. Nama proyek / klien / karyawan yang muncul di data konteks",
+      "tetap dipertahankan apa adanya (jangan diterjemahkan). Istilah teknis akuntansi & manajemen",
+      "proyek boleh memakai istilah Indonesia yang lazim (misal: 'gross margin' → 'margin kotor',",
+      "'utilisation' → 'utilisasi', 'SLA' tetap 'SLA').",
+    ].join(" ");
+  }
+  return [
+    "Reply ONLY in professional English.",
+    "Every text value on the output object (headline, summary, drivers, actions, signals, reasons)",
+    "MUST be in English. Keep project / client / employee names as they appear in the input.",
+  ].join(" ");
+}
 
 export type InsightRunResult<T> = {
   payload: T;
@@ -112,6 +149,7 @@ async function run<T>(opts: {
   system: string;
   prompt: string;
   fallback: T;
+  locale: Locale;
 }): Promise<InsightRunResult<T>> {
   const model = await resolveModel();
   const scrubbed = scrubPrompt(opts.prompt);
@@ -127,6 +165,10 @@ async function run<T>(opts: {
     };
   }
 
+  // Prepend the language directive so the model has locale context BEFORE
+  // reading the domain-specific system rules.
+  const systemWithLocale = `${languageDirective(opts.locale)}\n\n${opts.system}`;
+
   const started = Date.now();
   // The Vercel AI SDK v7+ generateObject signature has become more strict;
   // we call through an `any` boundary since providers are dynamically loaded.
@@ -140,7 +182,7 @@ async function run<T>(opts: {
   const { object, usage } = await genObj({
     model,
     schema: opts.schema,
-    system: opts.system,
+    system: systemWithLocale,
     prompt: scrubbed,
     temperature: 0.2,
   });
@@ -159,7 +201,10 @@ async function run<T>(opts: {
 // ---------------------------------------------------------------------------
 // 1. PREDICT_EXPENSE_IMPACT
 // ---------------------------------------------------------------------------
-export async function predictExpenseImpact(actor: CurrentEmployee) {
+export async function predictExpenseImpact(
+  actor: CurrentEmployee,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const supabase = await createClient();
 
   const { data: projects } = await supabase
@@ -209,9 +254,16 @@ export async function predictExpenseImpact(actor: CurrentEmployee) {
   );
 
   const fallback: PredictExpenseImpact = {
-    headline: "Sample expense impact insight (mock)",
-    summary:
+    headline: pick(
+      locale,
+      "Contoh insight dampak pengeluaran (mock)",
+      "Sample expense impact insight (mock)",
+    ),
+    summary: pick(
+      locale,
+      "Output mock — belum ada penyedia AI yang dikonfigurasi. Atur AI_PROVIDER + API key untuk inferensi nyata.",
       "Mock output — no AI provider configured. Configure AI_PROVIDER + provider API key to run real inference.",
+    ),
     severity: rows.length === 0 ? "INFO" : "WARNING",
     confidence: 0.3,
     project_impacts: rows.slice(0, 3).map((p) => {
@@ -226,13 +278,28 @@ export async function predictExpenseImpact(actor: CurrentEmployee) {
           0,
           Math.round((1 - Math.min(1, utilisation + 0.08)) * 100),
         ),
-        top_drivers: ["Pending expenses awaiting approval", "Direct labour cost"],
+        top_drivers: [
+          pick(locale, "Pengajuan biaya menunggu persetujuan", "Pending expenses awaiting approval"),
+          pick(locale, "Biaya tenaga kerja langsung", "Direct labour cost"),
+        ],
       };
     }),
     recommended_actions: [
-      "Escalate pending expenses > Rp 25 juta to OM within 24h.",
-      "Reforecast direct labour hours for projects with margin < 20%.",
-      "Trigger client billing review for over-utilised budgets.",
+      pick(
+        locale,
+        "Eskalasi pengajuan biaya > Rp 25 juta ke OM dalam 24 jam.",
+        "Escalate pending expenses > Rp 25 juta to OM within 24h.",
+      ),
+      pick(
+        locale,
+        "Forecast ulang jam tenaga kerja langsung untuk proyek dengan margin < 20%.",
+        "Reforecast direct labour hours for projects with margin < 20%.",
+      ),
+      pick(
+        locale,
+        "Picu review penagihan klien untuk anggaran yang over-utilised.",
+        "Trigger client billing review for over-utilised budgets.",
+      ),
     ],
   };
 
@@ -242,13 +309,17 @@ export async function predictExpenseImpact(actor: CurrentEmployee) {
       "You are a BPO finance analyst. Reason ONLY within the given tenant. Never invent projects or numbers not in the prompt. Money values are IDR cents.",
     prompt,
     fallback,
+    locale,
   });
 }
 
 // ---------------------------------------------------------------------------
 // 2. ANALYZE_RESOURCE_UTILIZATION
 // ---------------------------------------------------------------------------
-export async function analyzeResourceUtilization(actor: CurrentEmployee) {
+export async function analyzeResourceUtilization(
+  actor: CurrentEmployee,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const supabase = await createClient();
 
   const { data: employees } = await supabase
@@ -333,9 +404,16 @@ export async function analyzeResourceUtilization(actor: CurrentEmployee) {
     }));
 
   const fallback: AnalyzeResourceUtilization = {
-    headline: `Utilisation snapshot: ${overallocated.length} over, ${underutilized.length} under.`,
-    summary:
+    headline: pick(
+      locale,
+      `Snapshot utilisasi: ${overallocated.length} over, ${underutilized.length} under.`,
+      `Utilisation snapshot: ${overallocated.length} over, ${underutilized.length} under.`,
+    ),
+    summary: pick(
+      locale,
+      "Snapshot deterministik dari alokasi live. Aktifkan penyedia AI untuk insight naratif.",
       "Mock deterministic snapshot from live allocations. Enable an AI provider for narrative insight.",
+    ),
     severity: overallocated.length > 0 ? "WARNING" : "INFO",
     confidence: 0.7,
     overallocated: overallocated.slice(0, 20),
@@ -348,14 +426,38 @@ export async function analyzeResourceUtilization(actor: CurrentEmployee) {
     recommended_actions:
       overallocated.length > 0
         ? [
-            "Redistribute allocations from over-utilised employees.",
-            "Consider hiring or bench-sourcing for peak coverage.",
-            "Review shift patterns to smooth 24/7 rotations.",
+            pick(
+              locale,
+              "Redistribusi alokasi dari karyawan yang over-utilised.",
+              "Redistribute allocations from over-utilised employees.",
+            ),
+            pick(
+              locale,
+              "Pertimbangkan hiring atau bench-sourcing untuk coverage puncak.",
+              "Consider hiring or bench-sourcing for peak coverage.",
+            ),
+            pick(
+              locale,
+              "Review pola shift untuk memuluskan rotasi 24/7.",
+              "Review shift patterns to smooth 24/7 rotations.",
+            ),
           ]
         : [
-            "Utilisation within targets — monitor weekly.",
-            "Encourage cross-training for under-utilised employees.",
-            "Confirm project pipeline can absorb bench.",
+            pick(
+              locale,
+              "Utilisasi dalam target — monitor mingguan.",
+              "Utilisation within targets — monitor weekly.",
+            ),
+            pick(
+              locale,
+              "Dorong cross-training untuk karyawan yang under-utilised.",
+              "Encourage cross-training for under-utilised employees.",
+            ),
+            pick(
+              locale,
+              "Konfirmasi pipeline proyek bisa menyerap bench.",
+              "Confirm project pipeline can absorb bench.",
+            ),
           ],
   };
 
@@ -365,13 +467,17 @@ export async function analyzeResourceUtilization(actor: CurrentEmployee) {
       "You are a resource planner for a BPO. Reason only within this tenant. Do NOT invent employees.",
     prompt,
     fallback,
+    locale,
   });
 }
 
 // ---------------------------------------------------------------------------
 // 3. ANALYZE_CLIENT_HEALTH
 // ---------------------------------------------------------------------------
-export async function analyzeClientHealth(actor: CurrentEmployee) {
+export async function analyzeClientHealth(
+  actor: CurrentEmployee,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const supabase = await createClient();
 
   const { data: clients } = await supabase
@@ -414,9 +520,9 @@ export async function analyzeClientHealth(actor: CurrentEmployee) {
       health_score: clamped,
       status,
       signals: [
-        `Industry: ${c.industry ?? "—"}`,
-        `Active projects: ${active}`,
-        `MRR bucket: ${bucketSalary(mrr)}`,
+        pick(locale, `Industri: ${c.industry ?? "—"}`, `Industry: ${c.industry ?? "—"}`),
+        pick(locale, `Proyek aktif: ${active}`, `Active projects: ${active}`),
+        pick(locale, `Bucket MRR: ${bucketSalary(mrr)}`, `MRR bucket: ${bucketSalary(mrr)}`),
       ],
     };
   });
@@ -456,9 +562,16 @@ export async function analyzeClientHealth(actor: CurrentEmployee) {
             : ("<50jt" as const);
 
   const fallback: AnalyzeClientHealth = {
-    headline: `Client health snapshot (${perClient.length} clients)`,
-    summary:
+    headline: pick(
+      locale,
+      `Snapshot kesehatan klien (${perClient.length} klien)`,
+      `Client health snapshot (${perClient.length} clients)`,
+    ),
+    summary: pick(
+      locale,
+      "Snapshot deterministik dari state klien & kontrak live. Konfigurasi penyedia AI untuk menerima rekomendasi naratif.",
       "Mock deterministic snapshot from live client & contract state. Configure an AI provider to receive narrative recommendations.",
+    ),
     severity: perClient.some((p) => p.status === "RED")
       ? "WARNING"
       : "INFO",
@@ -467,14 +580,30 @@ export async function analyzeClientHealth(actor: CurrentEmployee) {
     at_risk_revenue_bucket: bucketed as AnalyzeClientHealth["at_risk_revenue_bucket"],
     recommended_actions: perClient.some((p) => p.status === "RED")
       ? [
-          "Escalate RED clients to GM within 48h.",
-          "Schedule QBRs for AMBER clients.",
-          "Explore expansion for GREEN clients above 85 score.",
+          pick(
+            locale,
+            "Eskalasi klien RED ke GM dalam 48 jam.",
+            "Escalate RED clients to GM within 48h.",
+          ),
+          pick(
+            locale,
+            "Jadwalkan QBR untuk klien AMBER.",
+            "Schedule QBRs for AMBER clients.",
+          ),
+          pick(
+            locale,
+            "Eksplorasi ekspansi untuk klien GREEN dengan skor di atas 85.",
+            "Explore expansion for GREEN clients above 85 score.",
+          ),
         ]
       : [
-          "Maintain QBR cadence.",
-          "Send NPS pulse next week.",
-          "Explore expansion in highest-score accounts.",
+          pick(locale, "Jaga cadence QBR.", "Maintain QBR cadence."),
+          pick(locale, "Kirim NPS pulse minggu depan.", "Send NPS pulse next week."),
+          pick(
+            locale,
+            "Eksplorasi ekspansi di akun dengan skor tertinggi.",
+            "Explore expansion in highest-score accounts.",
+          ),
         ],
   };
 
@@ -484,13 +613,17 @@ export async function analyzeClientHealth(actor: CurrentEmployee) {
       "You are a customer success analyst. Reason only within this tenant. No PII beyond client names.",
     prompt,
     fallback,
+    locale,
   });
 }
 
 // ---------------------------------------------------------------------------
 // 4. ANALYZE_SLA_BREACH
 // ---------------------------------------------------------------------------
-export async function analyzeSlaBreach(actor: CurrentEmployee) {
+export async function analyzeSlaBreach(
+  actor: CurrentEmployee,
+  locale: Locale = DEFAULT_LOCALE,
+) {
   const supabase = await createClient();
 
   const { data: projects } = await supabase
@@ -504,9 +637,13 @@ export async function analyzeSlaBreach(actor: CurrentEmployee) {
     breach_within_hours: 12 + i * 6,
     breach_probability: 0.2 + (i % 5) * 0.1,
     contributing_factors: [
-      "Ticket backlog trending up",
-      "Direct labour hours below plan",
-      "Weekend coverage gap",
+      pick(locale, "Backlog tiket meningkat", "Ticket backlog trending up"),
+      pick(
+        locale,
+        "Jam tenaga kerja langsung di bawah rencana",
+        "Direct labour hours below plan",
+      ),
+      pick(locale, "Coverage weekend kurang", "Weekend coverage gap"),
     ],
   }));
 
@@ -530,10 +667,21 @@ export async function analyzeSlaBreach(actor: CurrentEmployee) {
   const fallback: AnalyzeSlaBreach = {
     headline:
       worst > 0.5
-        ? "High SLA breach risk on one or more contracts"
-        : "SLA risk within manageable range",
-    summary:
+        ? pick(
+            locale,
+            "Risiko pelanggaran SLA tinggi pada satu atau lebih kontrak",
+            "High SLA breach risk on one or more contracts",
+          )
+        : pick(
+            locale,
+            "Risiko SLA dalam rentang terkendali",
+            "SLA risk within manageable range",
+          ),
+    summary: pick(
+      locale,
+      "Forecast deterministik mock. Konfigurasi penyedia AI untuk penalaran naratif.",
       "Mock deterministic forecast. Configure an AI provider to enable narrative reasoning.",
+    ),
     severity: worst > 0.5 ? "CRITICAL" : worst > 0.3 ? "WARNING" : "INFO",
     confidence: 0.5,
     breach_forecasts: forecasts.slice(0, 20),
@@ -550,14 +698,38 @@ export async function analyzeSlaBreach(actor: CurrentEmployee) {
     recommended_actions:
       worst > 0.5
         ? [
-            "Trigger surge coverage for the two highest-risk contracts.",
-            "Escalate to Head Manager within 2h.",
-            "Prepare client-facing SLA-recovery note.",
+            pick(
+              locale,
+              "Picu surge coverage untuk dua kontrak dengan risiko tertinggi.",
+              "Trigger surge coverage for the two highest-risk contracts.",
+            ),
+            pick(
+              locale,
+              "Eskalasi ke Head Manager dalam 2 jam.",
+              "Escalate to Head Manager within 2h.",
+            ),
+            pick(
+              locale,
+              "Siapkan nota SLA-recovery untuk klien.",
+              "Prepare client-facing SLA-recovery note.",
+            ),
           ]
         : [
-            "Continue steady-state monitoring.",
-            "Recheck staffing plan tomorrow.",
-            "Validate on-call rotation for weekend.",
+            pick(
+              locale,
+              "Lanjutkan monitoring steady-state.",
+              "Continue steady-state monitoring.",
+            ),
+            pick(
+              locale,
+              "Cek ulang rencana staffing besok.",
+              "Recheck staffing plan tomorrow.",
+            ),
+            pick(
+              locale,
+              "Validasi rotasi on-call untuk weekend.",
+              "Validate on-call rotation for weekend.",
+            ),
           ],
   };
 
@@ -567,6 +739,7 @@ export async function analyzeSlaBreach(actor: CurrentEmployee) {
       "You are an operations analyst. Reason only within this tenant. Provide concrete, time-bound actions.",
     prompt,
     fallback,
+    locale,
   });
 }
 
@@ -585,16 +758,17 @@ export type AnyInsight =
 export async function runInsight(
   kind: AiInsightKindLiteral,
   actor: CurrentEmployee,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<AnyInsight> {
   switch (kind) {
     case "PREDICT_EXPENSE_IMPACT":
-      return { kind, run: await predictExpenseImpact(actor) };
+      return { kind, run: await predictExpenseImpact(actor, locale) };
     case "ANALYZE_RESOURCE_UTILIZATION":
-      return { kind, run: await analyzeResourceUtilization(actor) };
+      return { kind, run: await analyzeResourceUtilization(actor, locale) };
     case "ANALYZE_CLIENT_HEALTH":
-      return { kind, run: await analyzeClientHealth(actor) };
+      return { kind, run: await analyzeClientHealth(actor, locale) };
     case "ANALYZE_SLA_BREACH":
-      return { kind, run: await analyzeSlaBreach(actor) };
+      return { kind, run: await analyzeSlaBreach(actor, locale) };
   }
 }
 

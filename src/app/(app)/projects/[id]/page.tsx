@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowLeft,
+  CalendarClock,
   ClipboardList,
   Flag,
   Users,
@@ -27,8 +28,16 @@ import {
   toCanonicalRole,
   type AnyDbEmployeeRole,
 } from "@/lib/rbac/roles";
+import { authorize } from "@/lib/security/pdp";
+import type { EmployeeRole } from "@/lib/rbac/roles";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { loadWorkload } from "@/lib/data/assignments";
+import { NewAssignmentSheet } from "@/app/(app)/assignments/new-assignment-sheet";
+import {
+  hasApprovedBudget,
+  hasActivePmAssignment,
+} from "@/lib/data/projects";
 import { STATUS_LABEL, STATUS_TONE as EXPENSE_STATUS_TONE } from "@/lib/expenses/state";
 import {
   MILESTONE_STATUS_LABEL,
@@ -51,10 +60,15 @@ import { MilestoneRowActions } from "./milestones/milestone-row-actions";
 import { ProjectIssuesSection } from "./issues/issues-section";
 import type { IssueAssigneeOption } from "./issues/new-issue-sheet";
 import { ProjectDirectLaborSection } from "./direct-labor-section";
+import {
+  ProjectLifecycleBanner,
+  type PmPickOption,
+} from "./lifecycle-banner";
 
 export const metadata: Metadata = { title: "Project detail" };
 
 const PROJECT_STATUS_TONE: Record<ProjectStatus, string> = {
+  DRAFT: "bg-muted text-muted-foreground border-border",
   PLANNING: "bg-chart-2/15 text-chart-2 border-chart-2/30",
   ACTIVE: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
   ON_HOLD: "bg-amber-500/15 text-amber-500 border-amber-500/30",
@@ -66,13 +80,14 @@ export default async function ProjectDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const [employee, t, tStatus, tMilestones, tMilestoneStatus] = await Promise.all([
-    requireCurrentEmployee(),
-    getTranslations("projects.detail"),
-    getTranslations("projects.status"),
-    getTranslations("milestones"),
-    getTranslations("milestones.status"),
-  ]);
+  const [employee, t, tStatus, tMilestones, tMilestoneStatus] =
+    await Promise.all([
+      requireCurrentEmployee(),
+      getTranslations("projects.detail"),
+      getTranslations("projects.status"),
+      getTranslations("milestones"),
+      getTranslations("milestones.status"),
+    ]);
   const supabase = await createClient();
 
   type PmRow = {
@@ -219,6 +234,35 @@ export default async function ProjectDetailPage(props: {
     canonicalRole === "DIRECTOR" ||
     canonicalRole === "ADMIN";
 
+  // PM+ boleh menambah anggota tim proyek. Delegasikan keputusan ke PDP
+  // (satu source of truth dengan Server Action) — rules §17.
+  const canManageTeam =
+    authorize({
+      actor: {
+        userId: employee.user_id,
+        employeeId: employee.id,
+        role: employee.role as EmployeeRole,
+        tenantId: employee.tenant_id,
+      },
+      action: "create",
+      resource: "project_employee_assignment",
+      attributes: { tenantId: employee.tenant_id },
+    }).effect === "ALLOW";
+
+  // Live workload lookup untuk indikator kapasitas di dialog assign.
+  // Hanya di-load kalau PM+ (hemat query untuk role read-only).
+  const workload = canManageTeam ? await loadWorkload() : [];
+  const workloadLookup: Record<string, { total: number; remaining: number }> =
+    {};
+  for (const w of workload) {
+    workloadLookup[w.employee_id] = {
+      total: w.total_alloc_pct,
+      remaining: w.remaining_pct,
+    };
+  }
+
+  const lockedProjectLabel = `${project.project_number ?? project.code ?? "—"} — ${project.name}`;
+
   const nextMilestoneSeq =
     milestones.reduce((max, m) => Math.max(max, m.seq), 0) + 1;
   const usedWeightBps = sumWeightBps(milestones);
@@ -229,6 +273,36 @@ export default async function ProjectDetailPage(props: {
     id: e.id,
     label: `${e.full_name} · ${formatRole(e.role as Parameters<typeof formatRole>[0])}`,
   }));
+
+  // Lifecycle banner context. Fetch approval + PM-assignment flags in
+  // parallel. Both queries are trivially cheap (COUNT with head=true).
+  // Only OM / HM / ADMIN can promote / activate.
+  const canManageLifecycle =
+    canonicalRole === "OM" ||
+    canonicalRole === "DIRECTOR" ||
+    canonicalRole === "ADMIN";
+  const [budgetApproved, pmAssigned] = await Promise.all([
+    hasApprovedBudget(id),
+    hasActivePmAssignment(id),
+  ]);
+  const hasBcMinimum = Boolean(
+    project.bc_executive_summary &&
+      project.bc_executive_summary.trim().length > 0 &&
+      project.bc_sponsor_id,
+  );
+  // PM options for the activate sheet — reuse the employee directory
+  // (already scoped to this tenant) filtered to PM-eligible roles.
+  const pmPickOptions: PmPickOption[] = employeeDirectory
+    .filter((e) =>
+      ["PROJECT_MANAGER", "OPERATIONS_MANAGER", "HEAD_MANAGER", "TENANT_ADMIN"].includes(
+        e.role,
+      ),
+    )
+    .map((e) => ({
+      id: e.id,
+      name: e.full_name,
+      role: formatRole(e.role as Parameters<typeof formatRole>[0]),
+    }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -288,6 +362,27 @@ export default async function ProjectDetailPage(props: {
           </div>
         </div>
       </header>
+
+      <ProjectLifecycleBanner
+        projectId={project.id}
+        status={project.status as ProjectStatus}
+        hasApprovedBudget={budgetApproved}
+        hasActivePm={pmAssigned}
+        hasBcMinimum={hasBcMinimum}
+        canManageLifecycle={canManageLifecycle}
+        pmOptions={pmPickOptions}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          render={<Link href={`/projects/${id}/monthly-reports`} />}
+        >
+          <CalendarClock className="size-4" />
+          Monthly reports
+        </Button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="glass lg:col-span-2">
@@ -484,10 +579,27 @@ export default async function ProjectDetailPage(props: {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="glass">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2">
               <Users className="size-4" /> {t("teamTitle")}
             </CardTitle>
+            {canManageTeam ? (
+              <NewAssignmentSheet
+                projects={[]}
+                employees={employeeDirectory.map((e) => ({
+                  id: e.id,
+                  full_name: e.full_name,
+                  role: e.role,
+                }))}
+                workload={workloadLookup}
+                triggerLabel={t("addTeamMember")}
+                buttonVariant="outline"
+                lockedProject={{
+                  id: project.id as string,
+                  label: lockedProjectLabel,
+                }}
+              />
+            ) : null}
           </CardHeader>
           <CardContent className="p-0">
             {employeeAssignments.length === 0 ? (
@@ -585,6 +697,7 @@ export default async function ProjectDetailPage(props: {
 
       <ProjectIssuesSection
         projectId={id}
+        projectLabel={`${project.project_number ?? project.code ?? "—"} — ${project.name}`}
         employees={
           employeeDirectory.map((e) => ({
             id: e.id,
@@ -600,6 +713,14 @@ export default async function ProjectDetailPage(props: {
           canonicalRole === "OM" ||
           canonicalRole === "DIRECTOR" ||
           canonicalRole === "ADMIN"
+        }
+        // project.priority mirrors project_issue_severity 1:1 — the enums
+        // share values (CRITICAL/HIGH/MEDIUM/LOW). New issues default to
+        // the project's priority so a Critical project gets a 1h SLA
+        // instead of the generic 8h.
+        defaultSeverity={
+          (project.priority ??
+            "MEDIUM") as import("@/types/database").ProjectIssueSeverity
         }
       />
 

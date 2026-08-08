@@ -126,7 +126,10 @@ export function NewTimesheetSheet({
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger render={<Button size="sm">{triggerLabel}</Button>} />
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
+      >
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>

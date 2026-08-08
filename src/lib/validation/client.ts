@@ -48,6 +48,12 @@ export const createClientSchema = z.object({
     .or(z.literal("").transform(() => undefined)),
   contact_phone: optionalTrimmed(32, "Phone number is too long."),
   status: clientStatusSchema.default("PROSPECT"),
+  // Primary/reference contract number (e.g. MSA#, retainer, SOW).
+  // Source of truth for finance is still bpo_contracts.contract_number.
+  contract_number: optionalTrimmed(64, "Contract number is too long."),
+  // Client-side project identifier / legacy PID for cross-referencing.
+  // Source of truth for delivery is still projects.code.
+  project_code: optionalTrimmed(64, "Project code is too long."),
   notes: optionalTrimmed(2000, "Notes are too long."),
 });
 export type CreateClientInput = z.infer<typeof createClientSchema>;
@@ -76,25 +82,69 @@ const isoDateSchema = z
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be an ISO date (YYYY-MM-DD).");
 
-export const createContractSchema = z
+// Base (unrefined) shape — exposed so downstream schemas can `.omit()` /
+// `.pick()` without hitting Zod's "cannot omit on refined object" limitation.
+export const createContractBaseSchema = z.object({
+  client_id: uuidSchema,
+  contract_number: z
+    .string()
+    .trim()
+    .min(1, "Contract number is required.")
+    .max(64, "Contract number is too long."),
+  mrr_amount_idr: z
+    .number()
+    .int("MRR must be a whole rupiah amount.")
+    .nonnegative("MRR cannot be negative."),
+  start_date: isoDateSchema,
+  end_date: isoDateSchema.optional().or(z.literal("").transform(() => undefined)),
+  status: contractStatusSchema.default("DRAFT"),
+  notes: optionalTrimmed(2000, "Notes are too long."),
+});
+
+const contractDatesOk = <T extends { start_date?: string; end_date?: string }>(
+  v: T,
+) => !v.end_date || !v.start_date || v.end_date >= v.start_date;
+
+export const createContractSchema = createContractBaseSchema.refine(
+  contractDatesOk,
+  { path: ["end_date"], message: "End date must be on or after start date." },
+);
+export type CreateContractInput = z.infer<typeof createContractSchema>;
+
+// Convenience: the same schema but for edit forms that don't touch client_id.
+export const editContractFormSchema = createContractBaseSchema
+  .omit({ client_id: true })
+  .refine(contractDatesOk, {
+    path: ["end_date"],
+    message: "End date must be on or after start date.",
+  });
+export type EditContractFormInput = z.infer<typeof editContractFormSchema>;
+
+export const updateContractSchema = z
   .object({
-    client_id: uuidSchema,
+    id: uuidSchema,
     contract_number: z
       .string()
       .trim()
-      .min(1, "Contract number is required.")
-      .max(64, "Contract number is too long."),
-    mrr_amount_idr: z
-      .number()
-      .int("MRR must be a whole rupiah amount.")
-      .nonnegative("MRR cannot be negative."),
-    start_date: isoDateSchema,
-    end_date: isoDateSchema.optional(),
-    status: contractStatusSchema.default("DRAFT"),
-    notes: optionalTrimmed(2000, "Notes are too long."),
+      .min(1)
+      .max(64)
+      .optional(),
+    mrr_amount_idr: z.number().int().nonnegative().optional(),
+    start_date: isoDateSchema.optional(),
+    end_date: isoDateSchema
+      .optional()
+      .or(z.literal("").transform(() => undefined))
+      // Explicit `null` = clear the end date (open-ended contract).
+      .or(z.null()),
+    status: contractStatusSchema.optional(),
+    notes: optionalTrimmed(2000, "Notes are too long.").or(z.null()),
   })
   .refine(
-    (v) => !v.end_date || v.end_date >= v.start_date,
+    (v) =>
+      !v.start_date ||
+      !v.end_date ||
+      v.end_date === null ||
+      v.end_date >= v.start_date,
     { path: ["end_date"], message: "End date must be on or after start date." },
   );
-export type CreateContractInput = z.infer<typeof createContractSchema>;
+export type UpdateContractInput = z.infer<typeof updateContractSchema>;

@@ -128,7 +128,10 @@ export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
           </Button>
         }
       />
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
+      >
         <SheetHeader>
           <SheetTitle>{tf("title")}</SheetTitle>
           <SheetDescription>{tf("description")}</SheetDescription>

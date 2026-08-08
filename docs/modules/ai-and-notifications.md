@@ -98,14 +98,35 @@ app layer.
 Config via env (lihat [`../env-reference.md`](../env-reference.md)):
 
 ```
-AI_PROVIDER=openai   # 'openai' | 'anthropic' | 'google' | 'mock'
-AI_MODEL_ID=gpt-4o-mini
-OPENAI_API_KEY=sk-...
+AI_PROVIDER=google                                # 'openai' | 'anthropic' | 'google' | 'mock'
+AI_MODEL_ID=gemini-flash-latest
+GOOGLE_GENERATIVE_AI_API_KEY=AQ.Ab...             # AI Studio API key (format modern per Juni 2026)
 ```
 
-**Default: `mock`** — kalau `OPENAI_API_KEY` unset, semua generator
-pakai `src/lib/ai/mock/*.ts` yang return deterministic dummy insights.
-Ini memudahkan onboarding dan development tanpa cost.
+**Default: `mock`** — kalau `AI_PROVIDER` unset atau key placeholder,
+semua generator pakai fallback deterministic (bilingual `id`/`en`) yang
+di-generate dari data DB tenant. Ini memudahkan onboarding dan
+development tanpa cost.
+
+**Recommended untuk production**: Google Gemini free tier — 1,500
+req/hari, structured output kelas satu, biaya nol untuk skala kecil-menengah.
+Setup lengkap + troubleshooting → [`../integrations/ai-insights-gemini.md`](../integrations/ai-insights-gemini.md).
+
+### Locale-aware output
+
+Bahasa output mengikuti cookie `NEXT_LOCALE` yang di-set via toggle
+bahasa di Topbar (rules §18). Server Action `runInsightAction()` baca
+cookie via `resolveInsightLocale()` dan pass ke `runInsight(kind, actor, locale)`.
+Generator inject `languageDirective(locale)` di awal system prompt supaya
+Gemini/OpenAI/Anthropic return teks dalam bahasa yang tepat.
+
+Yang tidak diterjemahkan: nama proyek, klien, karyawan, kode COA — semua
+tetap seperti di DB. Yang diterjemahkan: narasi, headline, actions,
+signals.
+
+Fallback (mock) output juga bilingual via helper `pick(locale, id, en)`.
+`PROMPT_VERSION = "v2-locale"` di-track di `ai_insights.prompt_version`
+untuk audit reproducibility.
 
 ### Dashboard integration
 
@@ -253,8 +274,37 @@ Kontrol UI: `/settings/notifications`. User bisa toggle per kind.
 Beberapa kind tidak bisa di-off (misal `SECRET_ROTATION_OVERDUE` untuk
 Admin) — enforced di Server Action.
 
+## Part 3 — Messaging channels (Telegram + WhatsApp)
+
+Selain in-app + email, ControlDesk support 2 messenger channel opsional:
+
+| Channel                  | Aktivasi                                      | Detail                                                              |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------------------------- |
+| **Telegram** (per-tenant bot) | Admin `/settings/integrations/telegram-bot` + user opt-in di `/settings/preferences` | [`../integrations/telegram-bot.md`](../integrations/telegram-bot.md) |
+| **WhatsApp** (via Fonnte)     | Admin `/settings/integrations/whatsapp-business` + user OTP verify di preferences | [`../integrations/whatsapp-fonnte.md`](../integrations/whatsapp-fonnte.md) |
+
+Setiap channel mengikuti pattern **per-tenant config**:
+- Tabel `tenant_<channel>_configs` untuk bot/device token (encrypted).
+- Tabel `user_<channel>_links` untuk pairing per-user (chat_id / phone).
+- Server Action `withSecureAction` + PDP check (`decideTelegramBotConfig`, `decideWhatsAppConfig`).
+- Adapter di `src/lib/integrations/<channel>/client.ts` — return `{ ok: false, code, error }` tanpa throw.
+- CLI smoke test via `pnpm test:tg` / `pnpm test:wa` — lihat [`../dev-tools.md`](../dev-tools.md).
+
+### Notification service fan-out
+
+Kalau row `notifications` di-insert dengan `channels: ['in_app', 'email', 'telegram', 'whatsapp']` (subset), worker `notification-drain` cron loop akan:
+
+1. Cek `user_notification_preferences` — user opt-in untuk kind ini di channel ini?
+2. Kalau ya, load `user_<channel>_links` row.
+3. Call `send<Channel>Message()` helper.
+4. Update `notification.delivered_at` per channel.
+
+**Fail-open**: kalau salah satu channel gagal (mis. Telegram bot di-block user), channel lain tetap fire. Kalau semua channel gagal, in-app tetap muncul di bel notifikasi.
+
 ## Where to look next
 
-- Environment vars → [`../env-reference.md#ai-analytics-engine-rules-15`](../env-reference.md#ai-analytics-engine-rules-15).
+- Environment vars → [`../env-reference.md#ai-analytics-engine`](../env-reference.md).
+- Integration setup + troubleshooting → [`../integrations/`](../integrations/).
+- CLI dev tools → [`../dev-tools.md`](../dev-tools.md).
 - Observability + logging AI errors → [`../ops/observability.md`](../ops/observability.md).
 - Cron endpoints (digest, insights, email-flush) → [`../api-reference.md`](../api-reference.md).

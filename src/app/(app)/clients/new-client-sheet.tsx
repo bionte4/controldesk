@@ -8,16 +8,7 @@ import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form } from "@/components/ui/form";
 import {
   Sheet,
   SheetClose,
@@ -29,18 +20,11 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  CLIENT_STATUSES,
   createClientSchema,
   type CreateClientInput,
 } from "@/lib/validation/client";
 
+import { ClientFormFields } from "./client-form-fields";
 import { createClientAction } from "./actions";
 
 const DEFAULT_VALUES: CreateClientInput = {
@@ -50,13 +34,14 @@ const DEFAULT_VALUES: CreateClientInput = {
   contact_email: undefined,
   contact_phone: undefined,
   status: "PROSPECT",
+  contract_number: undefined,
+  project_code: undefined,
   notes: undefined,
 };
 
 export function NewClientSheet() {
   const t = useTranslations("clients");
   const tf = useTranslations("clients.form");
-  const tStatus = useTranslations("clients.status");
   const tCommon = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
@@ -89,7 +74,10 @@ export function NewClientSheet() {
           </Button>
         }
       />
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
+      >
         <SheetHeader>
           <SheetTitle>{tf("createTitle")}</SheetTitle>
           <SheetDescription>{tf("createDescription")}</SheetDescription>
@@ -100,156 +88,7 @@ export function NewClientSheet() {
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-1 flex-col gap-4 overflow-y-auto px-4"
           >
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{tf("name")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={tf("namePlaceholder")}
-                      autoComplete="off"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="industry"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{tf("industry")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={tf("industryPlaceholder")}
-                      autoComplete="off"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{tf("status")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                  >
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {CLIENT_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {tStatus(s)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField
-                control={form.control}
-                name="contact_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{tf("contactName")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        placeholder={tf("contactNamePlaceholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="contact_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{tf("contactPhone")}</FormLabel>
-                    <FormControl>
-                      <Input
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        placeholder="+62 812 ..."
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="contact_email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{tf("contactEmail")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="email"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      placeholder="ops@client.co.id"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{tf("notes")}</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      rows={3}
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      placeholder={tf("notesPlaceholder")}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <ClientFormFields form={form} />
 
             <SheetFooter className="mt-auto flex-row justify-end gap-2 px-0">
               <SheetClose

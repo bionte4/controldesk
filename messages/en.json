@@ -10,11 +10,181 @@
     "search": "Search…",
     "profile": "Profile",
     "noResults": "No results found.",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "active": "Active",
+    "inactive": "Inactive",
+    "edit": "Edit",
+    "confirm": "Confirm"
   },
   "brand": {
     "name": "ControlDesk",
     "tagline": "One workspace for projects, people, cash, and clients."
+  },
+  "profile": {
+    "kicker": "My account",
+    "form": {
+      "title": "Personal details",
+      "description": "Update the parts of your profile that you control. Fields marked with * are required.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "phone": "Phone",
+      "dateOfBirth": "Date of birth",
+      "preferredLocale": "Preferred language",
+      "preferredLocalePlaceholder": "Use tenant default",
+      "preferredLocaleHint": "The app will render in this language on your devices. You can still switch temporarily from the top bar.",
+      "save": "Save changes",
+      "savedToast": "Profile updated."
+    },
+    "password": {
+      "title": "Change password",
+      "description": "Verify your current password, then choose a new one. Sessions on other devices are not signed out automatically.",
+      "current": "Current password",
+      "new": "New password",
+      "confirm": "Confirm new password",
+      "hint": "Use at least 8 characters with a mix of letters and digits.",
+      "show": "Show",
+      "hide": "Hide",
+      "showAria": "Show passwords",
+      "hideAria": "Hide passwords",
+      "submit": "Update password",
+      "changedToast": "Password updated."
+    },
+    "directory": {
+      "title": "Directory",
+      "description": "Managed by HR. Contact HR if any of these need to change.",
+      "email": "Email",
+      "phone": "Phone",
+      "role": "Role",
+      "department": "Department",
+      "positionTitle": "Position title",
+      "employmentType": "Employment type",
+      "joinDate": "Join date",
+      "contractEnd": "Contract end",
+      "reportsTo": "Reports to",
+      "hrOnly": "Contact HR for corrections."
+    },
+    "assignments": {
+      "title": "My active projects",
+      "total": "Total allocation: {pct}%",
+      "empty": "You are not assigned to any active project yet.",
+      "since": "since {date}"
+    },
+    "timesheet": {
+      "title": "This month",
+      "subtitle": "Timesheet activity for {month}",
+      "hoursWorked": "Hours worked",
+      "hoursOvertime": "Overtime hours",
+      "entries": "Entries",
+      "approved": "Approved"
+    },
+    "locale": {
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    },
+    "preferencesCta": {
+      "title": "Preferences & notifications",
+      "description": "Manage notifications, Telegram, WhatsApp, and appearance on the Preferences page."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Personal settings — only you can see or change these.",
+      "actions": {
+        "save": "Save changes",
+        "restore": "Restore defaults"
+      },
+      "toast": {
+        "saveOk": "Preferences saved.",
+        "saveError": "Could not save your preferences.",
+        "restoreOk": "Preferences reset to defaults.",
+        "restoreError": "Could not restore defaults."
+      },
+      "notifications": {
+        "title": "Notifications",
+        "description": "Choose where each category of notification is delivered — the bell dropdown, your email, or your linked Telegram chat.",
+        "tableCategory": "Category",
+        "summary": "Loaded {count} categories.",
+        "emailHint": "Emails go to your login email. Delivery uses the SMTP account configured for this tenant. You can turn every category to in-app only from this page."
+      },
+      "categories": {
+        "APPROVALS": "Approvals",
+        "BUDGETS": "Budgets",
+        "MILESTONES": "Milestones",
+        "ASSIGNMENTS": "Assignments",
+        "TIMESHEETS": "Timesheets",
+        "EMPLOYEES": "Employees",
+        "SYSTEM": "System"
+      },
+      "categoryDescription": {
+        "APPROVALS": "Expense, cash advance, evaluation & report approvals.",
+        "BUDGETS": "Cash advance disbursements, settlements & petty cash.",
+        "MILESTONES": "Project SLA and contract expiry reminders.",
+        "ASSIGNMENTS": "Project handovers and team changes.",
+        "TIMESHEETS": "Submit, approve and reject events.",
+        "EMPLOYEES": "Contract, probation and HR request updates.",
+        "SYSTEM": "Account and infrastructure notices."
+      },
+      "channels": {
+        "IN_APP": "In-app",
+        "EMAIL": "Email",
+        "TELEGRAM": "Telegram",
+        "WHATSAPP": "WhatsApp"
+      },
+      "telegram": {
+        "title": "Telegram",
+        "description": "Notifications land in your personal Telegram chat with your tenant's bot.",
+        "linked": "Linked",
+        "linkedAs": "as",
+        "sendTest": "Send test",
+        "unlink": "Unlink",
+        "generateLink": "Generate deep link",
+        "unlinkedIntro": "Open a chat with @{botUsername} and hit Start to link this account.",
+        "linkReady": "Click the deep link below to open Telegram and confirm the link.",
+        "openInTelegram": "Open in Telegram",
+        "copy": "Copy link",
+        "linkExpires": "This link expires in 15 minutes.",
+        "botNotConfigured": "Your tenant has not configured a Telegram bot yet. Ask an administrator to register one via /settings/integrations.",
+        "toast": {
+          "linkError": "Could not generate the deep link.",
+          "testOk": "Test message sent — check Telegram.",
+          "testError": "Could not send the test message.",
+          "unlinkOk": "Telegram unlinked.",
+          "unlinkError": "Could not unlink Telegram.",
+          "copied": "Link copied to clipboard."
+        }
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Notifications land in your WhatsApp inbox from your tenant's business number.",
+        "linked": "Linked",
+        "linkedAs": "as",
+        "sendTest": "Send test",
+        "unlink": "Unlink",
+        "generateLink": "Generate WhatsApp link",
+        "unlinkedIntro": "Open a chat with {businessPhone} and send the pre-filled message to link this account.",
+        "linkReady": "Tap the link below to open WhatsApp and send the confirmation message.",
+        "openInWhatsApp": "Open in WhatsApp",
+        "copy": "Copy link",
+        "linkExpires": "This link expires in 15 minutes.",
+        "notConfigured": "Your tenant has not configured WhatsApp yet. Ask an administrator to register a Twilio or Meta Cloud API sender via /settings/integrations.",
+        "toast": {
+          "linkError": "Could not generate the WhatsApp link.",
+          "testOk": "Test message sent — check WhatsApp.",
+          "testError": "Could not send the test message.",
+          "unlinkOk": "WhatsApp unlinked.",
+          "unlinkError": "Could not unlink WhatsApp.",
+          "copied": "Link copied to clipboard."
+        }
+      },
+      "appearance": {
+        "title": "Appearance",
+        "description": "Choose how the ControlDesk UI looks on this device. Auto follows your operating system's light / dark setting.",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "Auto",
+        "appliedInstantly": "Applied instantly. Saved to your account when you click.",
+        "resolvedAs": "Currently: {theme}"
+      }
+    }
   },
   "marketing": {
     "badge": "Multi-tenant BPO / ERP",
@@ -103,19 +273,32 @@
       "clients": "Clients",
       "projects": "Projects",
       "team": "Team",
+      "assignments": "Assignments",
       "handovers": "PM Handovers",
       "expenses": "Expenses",
       "cashAdvance": "Cash Advance",
       "pettyCash": "Petty Cash",
       "budgets": "Budgets",
       "approvals": "Approvals",
+      "employees": "Employees",
       "roster": "Roster",
+      "shifts": "Shifts",
       "timesheets": "Timesheets",
       "leaveOvertime": "Leave & Overtime",
       "payroll": "Payroll",
       "reports": "Reports",
+      "contracts": "BPO Contracts",
       "archives": "Data Archives",
-      "secrets": "Secret Rotation"
+      "secrets": "Secret Rotation",
+      "lookups": "Reference Data",
+      "users": "Users",
+      "coa": "Chart of Accounts",
+      "bulkImport": "Bulk import",
+      "performance": "Performance",
+      "upk": "UPK",
+      "overview": "Overview",
+      "preferences": "Preferences",
+      "integrations": "Integrations"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",
@@ -143,6 +326,148 @@
     },
     "aiInsights": {
       "ariaLabel": "AI Insights ({count} unread)"
+    }
+  },
+  "notifications": {
+    "expenses": {
+      "approverInbox": {
+        "title": "Expense awaiting L1 · IDR {amount}",
+        "titleGeneric": "Expense awaiting your approval · IDR {amount}",
+        "staleReceipt": "Late-submitted receipt (>7 wd) · IDR {amount} · needs review · aged {days} wd"
+      },
+      "submitterProgress": {
+        "title": "Expense advanced · {stepRoleLabel} approved",
+        "body": "IDR {amount} · now waiting {nextRoleLabel}"
+      },
+      "submitterApproved": {
+        "title": "Expense approved",
+        "body": "IDR {amount} · fully approved"
+      },
+      "submitterRejected": {
+        "title": "Expense rejected",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Your expense request was rejected."
+      },
+      "roles": {
+        "SUPERVISOR": "Supervisor",
+        "PROJECT_MANAGER": "Project Manager",
+        "LEAD_FINANCE": "Lead Finance",
+        "OPERATIONS_MANAGER": "Operations Manager",
+        "HEAD_MANAGER": "Head Manager",
+        "GENERAL_MANAGER": "General Manager",
+        "TENANT_ADMIN": "Admin"
+      }
+    },
+    "cashAdvances": {
+      "approverInbox": {
+        "titleGeneric": "Cash advance awaiting your approval · IDR {amount}",
+        "titleFieldOps": "Field-Ops cash advance awaiting your approval · IDR {amount}"
+      },
+      "submitterProgress": {
+        "title": "Cash advance advanced · {stepRoleLabel} approved",
+        "body": "IDR {amount} · now waiting {nextRoleLabel}"
+      },
+      "submitterApproved": {
+        "title": "Cash advance approved",
+        "body": "IDR {amount} · awaiting Finance to disburse"
+      },
+      "submitterRejected": {
+        "title": "Cash advance rejected",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Your cash advance request was rejected."
+      },
+      "submitterDisbursed": {
+        "title": "Cash advance disbursed",
+        "body": "Ref {ref} · please submit settlement after use."
+      },
+      "submitterSettled": {
+        "title": "Cash advance settled",
+        "body": "IDR {amount} — settlement accepted by Finance."
+      },
+      "submitterSettlementReturned": {
+        "title": "Settlement returned",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Finance returned your settlement — please review and resubmit."
+      },
+      "roles": {
+        "SUPERVISOR": "Supervisor",
+        "PROJECT_MANAGER": "Project Manager",
+        "LEAD_FINANCE": "Lead Finance",
+        "OPERATIONS_MANAGER": "Operations Manager",
+        "HEAD_MANAGER": "Head Manager",
+        "GENERAL_MANAGER": "General Manager",
+        "TENANT_ADMIN": "Admin"
+      }
+    },
+    "settlementReminders": {
+      "ca": {
+        "dueSoon": {
+          "title": "Settlement due in {days} working days",
+          "body": "Cash advance IDR {amount} · deadline {deadline}. Please submit your settlement (receipts + total spent)."
+        },
+        "dueToday": {
+          "title": "Settlement due today (last day)",
+          "body": "Cash advance IDR {amount} · today is your last working day to submit the settlement."
+        },
+        "overdue": {
+          "title": "Settlement overdue by {days} working day(s)",
+          "body": "Cash advance IDR {amount} · past deadline {deadline}. Submit the settlement immediately."
+        },
+        "escalationSupervisor": {
+          "title": "Overdue settlement · escalated to Supervisor",
+          "body": "{submitter} — cash advance IDR {amount} is {days} wd past the deadline."
+        },
+        "escalationPm": {
+          "title": "Overdue settlement · escalated to PM",
+          "body": "{submitter} — cash advance IDR {amount} is {days} wd past the deadline."
+        },
+        "escalationOm": {
+          "title": "Overdue settlement · escalated to Operations Manager",
+          "body": "{submitter} — cash advance IDR {amount} is {days} wd past the deadline."
+        }
+      },
+      "expenseDraft": {
+        "stale": {
+          "title": "Expense draft still pending — {days} working days old",
+          "body": "IDR {amount} · finish the draft or delete it. Approvals cannot proceed while it remains DRAFT."
+        }
+      },
+      "expenseIncurred": {
+        "flagged": {
+          "title": "Late-submitted receipt flagged",
+          "body": "IDR {amount} — receipt is {days} wd old at submit time. Justification: {reason}"
+        }
+      }
+    },
+    "evaluations": {
+      "submittedTitle": "Evaluation submitted for your review",
+      "submittedBody": "SPV finished the evaluation — please review and forward to OM.",
+      "reviewedTitle": "Evaluation reviewed — pending OM decision",
+      "reviewedBody": "PM has reviewed the evaluation. Please approve or reject.",
+      "returnedTitle": "Evaluation returned — coaching required",
+      "returnedBody": "PM asked you to adjust the evaluation before resubmitting.",
+      "approvedTitle": "Evaluation approved by OM",
+      "rejectedTitle": "Evaluation rejected by OM",
+      "finalizedTitle": "Evaluation finalized"
+    },
+    "upk": {
+      "draftTitle": "UPK draft awaiting your input",
+      "draftBody": "A severance draft was auto-created for the terminated employee. Please review the amount and submit to Finance.",
+      "financeApprovedTitle": "UPK approved by Finance",
+      "financeToDirectorTitle": "UPK routed to Director for approval",
+      "financeRejectedTitle": "UPK rejected by Finance",
+      "paidTitle": "UPK disbursed"
+    },
+    "monthlyReports": {
+      "submittedTitle": "Monthly report submitted for your review",
+      "submittedBody": "A supervisor submitted the monthly report — please review.",
+      "approvedTitle": "Monthly report approved by PM",
+      "returnedTitle": "Monthly report returned — please revise",
+      "rejectedTitle": "Monthly report rejected",
+      "sentTitle": "Monthly report has been sent to client",
+      "clientApprovedTitle": "Client approved the monthly report",
+      "clientRejectedTitle": "Client asked for a revision",
+      "baGeneratedTitle": "Berita Acara ready for collection"
     }
   },
   "dashboard": {
@@ -211,6 +536,8 @@
       "name": "Name",
       "industry": "Industry",
       "status": "Status",
+      "contractNumber": "Contract",
+      "projectCode": "PID",
       "projects": "Projects",
       "contact": "Contact",
       "onboardedAt": "Onboarded"
@@ -233,10 +560,21 @@
       "contactNamePlaceholder": "Ada Lovelace",
       "contactEmail": "Contact email",
       "contactPhone": "Phone",
+      "contractInfoTitle": "Contract info",
+      "contractInfoHint": "Quick reference for lookup. Source of truth remains in the Contracts / Projects modules.",
+      "contractNumber": "Contract number",
+      "contractNumberPlaceholder": "MSA-2026-001",
+      "projectCode": "Project code (PID)",
+      "projectCodePlaceholder": "PID-2026-001",
       "notes": "Notes",
       "notesPlaceholder": "Internal context, onboarding notes, negotiation points…",
       "submit": "Create client",
-      "created": "Client \"{name}\" created."
+      "created": "Client \"{name}\" created.",
+      "editButton": "Edit",
+      "editTitle": "Edit client",
+      "editDescription": "Update client details. Changes take effect immediately across all modules.",
+      "saveChanges": "Save changes",
+      "updated": "Client \"{name}\" updated."
     },
     "detail": {
       "kicker": "Client",
@@ -259,7 +597,9 @@
       "name": "Project",
       "status": "Status",
       "budget": "Budget",
-      "managePortalUsers": "Manage portal users"
+      "managePortalUsers": "Manage portal users",
+      "refContract": "Contract",
+      "refProject": "PID"
     },
     "portalUsers": {
       "kicker": "Client · Portal users",
@@ -352,32 +692,115 @@
       "code": "Code",
       "name": "Project",
       "client": "Client",
+      "type": "Type",
       "status": "Status",
+      "priority": "Priority",
       "budget": "Budget",
-      "startDate": "Start"
+      "startDate": "Start",
+      "period": "Period"
     },
     "status": {
+      "DRAFT": "Draft",
       "PLANNING": "Planning",
       "ACTIVE": "Active",
       "ON_HOLD": "On Hold",
       "COMPLETED": "Completed",
       "ARCHIVED": "Archived"
     },
+    "lifecycle": {
+      "stageDraft": "Business Case",
+      "stagePlanning": "Planning (budget)",
+      "stageActive": "Active",
+      "draftReady": "Business Case complete — ready to promote to Planning.",
+      "draftMissingBc": "Fill the executive summary + sponsor to promote to Planning.",
+      "planningReady": "Budget approved — ready to assign PM and activate.",
+      "planningMissingBudget": "At least one budget must be APPROVED before activation.",
+      "activeReady": "Project is active. Operational entries are unlocked.",
+      "closedHint_ON_HOLD": "Project is On Hold — operational entries are paused.",
+      "closedHint_COMPLETED": "Project is Completed — no new operational entries.",
+      "closedHint_ARCHIVED": "Project is Archived — read-only.",
+      "ctaPromote": "Promote to Planning",
+      "ctaActivate": "Activate & Assign PM",
+      "activateTitle": "Activate project",
+      "activateDescription": "Pick the Primary PM. The project moves to Active immediately.",
+      "activatePickPm": "Primary PM",
+      "activatePickPmPlaceholder": "Pick a PM…",
+      "activatePickPmError": "Please pick a PM first.",
+      "activateHasActivePmHint": "This project already has an active PM assignment — activation will only flip the status.",
+      "toastPromoted": "Project promoted to Planning.",
+      "toastPromoteFailed": "Failed to promote project.",
+      "toastActivated": "Project activated.",
+      "toastActivateFailed": "Failed to activate project."
+    },
+    "priority": {
+      "CRITICAL": "Critical",
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low"
+    },
+    "type": {
+      "FIXED_PRICE": "Fixed Price",
+      "TIME_MATERIAL": "Time & Material",
+      "RETAINER": "Retainer",
+      "INTERNAL": "Internal"
+    },
     "form": {
-      "createTitle": "Add a new project",
+      "createTitle": "New project",
       "createDescription": "A project is scoped to a single client and can carry multiple PMs and allocated team members.",
       "needsClient": "You need at least one client before creating a project.",
       "client": "Client",
-      "clientPlaceholder": "Pick a client…",
+      "clientPlaceholder": "Select client…",
       "code": "Code",
       "name": "Project name",
       "status": "Status",
-      "startDate": "Start",
-      "endDate": "End",
+      "priority": "Priority",
+      "pm": "Project manager",
+      "pmPlaceholder": "Assign PM…",
+      "pmUnassigned": "Unassigned (assign later)",
+      "projectType": "Project type",
+      "projectTypePlaceholder": "Select…",
+      "location": "Location",
+      "locationPlaceholder": "City, site, or 'Remote'",
+      "startDate": "Start date",
+      "endDate": "End date",
       "description": "Description",
       "descriptionPlaceholder": "Scope, service type, notable points…",
       "submit": "Create project",
       "created": "Project \"{name}\" created."
+    },
+    "wizard": {
+      "step1": "Info",
+      "step2": "Business Case & budget",
+      "step3": "Milestones",
+      "back": "Back",
+      "next": "Next",
+      "saveProject": "Save project",
+      "autoNumberHint": "Number auto-assigned on save",
+      "duration": "Duration",
+      "contractValue": "Contract value",
+      "currency": "Currency",
+      "notes": "Notes",
+      "bcSection": "Business Case",
+      "bcSectionHint": "Optional at creation — project starts in Draft. Fill this before promoting to Planning.",
+      "bcExecutiveSummary": "Executive summary",
+      "bcExecutiveSummaryPlaceholder": "Why this project? Scope, expected outcome, strategic value…",
+      "bcTargetGmPct": "Target gross margin (%)",
+      "bcSponsor": "Sponsor",
+      "bcSponsorPlaceholder": "Pick sponsor (OM / Admin / Director)…",
+      "bcSponsorNone": "No eligible sponsor available",
+      "syncCalendar": "Sync to Google Calendar",
+      "syncCalendarHint": "Pushes the project (and every milestone) to the org calendar. Turn off for confidential engagements or personal reference projects.",
+      "comingSoon": "Coming soon",
+      "milestonesTitle": "Milestones",
+      "milestonesHint": "Optional at creation. Progress % is computed from milestone completion.",
+      "addMilestone": "+ Add milestone",
+      "removeMilestone": "Remove milestone",
+      "noMilestones": "No milestones yet — click Add milestone.",
+      "milestoneName": "Name",
+      "milestoneNamePlaceholder": "Milestone name",
+      "milestoneDue": "Due date",
+      "milestoneWeight": "Weight %",
+      "totalWeight": "Total weight (leave all at 0 for even weighting)"
     },
     "detail": {
       "kicker": "Project",
@@ -392,6 +815,7 @@
       "since": "Since {date}",
       "teamTitle": "Team & Allocation",
       "teamEmpty": "No employees are assigned to this project yet.",
+      "addTeamMember": "Add team member",
       "expensesTitle": "Recent expenses",
       "expensesEmpty": "No expense submissions yet.",
       "descriptionTitle": "Description"
@@ -417,12 +841,71 @@
     }
   },
   "contracts": {
+    "kicker": "Finance",
+    "title": "BPO Contracts",
+    "subtitle": "Master record for every Managed Services / MSA contract per client. MRR here feeds the real-time gross margin (rules §5, §14).",
+    "newContract": "New contract",
+    "empty": "No contracts yet",
+    "emptyBody": "Create your first BPO contract to unlock MRR calculations and gross margin insights.",
+    "openEnded": "open-ended",
+    "columns": {
+      "number": "Contract #",
+      "client": "Client",
+      "status": "Status",
+      "mrr": "MRR",
+      "period": "Period",
+      "updated": "Updated"
+    },
+    "form": {
+      "createTitle": "Create BPO contract",
+      "createDescription": "This contract becomes the source of truth for MRR and gross margin on the dashboard.",
+      "editTitle": "Edit contract",
+      "editDescription": "Update contract details. Changes take effect immediately across all modules.",
+      "editButton": "Edit contract",
+      "client": "Client",
+      "clientPlaceholder": "Pick a client…",
+      "contractNumber": "Contract number (MSA)",
+      "mrrAmount": "MRR amount (IDR)",
+      "mrrHint": "Monthly, whole rupiah. Example: 15000000 = Rp 15 million.",
+      "status": "Status",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "endDateHint": "Leave empty for open-ended contracts (no fixed end date).",
+      "notes": "Notes",
+      "notesPlaceholder": "Negotiation context, custom SLAs, addenda…",
+      "submit": "Create contract",
+      "saveChanges": "Save changes",
+      "created": "Contract {number} created.",
+      "updated": "Contract {number} updated."
+    },
     "status": {
       "DRAFT": "Draft",
       "ACTIVE": "Active",
       "ENDED": "Ended",
       "RENEWED": "Renewed",
       "TERMINATED": "Terminated"
+    },
+    "detail": {
+      "kicker": "BPO contract",
+      "back": "Back",
+      "openEnded": "no end date set",
+      "mrrLabel": "MRR",
+      "mrrHint": "Recurring monthly",
+      "annualRevenueLabel": "Annual revenue",
+      "annualRevenueHint": "MRR × 12",
+      "linkedProjectsLabel": "Linked projects",
+      "linkedProjectsHint": "Projects sharing this contract_id",
+      "currencyLabel": "Currency",
+      "currencyHint": "Per contract terms",
+      "projectsTitle": "Linked projects",
+      "projectsEmpty": "No projects are linked to this contract yet.",
+      "code": "Code",
+      "name": "Name",
+      "status": "Status",
+      "dates": "Dates",
+      "notesTitle": "Contract notes",
+      "createdAt": "Created {date}",
+      "updatedAt": "updated {date}"
     }
   },
   "milestones": {
@@ -479,19 +962,32 @@
     "new": "New issue",
     "empty": "No issues raised for this project yet.",
     "tableAria": "Project issues",
+    "milestoneMissing": "Milestone removed",
+    "attachmentCountAria": "{count, plural, one {# attachment} other {# attachments}}",
     "columns": {
       "title": "Title",
-      "severity": "Severity",
+      "category": "Category",
+      "severity": "Priority",
       "status": "Status",
       "sla": "SLA",
       "assignee": "Assignee",
-      "created": "Created"
+      "created": "Created",
+      "due": "Due"
     },
     "severity": {
       "CRITICAL": "Critical",
       "HIGH": "High",
       "MEDIUM": "Medium",
       "LOW": "Low"
+    },
+    "category": {
+      "BUG": "Bug",
+      "FEATURE": "Feature",
+      "TASK": "Task",
+      "INCIDENT": "Incident",
+      "RISK": "Risk",
+      "IMPROVEMENT": "Improvement",
+      "QUESTION": "Question"
     },
     "status": {
       "OPEN": "Open",
@@ -506,15 +1002,40 @@
       "breached": "Breached {hours}h"
     },
     "form": {
-      "title": "Raise a new issue",
-      "description": "Log a defect, blocker, or risk against this project. Severity drives the business-hours SLA (Critical 1h · High 4h · Medium 8h · Low 24h).",
+      "title": "New issue",
+      "description": "Log a defect, blocker, or risk against this project. Priority drives the business-hours SLA (Critical 1h · High 4h · Medium 8h · Low 24h).",
+      "project": "Project",
+      "projectLockedFallback": "This project",
+      "milestone": "Milestone (optional)",
+      "milestoneNone": "— none —",
+      "milestoneHint": "Link the issue to a milestone to flag delivery risk.",
       "issueTitle": "Title",
       "issueTitlePlaceholder": "Login fails after 2 attempts…",
-      "severity": "Severity",
-      "assignee": "Assignee",
-      "assigneeUnassigned": "Assign later…",
+      "category": "Category",
+      "priority": "Priority",
+      "priorityHint": "Drives SLA (Critical 1h · High 4h · Medium 8h · Low 24h).",
+      "dueDate": "Due date (optional)",
+      "assignee": "Assign to (optional)",
+      "assigneeUnassigned": "— unassigned —",
       "descriptionField": "Description",
-      "submit": "Create issue",
+      "descriptionPlaceholder": "Steps to reproduce, business impact, expected vs. actual, links to related tickets, etc.",
+      "tags": "Tags (comma-separated)",
+      "tagsPlaceholder": "backend, checkout, prio-p1",
+      "tagsHint": "Max 20 tags. We normalise to lowercase.",
+      "notes": "Notes",
+      "notesPlaceholder": "Internal remarks (not shown to clients)…",
+      "notesHint": "Only visible to internal staff.",
+      "attachments": {
+        "label": "Attachments (optional)",
+        "add": "Add file",
+        "hint": "Attach screenshots, logs, or reference docs. Max 10 MB per file.",
+        "pickerLabel": "Pick files to attach",
+        "removeAria": "Remove file",
+        "unsupportedType": "{name} — unsupported file type. Use JPEG, PNG, WebP, or PDF.",
+        "tooLarge": "{name} exceeds the 10 MB limit.",
+        "partialUploadFailed": "Issue saved, but some attachments failed to upload."
+      },
+      "submit": "Save",
       "createdToast": "Issue raised."
     },
     "actions": {
@@ -609,8 +1130,16 @@
       "project": "Project",
       "description": "Description",
       "category": "Category",
+      "paymentMethod": "Payment",
       "amount": "Amount",
       "status": "Status"
+    },
+    "filters": {
+      "all": "All",
+      "myDrafts": "My drafts",
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected / Cancelled"
     },
     "categories": {
       "TRAVEL": "Travel",
@@ -622,20 +1151,57 @@
       "MISC": "Miscellaneous"
     },
     "form": {
-      "title": "Submit an expense",
-      "description": "Request a project expense reimbursement. The amount determines which approval chain is required.",
+      "title": "New expense",
+      "description": "Draft your expense first, attach receipts, then submit for approval.",
       "needsProject": "You need an active project before submitting expenses.",
       "project": "Project",
-      "projectPlaceholder": "Pick a project…",
-      "amount": "Amount (IDR)",
+      "projectPlaceholder": "Select project…",
+      "budgetLine": "MA (budget line)",
+      "budgetLinePlaceholder": "Select a budget line…",
+      "budgetLinePlaceholderNoProject": "Pick a project first…",
+      "budgetLineLoading": "Loading budget lines…",
+      "budgetLineEmpty": "No eligible budget line for this project.",
+      "budgetLineHint": "Only budget lines on an approved (or draft/submitted) budget for the project are shown.",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Select GL account…",
+      "coaPlaceholderNoProject": "Pick a project first…",
+      "coaLoading": "Loading CoA…",
+      "coaEmpty": "No CoA registered for this project.",
+      "coaEmptyHint": "Finance has not linked any Chart of Accounts to this project's budget lines yet.",
+      "coaNone": "— No CoA (Finance will classify) —",
+      "coaHint": "Only CoAs registered on this project's budget lines are shown.",
+      "amount": "Amount",
       "amountHint": "Whole rupiah, no decimals.",
       "category": "Category",
-      "incurredOn": "Date incurred",
+      "paymentMethod": "Payment method",
+      "paymentMethodPlaceholder": "Select payment method…",
+      "incurredOn": "Expense date",
       "descriptionLabel": "Description",
-      "descriptionPlaceholder": "Short summary of the expense…",
+      "descriptionPlaceholder": "What is this expense for?",
+      "notes": "Notes",
+      "notesPlaceholder": "Extra context for reviewers…",
+      "lateReasonLabel": "Late-submission justification ({days} working days old) — required",
+      "lateReasonPlaceholder": "e.g. just returned from a client site, receipt was misplaced, approver was unavailable…",
+      "lateReasonHint": "Receipt is more than 7 working days old. Approvers will see a special flag — please provide a brief explanation (min 5 characters).",
+      "receipts": "Receipts",
+      "receiptsHint": "JPG, PNG, WEBP or PDF · up to 10 MB per file.",
+      "addReceipt": "Add receipt",
+      "receiptsAttached": "{n} file(s) queued",
+      "removeStagedReceipt": "Remove",
+      "uploadingReceipts": "Uploading receipts…",
+      "budgetLineEmptyHint": "Ask Finance to create a budget for this project first.",
+      "draftHint": "Draft — receipts upload after Save draft.",
       "receiptUrl": "Receipt URL (optional)",
+      "saveDraft": "Save draft",
       "submit": "Submit for approval",
+      "draftSaved": "Draft saved. You can add more receipts on the detail page.",
       "submitted": "Expense submitted for approval."
+    },
+    "paymentMethods": {
+      "BANK_TRANSFER": "Bank transfer",
+      "CASH": "Cash",
+      "REIMBURSEMENT": "Reimbursement",
+      "CORPORATE_CARD": "Corporate card"
     },
     "detail": {
       "back": "Back to list",
@@ -647,7 +1213,33 @@
       "openReceipt": "Open receipt",
       "timelineTitle": "Approval history",
       "timelineEmpty": "No approval activity yet.",
-      "rejectionReasonTitle": "Rejection reason"
+      "rejectionReasonTitle": "Rejection reason",
+      "notesTitle": "Notes",
+      "receiptsTitle": "Receipts",
+      "receiptsEmpty": "No receipts uploaded yet.",
+      "uploadReceipts": "Upload receipts",
+      "uploadHint": "JPG, PNG, WEBP or PDF · up to 10 MB per file.",
+      "uploadingFiles": "Uploading {n} file(s)…",
+      "uploadedToast": "{n} receipt(s) uploaded.",
+      "removeReceipt": "Remove",
+      "removedToast": "Receipt removed.",
+      "submitForApproval": "Submit for approval",
+      "submitLocked": "Add a payment method and at least one receipt to submit. Your PM will assign the budget line.",
+      "deleteDraft": "Delete draft",
+      "deletedToast": "Draft deleted.",
+      "confirmDelete": "Delete this draft permanently?",
+      "confirmDeleteBody": "This action cannot be undone. Uploaded receipts will also be removed.",
+      "budgetLineLabel": "Budget line",
+      "coaLabel": "Chart of Accounts",
+      "paymentMethodLabel": "Payment method",
+      "assignBudgetLineTitle": "Assign a budget line (MA)",
+      "changeBudgetLine": "Change budget line",
+      "selectBudgetLine": "Select a budget line…",
+      "loadingBudgetLines": "Loading budget lines…",
+      "noBudgetLines": "No approved budget lines on this project.",
+      "saveBudgetLine": "Save",
+      "cancelBudgetLine": "Cancel",
+      "budgetLineAssignedToast": "Budget line assigned."
     },
     "actions": {
       "approve": "Approve",
@@ -711,6 +1303,9 @@
       "addRow": "Add line item",
       "seq": "#",
       "category": "Category",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Pick a GL account…",
+      "coaNone": "— not assigned —",
       "plannedAmount": "Planned (IDR)",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "What does this line pay for?",
@@ -735,6 +1330,7 @@
       "noLineItems": "No line items yet. Add at least one before submitting.",
       "columns": {
         "category": "Category",
+        "coa": "CoA",
         "description": "Description",
         "planned": "Planned",
         "realized": "Realized",
@@ -869,20 +1465,36 @@
     "form": {
       "title": "New cash advance",
       "description": "Request an operational cash advance. Type and amount drive the approval chain.",
-      "needsProject": "You need at least one active project assignment to request an advance.",
+      "needsProject": "You need at least one active project assignment to request an advance. Contact your PM if you believe this is a mistake.",
       "type": "Type",
       "project": "Project",
       "projectPlaceholder": "Pick a project…",
       "amount": "Amount (IDR)",
-      "amountHint": "Whole rupiah, no decimals.",
+      "amountHint": "Whole rupiah — dots added automatically as you type.",
       "neededBy": "Needed by",
       "purposeLabel": "Purpose",
-      "purposePlaceholder": "What is the advance for?…",
+      "purposePlaceholder": "e.g., Materials for XYZ site visit; vendor meeting logistics; temporary card top-up for client X.",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Select GL account…",
+      "coaPlaceholderNoProject": "Pick a project first…",
+      "coaLoading": "Loading CoA…",
+      "coaEmpty": "No CoA registered for this project.",
+      "coaEmptyHint": "Finance has not linked any Chart of Accounts to this project's budget lines yet.",
+      "coaNone": "— No CoA (Finance will classify) —",
+      "coaHint": "Only CoAs registered on this project's budget lines are shown.",
       "chainPreviewTitle": "Approval chain",
       "chainPreviewEmpty": "Enter an amount to preview approvers.",
       "chainPreviewAuto": "Instant approval (below thresholds).",
       "submit": "Submit for approval",
-      "submitted": "Cash advance submitted."
+      "submitted": "Cash advance submitted.",
+      "settlementPreviewTitle": "Estimated settlement deadline",
+      "settlementPreviewBody": "If disbursed today, you must settle by {date} (7 business days). Late settlement blocks new requests.",
+      "settlementPreviewEmpty": "Settlement deadline shown once disbursement date is known.",
+      "fieldOpsCardLockedTitle": "Field Ops uses a dedicated flow",
+      "fieldOpsCardLockedEligible": "Use the 'Pengajuan Operasional' button instead — it captures RAB line items, site details, and required attachments.",
+      "fieldOpsCardLockedNotEligible": "Only Supervisors or Field Technicians assigned to a project can raise Field Ops CA. Ask your Supervisor to submit on your behalf.",
+      "fieldOpsCardLockedToastEligible": "Please use the 'Pengajuan Operasional' button for Field Ops CA.",
+      "fieldOpsCardLockedToastNotEligible": "Field Ops CA is limited to Supervisor / Field Technician roles."
     },
     "chainSlot": {
       "SUPERVISOR": "Supervisor",
@@ -891,11 +1503,25 @@
       "FINANCE": "Finance",
       "DIRECTOR": "Director"
     },
+    "attachments": {
+      "title": "Supporting attachments",
+      "subtitleGeneral": "Optional supporting files (memo, invoice, receipt) that reviewers may need.",
+      "subtitleFieldOps": "Required for reviewers: Google Maps route screenshot, memo pendukung, dan foto site jika diminta approver.",
+      "upload": "Add file",
+      "uploadHint": "JPG, PNG, WEBP or PDF · up to 10 MB per file. Upload while status is DRAFT or Pending Supervisor.",
+      "empty": "No supporting files uploaded yet.",
+      "remove": "Remove file",
+      "uploadedToast": "{n} file(s) uploaded.",
+      "removedToast": "File removed.",
+      "locked": "Attachments locked",
+      "lockedTitle": "Attachments become read-only once Supervisor moves the request forward."
+    },
     "detail": {
       "kicker": "Cash advance",
       "back": "Back to list",
       "amount": "Amount",
       "neededBy": "Needed by {date}",
+      "coaLabel": "CoA",
       "requesterTitle": "Requester",
       "submittedAt": "Submitted {date}",
       "timelineTitle": "Approval timeline",
@@ -943,9 +1569,29 @@
       "submitTitle": "Submit settlement",
       "submitDescription": "Upload nota/struk totals so Finance can reconcile the advance.",
       "totalSpent": "Total spent (IDR)",
+      "totalSpentInvalid": "Total spent must be a non-negative amount.",
       "notes": "Notes (optional)",
       "confirmSubmit": "Submit",
       "submitted": "Settlement submitted.",
+      "attachments": {
+        "label": "Receipts (nota / struk)",
+        "hint": "JPG · PNG · PDF · max 10 MB each",
+        "add": "Add receipt",
+        "attached": "{n} attached",
+        "none": "No receipts yet",
+        "pickerLabel": "Pick receipt files",
+        "requiredForSpend": "At least one receipt is required when total spent is greater than 0.",
+        "carryOverInfo": "{n} receipt(s) from your previous returned submission will be carried over.",
+        "submittedWithCopyForward": "Settlement submitted with {n} carried-over receipts.",
+        "unsupportedType": "{name}: unsupported file type",
+        "tooLarge": "{name}: exceeds 10 MB limit",
+        "removeAria": "Remove {name} from selection",
+        "detached": "{name} removed.",
+        "detachAria": "Delete {name}",
+        "removedToast": "Receipt removed.",
+        "listAria": "Receipts attached to this settlement",
+        "listTitle": "Attached receipts"
+      },
       "review": {
         "accept": "Accept",
         "acceptTitle": "Accept settlement?",
@@ -966,6 +1612,80 @@
       "generalHint": "Any project member may request. Approval: PM (≥ IDR 2M) → Finance → Director (≥ IDR 20M).",
       "fieldOps": "Field ops",
       "fieldOpsHint": "Supervisor-initiated for field visits. Approval always starts at Supervisor; escalates to PM / OM / Director based on amount."
+    },
+    "newFieldOps": "Pengajuan operasional",
+    "newFieldOpsDisabled": "Field-Ops advance is only available to technicians assigned to a project.",
+    "newGeneralDisabled": "You are assigned as a field technician — please use Pengajuan Operasional.",
+    "fieldOpsForm": {
+      "title": "Pengajuan Dana Operasional Lapangan",
+      "description": "Sesuai mockup Field Ops. Approval otomatis dihitung dari total RAB (5jt / 20jt / 50jt).",
+      "needsFieldTech": "You need an active FIELD_TECHNICIAN assignment on a project to use this form.",
+      "section1": "Informasi Pekerjaan & Site",
+      "section2": "Transportasi & Lokasi",
+      "section3": "Rekening Pencairan",
+      "rabTitle": "Rincian Anggaran (RAB)",
+      "rabHint": "Total RAB menentukan alur approval. Minimal 1 baris.",
+      "rabAdd": "Tambah baris",
+      "rabRemove": "Hapus",
+      "rabCategory": "Kategori",
+      "rabCategoryPlaceholder": "Transportasi / Konsumsi / Akomodasi …",
+      "rabDetail": "Detail",
+      "rabDetailPlaceholder": "Contoh: PP Jakarta–Bandung, 2 org, 3 hari",
+      "rabAmount": "Nominal (IDR)",
+      "rabTotal": "Total RAB",
+      "rabEmpty": "Belum ada baris RAB.",
+      "rabCoa": "Chart of Accounts",
+      "rabCoaPlaceholder": "Select GL account…",
+      "rabCoaPlaceholderNoProject": "Pick a project first…",
+      "rabCoaLoading": "Loading CoA…",
+      "rabCoaEmpty": "No CoA registered for this project.",
+      "rabCoaNone": "— No CoA (Finance will classify) —",
+      "project": "Nama Project",
+      "projectPlaceholder": "Pilih project…",
+      "ticketNumber": "No Ticket / SPK",
+      "ticketNumberPlaceholder": "SPK-2026-…",
+      "unitPengaju": "Unit Pengaju",
+      "unitPengajuPlaceholder": "Ops-Nusa / NOC-Jakarta …",
+      "justification": "Justifikasi",
+      "justificationPlaceholder": "Ringkas kenapa kunjungan/kerja lapangan ini perlu…",
+      "cidCompany": "CID / Nama Perusahaan",
+      "cidCompanyPlaceholder": "CID: NUSA-CS-2026-…",
+      "area": "Area",
+      "areaPlaceholder": "Jabodetabek / Jawa Barat …",
+      "tujuan": "Tujuan",
+      "tujuanPlaceholder": "Alamat / site tujuan",
+      "picName": "Nama PIC di Lokasi",
+      "picNamePlaceholder": "Nama kontak on-site",
+      "picPhone": "No HP PIC",
+      "pickupKeyBts": "Ambil kunci BTS?",
+      "transportNeed": "Kebutuhan Transportasi",
+      "transportNeedPlaceholder": "Motor / mobil pribadi / rental / carter",
+      "jarakPpKm": "Jarak PP (km)",
+      "gmapDuration": "Durasi Estimasi (Gmap)",
+      "gmapDurationPlaceholder": "2 jam 30 menit",
+      "driverPhone": "No HP Driver",
+      "bankOwnerName": "Nama Pemilik Rekening",
+      "bankName": "Nama Bank",
+      "bankNamePlaceholder": "BCA / Mandiri / BNI …",
+      "bankAccountNo": "No Rekening",
+      "bankAccountHint": "6-24 digit angka.",
+      "lookupEmpty": "Belum ada opsi — hubungi admin.",
+      "saveDraft": "Simpan Draft",
+      "saveDraftSaved": "Draft tersimpan. Anda bisa lengkapi dan submit dari detail halaman.",
+      "cancel": "Batal",
+      "chainPreview": "Preview alur approval untuk total ini",
+      "chainSupervisor": "Supervisor",
+      "chainManagerOnSite": "Manager On-site",
+      "chainLeadOm": "Lead Operations Manager",
+      "chainFinance": "Finance",
+      "chainHeadOps": "Head of Operations",
+      "section4": "Lampiran Pendukung",
+      "attachmentsHint": "Wajib untuk approver Field-Ops: screenshot rute Google Maps, memo pendukung, foto site. Bisa juga ditambah nanti dari halaman detail.",
+      "addAttachment": "Tambah lampiran",
+      "attachmentsPickHint": "JPG, PNG, WEBP atau PDF · maksimal 10 MB per file.",
+      "attachmentsAttached": "{n} file siap diupload setelah Simpan Draft.",
+      "removeStagedAttachment": "Hapus dari daftar upload",
+      "uploadingAttachments": "Mengupload lampiran…"
     },
     "canonicalStatus": {
       "DRAFT": "Draft",
@@ -1024,6 +1744,10 @@
       "incurredOn": "Date",
       "descriptionLabel": "Description",
       "descriptionPlaceholder": "Short note about the purchase…",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Select GL account…",
+      "coaNone": "— No CoA —",
+      "coaHint": "Optional. Only active, postable accounts are shown.",
       "receiptUrl": "Receipt URL (optional)",
       "submit": "Record voucher",
       "recorded": "Voucher recorded."
@@ -1042,6 +1766,7 @@
       "cols": {
         "date": "Date",
         "category": "Category",
+        "coa": "CoA",
         "description": "Description",
         "amount": "Amount",
         "status": "Status"
@@ -1055,6 +1780,25 @@
       "reason": "Reason (optional)",
       "confirm": "Send request",
       "submitted": "Replenishment request submitted.",
+      "attachments": {
+        "labelMemo": "Supporting memo (optional)",
+        "labelTransferProof": "Transfer proof (recommended)",
+        "hint": "JPG · PNG · PDF · max 10 MB each",
+        "add": "Add memo",
+        "addProof": "Attach transfer proof",
+        "attached": "{n} attached",
+        "none": "No attachments yet",
+        "pickerLabel": "Pick memo files",
+        "pickerLabelProof": "Pick transfer proof files",
+        "uploading": "Uploading…",
+        "unsupportedType": "{name}: unsupported file type",
+        "tooLarge": "{name}: exceeds 10 MB limit",
+        "removeAria": "Remove {name} from selection",
+        "detachAria": "Delete {name}",
+        "removedToast": "Attachment removed.",
+        "listAria": "Attachments for this replenishment",
+        "partialUploadFailed": "Request saved but attachment upload failed: {reason}"
+      },
       "actions": {
         "approve": "Approve",
         "reject": "Reject",
@@ -1079,7 +1823,372 @@
       }
     }
   },
+  "settingsHub": {
+    "kicker": "Settings",
+    "title": "Settings",
+    "subtitle": "Manage your personal preferences and, if you have admin access, tenant-wide configuration.",
+    "personal": {
+      "heading": "Personal preferences",
+      "description": "Settings scoped to your account — they do not affect other users.",
+      "preferences": {
+        "title": "My preferences",
+        "description": "Notifications, Telegram, WhatsApp, and appearance."
+      }
+    },
+    "admin": {
+      "heading": "Administration",
+      "description": "Tenant-level configuration. Tiles below only appear for roles with permission.",
+      "tiles": {
+        "users": {
+          "title": "Users",
+          "description": "Manage login accounts, roles, and active status."
+        },
+        "coa": {
+          "title": "Chart of accounts",
+          "description": "Manage the tenant's financial account list."
+        },
+        "lookups": {
+          "title": "Lookups",
+          "description": "Departments, positions, budget categories, and other lookups."
+        },
+        "bulkImport": {
+          "title": "Bulk import",
+          "description": "Upload CSV/XLSX for clients, employees, projects, and budget lines."
+        },
+        "secrets": {
+          "title": "Secret rotation",
+          "description": "Track rotation of encryption keys and integration credentials."
+        },
+        "archives": {
+          "title": "Archives",
+          "description": "Browse archived (soft-deleted) records across the tenant."
+        },
+        "integrations": {
+          "title": "Integrations",
+          "description": "Google Calendar, Telegram bots, WhatsApp Business."
+        }
+      }
+    }
+  },
+  "integrationsHub": {
+    "kicker": "Settings · Integrations",
+    "title": "Integrations",
+    "subtitle": "Tenant-level integrations — OAuth credentials, bot configuration, and third-party APIs. To link your personal Telegram / WhatsApp account, open Preferences.",
+    "status": {
+      "connected": "Connected",
+      "disconnected": "Not connected",
+      "notAvailable": "Coming soon"
+    },
+    "cards": {
+      "calendar": {
+        "title": "Google Calendar",
+        "description": "Push projects and milestones to a shared team calendar."
+      },
+      "telegram_bot": {
+        "title": "Telegram bot",
+        "description": "Configure the per-tenant bot that sends notifications to employees."
+      },
+      "whatsapp_business": {
+        "title": "WhatsApp (Fonnte)",
+        "description": "Send notifications via WhatsApp using Fonnte's device-token gateway. Pair a WhatsApp Web session and paste the device token."
+      }
+    }
+  },
+  "telegramBotAdmin": {
+    "kicker": "Integrations · Telegram bot",
+    "title": "Telegram bot",
+    "subtitle": "Configure the per-tenant bot that delivers approval, budget, and roster notifications. This is a tenant-level setting; each employee links their personal chat separately via Preferences.",
+    "status": {
+      "connected": "Bot is active",
+      "inactive": "Bot registered but inactive",
+      "noConfig": "No bot registered for this tenant",
+      "lastError": "Last error",
+      "hintConnected": "Employees can link their personal Telegram chat from Preferences.",
+      "hintNotConfigured": "Once a bot is registered, employees will see a Link Telegram button in Preferences."
+    },
+    "runbook": {
+      "title": "1 · Create the bot in Telegram",
+      "description": "Follow these steps once. The bot lives inside Telegram; only its credentials come back to ControlDesk.",
+      "step1": "In Telegram, chat with @BotFather and send /newbot.",
+      "step2": "Choose a display name, then a username ending with _bot.",
+      "step3": "Copy the bot token BotFather returns — it looks like 123456:ABC-DEF….",
+      "step4": "Note the bot username (starts with @) — you will need both values to activate."
+    },
+    "handoff": {
+      "title": "2 · Hand off to platform engineering",
+      "description": "Self-serve admin form is not shipped yet. Send the following bundle to your platform engineer — they will run a one-time write against the encrypted store.",
+      "copyLabel": "Fields to hand over",
+      "hint": "Never paste the bot token in chat or issues — use a password manager or vault handoff."
+    },
+    "comingSoon": {
+      "title": "Self-serve admin form is on the roadmap",
+      "body": "A dedicated form with token input, test-connection button, and activate/deactivate toggle will replace this handoff step. Ship-blocked on the encrypted-secret editor pattern used by /settings/secrets."
+    },
+    "form": {
+      "title": "Register or update the bot",
+      "description": "Paste the bot username and token from @BotFather. On save, we verify the token against Telegram's getMe API before persisting.",
+      "fields": {
+        "botUsername": "Bot username",
+        "botUsernamePlaceholder": "my_erp_bot",
+        "botUsernameHint": "The @handle you set in BotFather. Must end with \"bot\". The leading @ is optional.",
+        "botToken": "Bot token",
+        "botTokenPlaceholder": "123456789:ABC-DEF...",
+        "botTokenHint": "Copy this from BotFather. It is encrypted at rest and never displayed again.",
+        "botTokenHintUpdate": "Paste a fresh token to rotate. The existing token is never shown."
+      },
+      "actions": {
+        "save": "Save & activate",
+        "update": "Update & re-verify",
+        "deactivate": "Deactivate"
+      },
+      "deactivateConfirm": "Deactivate this Telegram bot? Outbound notifications will stop and personal linking will be hidden in Preferences.",
+      "toast": {
+        "savedOk": "Telegram bot @{botUsername} is active.",
+        "deactivatedOk": "Telegram bot deactivated."
+      }
+    }
+  },
+  "whatsappAdmin": {
+    "kicker": "Integrations · WhatsApp (Fonnte)",
+    "title": "WhatsApp (Fonnte)",
+    "subtitle": "Configure the tenant's outbound WhatsApp channel via Fonnte's device-token gateway. Pair a WhatsApp Web session on your phone and paste the device token — no Meta business verification required.",
+    "status": {
+      "connected": "Fonnte device is active",
+      "inactive": "Device registered but inactive",
+      "noConfig": "No Fonnte device registered for this tenant",
+      "lastError": "Last error",
+      "hintConnected": "Employees can link their WhatsApp number from Preferences. Keep your Fonnte-paired phone online — a disconnected device stops delivery.",
+      "hintNotConfigured": "Once a device is registered, employees will see a Link WhatsApp button in Preferences."
+    },
+    "runbook": {
+      "title": "1 · Pair your device on Fonnte",
+      "description": "Fonnte relays messages through a WhatsApp Web session tied to your phone. Free tier is enough for early testing.",
+      "step1": "Open https://md.fonnte.com and sign up (or log in).",
+      "step2": "Go to Device → Add device. Give it a name (e.g. \"ControlDesk primary\").",
+      "step3": "Scan the QR code with WhatsApp on the phone number you want to use as the sender.",
+      "step4": "Once the device shows status \"connect\", copy the device Token from the device list.",
+      "step5": "Paste the token in the form on the right. We verify it against Fonnte before saving.",
+      "warning": "Warning: Fonnte is an unofficial gateway. The paired WhatsApp account can be banned by WhatsApp if flagged. For high-volume production, plan to migrate to Meta Cloud API (adapter already exists in the backend)."
+    },
+    "form": {
+      "title": "Register or update the Fonnte device",
+      "description": "Paste the WhatsApp number and device token from your Fonnte dashboard. On save, we verify the token against Fonnte's /device endpoint before persisting.",
+      "fields": {
+        "phoneFonnte": "Business phone",
+        "phoneFonntePlaceholder": "6281234567890 or +6281234567890",
+        "phoneFonnteHint": "The WhatsApp number you paired to this Fonnte device (for display + audit). Fonnte routes by device token, so this field is informational.",
+        "deviceToken": "Device token",
+        "deviceTokenPlaceholder": "Paste your Fonnte device token here",
+        "deviceTokenHint": "Copy from Fonnte dashboard → Device list. Encrypted at rest; never displayed after save.",
+        "deviceTokenHintUpdate": "Paste a fresh token to rotate. The stored token is never shown."
+      },
+      "actions": {
+        "save": "Save & activate",
+        "update": "Update & re-verify",
+        "deactivate": "Deactivate"
+      },
+      "deactivateConfirm": "Deactivate this Fonnte device? Outbound notifications will stop and personal linking will be hidden in Preferences.",
+      "toast": {
+        "savedOk": "Fonnte device saved and verified.",
+        "deactivatedOk": "Fonnte device deactivated."
+      }
+    }
+  },
+  "calendarSync": {
+    "kicker": "Integrations \u00b7 Google Calendar",
+    "title": "Calendar sync",
+    "subtitle": "Every project and milestone is pushed to a single ERP-owned Google Calendar. The ERP is server-authoritative \u2014 manual edits on the Google side are overwritten on the next reconciliation. Attendees (project manager + assigned PM/OM) see the invite on their own calendars automatically.",
+    "kpis": {
+      "synced": "Synced",
+      "pending": "Pending",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "kind": {
+      "project": "Project",
+      "milestone": "Milestone"
+    },
+    "connection": {
+      "connected": "Connected to Google Calendar",
+      "noEnv": "Not configured on the server",
+      "noEnvHint": "Set GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET, then restart.",
+      "noCreds": "This tenant has not connected a calendar yet",
+      "noCredsHint": "Run the Google Calendar OAuth flow via the ops runbook.",
+      "inactive": "Credentials disabled",
+      "inactiveHint": "Check the last error \u2014 usually the refresh token was revoked."
+    },
+    "statusBadge": {
+      "sent": "Synced",
+      "pending": "Pending",
+      "failed": "Failed",
+      "skipped": "Skipped"
+    },
+    "filter": {
+      "all": "All statuses",
+      "sent": "Synced only",
+      "pending": "Pending only",
+      "failed": "Failed only",
+      "skipped": "Skipped only"
+    },
+    "syncMap": {
+      "title": "Sync map",
+      "lastSync": "Last sync: {when}",
+      "rowActions": "Row actions",
+      "pendingScheduled": "Scheduled",
+      "emptyAll": "No calendar events yet. Create or update a project with syncCalendar enabled to start pushing events.",
+      "emptyFiltered": "No rows match this filter.",
+      "col": {
+        "type": "Type",
+        "project": "Project",
+        "subject": "Subject",
+        "dates": "Start / End",
+        "status": "Status",
+        "lastSynced": "Last synced",
+        "actions": "Actions"
+      }
+    },
+    "actions": {
+      "runReconciliation": "Run reconciliation",
+      "refresh": "Refresh",
+      "cancel": "Cancel",
+      "retry": "Retry",
+      "skip": "Skip row",
+      "openInGoogle": "Open in Google",
+      "noAction": "No action available"
+    },
+    "reconcileDialog": {
+      "title": "Run manual reconciliation?",
+      "description": "{count} FAILED rows will be reset to PENDING and rescheduled. The drain cron runs every 10 minutes.",
+      "confirm": "Confirm reconciliation"
+    },
+    "skipDialog": {
+      "title": "Skip this row?",
+      "description": "The row is marked SKIPPED and will not be pushed. Your reason is stored in the audit log and the last_error column.",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "e.g. project cancelled, no need to sync",
+      "confirm": "Confirm skip"
+    },
+    "howItWorks": {
+      "title": "How sync works",
+      "bullet1": "Every project + milestone create/update/delete triggers a best-effort push.",
+      "bullet2": "Failed pushes are automatically retried on the nightly reconciliation trigger.",
+      "bullet3": "Toggle syncCalendar off on a project to opt it (and its milestones) out entirely.",
+      "bullet4": "Attendees receive an invitation the first time an event is created. Subsequent updates patch in place."
+    },
+    "toasts": {
+      "retryOk": "Row rescheduled.",
+      "retryFailed": "Failed to reschedule row.",
+      "skipOk": "Row marked as SKIPPED.",
+      "skipFailed": "Failed to skip row.",
+      "reconcileOk": "{count} FAILED rows rescheduled.",
+      "reconcileNothing": "No FAILED rows to reconcile.",
+      "reconcileFailed": "Reconciliation failed."
+    }
+  },
   "settings": {
+    "users": {
+      "backToSettings": "Back to Settings",
+      "kicker": "Admin · User accounts",
+      "title": "Users",
+      "subtitle": "Login accounts scoped to this tenant. This is a read-only view (Phase 1) — role changes and account provisioning still happen via Supabase Studio. Session invalidation will be added in a future phase.",
+      "subtitleV2": "Manage login accounts scoped to this tenant. Invite new users, change roles, or deactivate accounts. Sessions are revoked automatically on role change and deactivation.",
+      "readOnlyNotice": "Read-only view. Contact your platform admin (or open Supabase Studio) to invite new users, change roles, or deactivate accounts.",
+      "searchPlaceholder": "Search email or name…",
+      "statusFilter": {
+        "label": "Status",
+        "all": "All statuses",
+        "active": "Active",
+        "suspended": "Suspended",
+        "inactive": "Inactive",
+        "pending": "Pending"
+      },
+      "empty": "No users match the current filter.",
+      "emptyBody": "Try a different search term or clear the status filter.",
+      "totalCount": "{count} user(s)",
+      "columns": {
+        "email": "Email",
+        "linkedEmployee": "Linked employee",
+        "role": "Role",
+        "status": "Status",
+        "lastLogin": "Last login",
+        "createdAt": "Account created",
+        "actions": "Actions"
+      },
+      "noLinkedEmployee": "— none —",
+      "noRole": "— unassigned —",
+      "neverSignedIn": "Never signed in",
+      "youBadge": "You",
+      "canonicalRole": {
+        "EMPLOYEE": "Employee",
+        "SUPERVISOR": "Supervisor",
+        "PM": "Project Manager",
+        "OM": "Operations Manager",
+        "FINANCE": "Finance",
+        "DIRECTOR": "Director",
+        "ADMIN": "Administrator"
+      },
+      "invite": {
+        "openTrigger": "Invite user",
+        "title": "Invite a new user",
+        "description": "The invitee receives a magic-link email. On click they set their own password and land inside your tenant with the role you pick.",
+        "email": "Email",
+        "emailPlaceholder": "user@company.com",
+        "fullName": "Full name",
+        "fullNamePlaceholder": "Ex: Ayu Setyawati",
+        "role": "Role at invite",
+        "roleHint": "You can change this later — but each promotion writes an audit log entry.",
+        "flowTitle": "How the invite works",
+        "flowStep1": "We create the Supabase auth user and send a magic-link email (dev: Inbucket at localhost:54324).",
+        "flowStep2": "An employee row is created up-front with your chosen role so the JWT claim is ready on first sign-in.",
+        "flowStep3": "If the email hasn't been claimed after 7 days, resend from Supabase Studio.",
+        "submit": "Send invite",
+        "submittedToast": "Invite sent to {email}."
+      },
+      "actions": {
+        "openMenu": "Open user actions",
+        "menuLabel": "Manage user",
+        "changeRole": "Change role",
+        "deactivate": "Deactivate",
+        "reactivate": "Reactivate",
+        "forceLogout": "Force logout",
+        "selfDisabledHint": "You cannot edit your own account here.",
+        "missingEmployeeHint": "This auth user has no linked employee — actions unavailable."
+      },
+      "changeRole": {
+        "title": "Change user role",
+        "description": "Update the canonical role for {email}. Active sessions will be revoked so the next sign-in picks up the new claim.",
+        "newRole": "New role",
+        "reason": "Reason (optional, recorded in audit log)",
+        "reasonPlaceholder": "e.g., promoted after Q3 review",
+        "sessionWarning": "All active sessions for this user will be revoked immediately.",
+        "submit": "Change role & revoke sessions",
+        "submittedToast": "Role updated for {email}. {sessions} session(s) revoked."
+      },
+      "status": {
+        "ACTIVE": "Active",
+        "SUSPENDED": "Suspended",
+        "INACTIVE": "Inactive",
+        "PENDING": "Pending",
+        "reason": "Reason (optional, recorded in audit log)",
+        "reasonPlaceholder": "e.g., termination effective today",
+        "deactivateTitle": "Deactivate account",
+        "deactivateDescription": "{email} will lose access immediately and cannot sign in until you reactivate. Historic data (expenses, timesheets, audit logs) is preserved.",
+        "deactivateConfirm": "Deactivate account",
+        "deactivateToast": "Account for {email} deactivated.",
+        "reactivateTitle": "Reactivate account",
+        "reactivateDescription": "{email} will regain access with their previous role.",
+        "reactivateConfirm": "Reactivate account",
+        "reactivateToast": "Account for {email} reactivated."
+      },
+      "forceLogout": {
+        "title": "Force logout",
+        "description": "Revoke every active session for {email}. Their role and status stay unchanged; they simply need to sign in again on their next request.",
+        "reason": "Reason (optional, recorded in audit log)",
+        "reasonPlaceholder": "e.g., suspected stolen device, password reset in flight",
+        "submit": "Revoke sessions",
+        "submittedToast": "Revoked {sessions} session(s) for {email}."
+      }
+    },
     "secrets": {
       "kicker": "Ops · Rotation",
       "title": "Infrastructure Secret Rotation",
@@ -1113,6 +2222,139 @@
         "confirmMarkRotated": "Confirm rotation",
         "markSuccess": "{name} marked as freshly rotated.",
         "markFailed": "Failed to mark as rotated."
+      }
+    },
+    "lookups": {
+      "backToSettings": "Back to Settings",
+      "kicker": "Admin · Reference data",
+      "title": "Reference Data (Lookups)",
+      "subtitle": "Curate the dropdown vocabulary used across forms — Unit Pengaju, Transport Need, Area, and RAB Category. Deactivating an option hides it from new forms while keeping historical rows readable.",
+      "activeCount": "{active} active / {total} total",
+      "empty": "No lookup options yet.",
+      "emptyBody": "Pick a domain below and add the first option so users have something to select from.",
+      "addOption": "Add option",
+      "editOption": "Edit option",
+      "deleteOption": "Delete option",
+      "toggleActive": "Toggle active",
+      "domainEmpty": "No options in this domain yet.",
+      "editTitle": "Edit option",
+      "createTitle": "Add {domain} option",
+      "editDescription": "Codes should be short and machine-friendly (uppercase). Labels are what users see in the dropdown.",
+      "confirmDelete": "Delete permanently",
+      "deleteTitle": "Delete lookup option?",
+      "deleteDescription": "Historical records that already reference this label will not be affected — the label is snapshotted at write time. Prefer deactivating unless this is a typo cleanup.",
+      "createdToast": "Option added.",
+      "updatedToast": "Option updated.",
+      "deletedToast": "Option deleted.",
+      "activatedToast": "Option activated.",
+      "deactivatedToast": "Option deactivated.",
+      "columns": {
+        "label": "Label",
+        "code": "Code",
+        "sort": "Sort",
+        "active": "Active",
+        "actions": "Actions"
+      },
+      "form": {
+        "code": "Code",
+        "codeHint": "Uppercase A–Z, digits, hyphen or underscore. Example: NOC-JKT.",
+        "label": "Label",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional — helps admins remember what this option means.",
+        "sortOrder": "Sort order",
+        "sortOrderHint": "Lower values appear first. Default 100.",
+        "isActive": "Availability",
+        "active": "Active — visible in forms.",
+        "inactive": "Inactive — hidden from new forms."
+      },
+      "domains": {
+        "unit_pengaju": "Unit Pengaju",
+        "unit_pengajuHint": "Operational unit / squad that submits requests (Ops-Nusa, NOC-Jakarta, …).",
+        "transport_need": "Transport Need",
+        "transport_needHint": "Transportation type for field visits (motor, mobil rental, carter, …).",
+        "area": "Area",
+        "areaHint": "Regional grouping used in the field-ops advance form (Jabodetabek, Jawa Barat, …).",
+        "rab_category": "RAB Category",
+        "rab_categoryHint": "Line-item category on the RAB table (Transportasi, Konsumsi, Akomodasi, …).",
+        "department": "Departments",
+        "departmentHint": "Logical grouping of employees — Engineering, Finance, PM, etc. Shown as a suggestion list on the New Employee form.",
+        "position": "Positions",
+        "positionHint": "HR job titles: Agent, Team Lead, Analyst, Manager, … Shown as a suggestion list on the New Employee form.",
+        "budget_category": "Budget categories",
+        "budget_categoryHint": "Category enum for project budget line items (Direct Labour, Subcontractor, Tooling, …). Codes MUST stay stable — they persist to historic budget rows."
+      }
+    },
+    "coa": {
+      "backToSettings": "Back to Settings",
+      "kicker": "Finance · Master data",
+      "title": "Chart of Accounts",
+      "subtitle": "Finance-curated general-ledger accounts used to classify every budget line, expense, cash advance, and petty-cash entry. Deactivating an account hides it from new forms; historical rows keep their reference.",
+      "activeCount": "{active} active / {total} total",
+      "postableCount": "{count} postable",
+      "empty": "No accounts yet.",
+      "emptyBody": "Add your first account to unlock CoA classification across budgets and expenses. The default set of Indonesian service-company accounts is seeded automatically — if you don't see it, run the seed function again.",
+      "accountsTitle": "Accounts",
+      "accountsHint": "Numeric-code hierarchy — parents are containers, leaves receive postings. Only postable + active accounts appear in budget dropdowns.",
+      "addAccount": "Add account",
+      "addChild": "Add child account",
+      "edit": "Edit",
+      "searchPlaceholder": "Search by code, name or description…",
+      "filterAllTypes": "All types",
+      "showInactive": "Show inactive",
+      "noMatches": "No accounts match the current filter.",
+      "postable": "Postable",
+      "group": "Group",
+      "createTitle": "New account",
+      "createDescription": "Codes are numeric (3–10 digits). Postable = leaf account that can receive postings.",
+      "editTitle": "Edit account",
+      "editDescription": "Renaming or reclassifying an account keeps its historic references intact.",
+      "createdToast": "Account created.",
+      "updatedToast": "Account updated.",
+      "activatedToast": "Account activated.",
+      "deactivatedToast": "Account deactivated.",
+      "failedCreate": "Failed to create account.",
+      "failedUpdate": "Failed to update account.",
+      "failedToggle": "Failed to change status.",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "createAccount": "Create account",
+      "codeRequired": "Account code is required.",
+      "codeFormat": "Use 3–10 digits.",
+      "codeHint": "Numeric identifier, e.g. 5101. Must be unique.",
+      "nameRequired": "Account name is required.",
+      "nameShort": "Name is too short.",
+      "namePlaceholder": "e.g. Beban Gaji Direct",
+      "normalSideHint": "Auto-picked from the account type. Change only for contra-accounts.",
+      "descriptionPlaceholder": "Optional — helps finance remember when to use this account.",
+      "parentNone": "— no parent —",
+      "postableHint": "Turn off for parent / group accounts that only aggregate their children.",
+      "columns": {
+        "code": "Code",
+        "name": "Account",
+        "type": "Type",
+        "postable": "Postable",
+        "active": "Active",
+        "actions": "Actions"
+      },
+      "fields": {
+        "code": "Code",
+        "name": "Name",
+        "type": "Type",
+        "normalSide": "Normal side",
+        "parent": "Parent account",
+        "postable": "Postable",
+        "description": "Description"
+      },
+      "types": {
+        "ASSET": "Asset",
+        "LIABILITY": "Liability",
+        "EQUITY": "Equity",
+        "REVENUE": "Revenue",
+        "EXPENSE": "Expense"
+      },
+      "sides": {
+        "DEBIT": "Debit",
+        "CREDIT": "Credit"
       }
     },
     "archives": {
@@ -1188,6 +2430,99 @@
         "description": "24-48h SLA breach forecast + preventive actions.",
         "empty": "Not yet generated"
       }
+    }
+  },
+  "assignments": {
+    "kicker": "Delivery",
+    "title": "Assignments",
+    "subtitle": "Team assignments across projects — many-to-many, multi-role, allocation-aware. A PM may lead many projects; a member's total allocation across active projects must not exceed 100%.",
+    "newAssignment": "New assignment",
+    "addTeam": "Add team",
+    "empty": "No assignments yet",
+    "emptyBody": "Assign a PM or a team member to a project to get started.",
+    "tabs": {
+      "byProject": "By project",
+      "byEmployee": "By employee",
+      "workload": "Workload"
+    },
+    "filters": {
+      "project": "Project",
+      "role": "Role",
+      "status": "Status",
+      "allProjects": "All projects",
+      "allRoles": "All roles",
+      "activeOnly": "Active only",
+      "includeEnded": "Include ended"
+    },
+    "columns": {
+      "employee": "Employee",
+      "project": "Project",
+      "role": "Role",
+      "allocation": "Allocation",
+      "period": "Period",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "form": {
+      "title": "New assignment",
+      "titleEdit": "Edit assignment",
+      "description": "An assignment links an employee to a project with a role and allocation %. Total across active projects cannot exceed 100%.",
+      "project": "Project",
+      "projectPlaceholder": "Select project…",
+      "role": "Role",
+      "rolePlaceholder": "Select role…",
+      "employee": "Employee",
+      "employeePlaceholder": "Select employee…",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "allocation": "Allocation %",
+      "notes": "Notes",
+      "notesPlaceholder": "Optional context or scope for the assignment",
+      "save": "Save",
+      "cancel": "Cancel",
+      "idAutoAssigned": "ID auto-assigned on save",
+      "remainingCapacity": "Remaining capacity for {name}: {pct}%",
+      "capacityWarning": "Exceeds capacity: only {remaining}% remaining (requested {requested}%).",
+      "capacityOk": "Allocation fits within capacity."
+    },
+    "roles": {
+      "PRIMARY_PM": "Primary PM",
+      "CO_PM": "Co-PM",
+      "MEMBER": "Member",
+      "TECH_LEAD": "Tech Lead",
+      "DEVELOPER": "Developer",
+      "ENGINEER": "Engineer",
+      "QA": "QA",
+      "DESIGNER": "Designer",
+      "DEVOPS": "DevOps",
+      "CONSULTANT": "Consultant",
+      "SUPPORT": "Support",
+      "SITE_SUPERVISOR": "Site Supervisor",
+      "FIELD_TECHNICIAN": "Field Technician"
+    },
+    "status": {
+      "ACTIVE": "Active",
+      "ENDED": "Ended"
+    },
+    "workload": {
+      "total": "Total allocation",
+      "remaining": "Remaining",
+      "activeCount": "{count} active projects",
+      "overloaded": "Overloaded",
+      "healthy": "Healthy",
+      "idle": "Unassigned"
+    },
+    "actions": {
+      "edit": "Edit",
+      "end": "End",
+      "confirmEnd": "End this assignment?",
+      "endedToast": "Assignment ended.",
+      "createdToast": "Assignment created.",
+      "updatedToast": "Assignment updated."
+    },
+    "list": {
+      "activeAllocation": "Active allocation: {pct}%",
+      "roleGroup": "{role} ({count})"
     }
   },
   "handovers": {
@@ -1272,6 +2607,7 @@
     "submittedBy": "by {name} ({role})",
     "amount": "Amount",
     "weeklyTotals": "Weekly totals",
+    "attachmentsLabel": "{n} supporting file(s) attached",
     "sections": {
       "expenses": "Expenses",
       "cashAdvances": "Cash advances",
@@ -1280,6 +2616,60 @@
       "budgets": "Budgets",
       "budgetRequests": "Budget requests",
       "weeklyTimesheets": "Weekly timesheets"
+    }
+  },
+  "employees": {
+    "kicker": "HR",
+    "title": "Employees",
+    "subtitle": "Tenant staff directory — the source of truth for rosters, timesheets, payroll, and BPO gross margin.",
+    "empty": "No employees yet",
+    "emptyBody": "Add your first employee to start allocating them to projects and computing Direct Labor Cost.",
+    "newEmployee": "New employee",
+    "expiresIn": "Ends in {days} days",
+    "expired": "Contract already ended",
+    "columns": {
+      "employee": "Employee",
+      "department": "Department",
+      "position": "Position",
+      "employment": "Employment",
+      "joinDate": "Join date",
+      "endDate": "End date",
+      "availability": "Availability"
+    },
+    "employmentType": {
+      "PERMANENT": "Permanent",
+      "CONTRACT": "Contract",
+      "PROBATION": "Probation",
+      "INTERN": "Intern",
+      "OUTSOURCE": "Outsource",
+      "OUTTASK": "Outtask"
+    },
+    "availability": {
+      "AVAILABLE": "Available",
+      "ASSIGNED": "Assigned",
+      "ON_LEAVE": "On leave",
+      "INACTIVE": "Inactive"
+    },
+    "form": {
+      "createTitle": "New employee",
+      "createDescription": "You can add an employee before they activate a system account. Invite them later from the row menu.",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "phone": "Phone",
+      "department": "Department",
+      "selectDepartment": "Select department…",
+      "position": "Position",
+      "selectPosition": "Select position…",
+      "joinDate": "Join date",
+      "employment": "Employment",
+      "endDate": "End date",
+      "endDatePermanentHint": "Optional for Permanent — the retirement date (age 55) is auto-derived from Date of birth.",
+      "endDateContractHint": "Required for Contract, Probation, Intern, Outsource, and Outtask. Drives the contract-expiry reminder.",
+      "dateOfBirth": "Date of birth",
+      "dateOfBirthHint": "Optional. Used to auto-derive the retirement date (age 55).",
+      "availability": "Availability",
+      "created": "Employee {name} added."
     }
   },
   "roster": {
@@ -1320,6 +2710,74 @@
       "saving": "Saving…",
       "successToast": "Roster entry saved.",
       "errorToast": "Failed to save roster entry."
+    }
+  },
+  "shifts": {
+    "kicker": "HR",
+    "title": "Shift catalog",
+    "subtitle": "Tenant-wide shift definitions plus per-project overrides. HR/OM own the base catalog; PMs and Supervisors may add project-specific shifts for their own projects.",
+    "governance": {
+      "title": "Editing policy",
+      "bodyHrOm": "You own the tenant-wide base catalog plus every project override. Changes to shift allowance flow straight into payroll.",
+      "bodyPmSpv": "You can only add or edit shifts for projects assigned to you. Shift allowance is locked — it inherits from HR's base catalog so payroll stays consistent."
+    },
+    "sections": {
+      "base": "Base catalog",
+      "baseHint": "Tenant-wide. Used by every project without a matching override.",
+      "projectOverrides": "Project overrides",
+      "projectHint": "Custom shifts that apply only to their project. When a roster picks that project, overrides win over base shifts sharing the same code."
+    },
+    "columns": {
+      "code": "Code",
+      "name": "Name",
+      "start": "Start",
+      "end": "End",
+      "duration": "Duration",
+      "night": "Night",
+      "allowance": "Allowance",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "badges": {
+      "night_yes": "Night",
+      "night_no": "Non-night",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "empty": {
+      "base": "No base shifts yet.",
+      "projects": "No project override shifts yet."
+    },
+    "actions": {
+      "new": "Add shift",
+      "edit": "Edit",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this shift? Rosters or timesheets still referencing it will block the delete.",
+      "successDelete": "Shift deleted.",
+      "errorDelete": "Failed to delete shift."
+    },
+    "form": {
+      "title": "Shift",
+      "description": "Code + operational times. Allowance is HR/OM-only.",
+      "code": "Code",
+      "codeHelp": "Letters, digits, underscore, or dash. e.g. DAY, NIGHT_A.",
+      "name": "Name",
+      "startTime": "Start",
+      "endTime": "End",
+      "duration": "Duration (hours)",
+      "durationHelp": "0.5 to 24 hours. Should match the span between start and end.",
+      "isNight": "Night shift (eligible for night allowance)",
+      "allowance": "Allowance (IDR / shift)",
+      "allowanceHrOnly": "Only HR / OM tier may edit this — it feeds payroll directly.",
+      "project": "Scope",
+      "projectPlaceholder": "Pick a scope…",
+      "projectRequired": "PMs and Supervisors must pick a project — base catalog is HR/OM-only.",
+      "baseCatalog": "— Base catalog (tenant-wide) —",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "successToast": "Shift saved.",
+      "errorToast": "Failed to save shift."
     }
   },
   "timesheets": {
@@ -1467,6 +2925,7 @@
     "signOut": "Sign out",
     "footer": "Read-only client portal · Powered by ControlDesk",
     "projectStatus": {
+      "DRAFT": "Draft",
       "PLANNING": "Planning",
       "ACTIVE": "Active",
       "ON_HOLD": "On hold",
@@ -1583,6 +3042,426 @@
         "draft": "Draft"
       },
       "privacyFootnote": "Individual cost items are not shared. Totals are updated whenever an approved settlement lands."
+    }
+  },
+  "performance": {
+    "kicker": "HR · Performance",
+    "title": "Performance evaluations",
+    "subtitle": "Contract-based employees are evaluated near the end of their contract. SPV drafts → PM reviews → OM decides. Confidential to the employee.",
+    "newEvaluation": "New evaluation",
+    "empty": "No evaluations yet",
+    "emptyBody": "Once an employee's contract is within 30 days, SPVs get a reminder to file an evaluation.",
+    "columns": {
+      "employee": "Employee",
+      "contractEnd": "Contract end",
+      "template": "Template",
+      "status": "Status",
+      "score": "Score",
+      "recommendation": "Recommendation",
+      "submittedAt": "Submitted",
+      "updatedAt": "Updated"
+    },
+    "status": {
+      "DRAFT": "Draft (SPV)",
+      "SUBMITTED_BY_SPV": "Pending PM review",
+      "REVIEWED_BY_PM": "Pending OM decision",
+      "RETURNED_TO_SPV": "Returned for coaching",
+      "APPROVED_BY_OM": "Approved by OM",
+      "REJECTED_BY_OM": "Rejected by OM",
+      "FINALIZED": "Finalized"
+    },
+    "recommendation": {
+      "EXTEND": "Extend contract",
+      "NOT_EXTEND": "Do not extend / terminate",
+      "EXTEND_WITH_COACHING": "Extend with coaching",
+      "EXTEND_PERMANENT": "Angkat sebagai karyawan tetap",
+      "EXTEND_PKWT_3M": "Perpanjang PKWT 3 bulan"
+    },
+    "form": {
+      "employee": "Employee",
+      "employeePlaceholder": "Pick a non-permanent employee…",
+      "employeeHint": "Only non-permanent employees with a contract end date can be evaluated.",
+      "template": "Template",
+      "templatePlaceholder": "Pick a template…",
+      "templateHint": "HR defines templates in HR › Templates.",
+      "startEvaluation": "Start evaluation",
+      "spvRecommendation": "Recommendation to management",
+      "spvNotes": "SPV notes",
+      "spvNotesPlaceholder": "Highlight strengths, concerns, coaching plan…",
+      "submit": "Submit for PM review",
+      "pmDecision": "PM decision",
+      "pmApprove": "Approve & forward to OM",
+      "pmReturn": "Return to SPV for coaching",
+      "pmNotes": "Coaching notes (required when returning)",
+      "omDecision": "OM decision",
+      "omApprove": "Approve & finalize",
+      "omReject": "Reject",
+      "omNotes": "Notes (required when rejecting)",
+      "answerScorePlaceholder": "Score 1-5",
+      "answerTextPlaceholder": "Free-form answer",
+      "commentPlaceholder": "Komentar / justifikasi (wajib)",
+      "saveItem": "Save",
+      "totalScore": "Total weighted score",
+      "returnToList": "Back to list",
+      "ratingScale": "Rating scale",
+      "metaTitle": "Periode & catatan penilai",
+      "metaSave": "Save",
+      "metaSaved": "Metadata saved.",
+      "periodStart": "Periode start",
+      "periodEnd": "Periode end",
+      "strengths": "Aspek yang menjadi kekuatan",
+      "strengthsPlaceholder": "Ringkasan aspek positif karyawan…",
+      "devAreas": "Aspek yang perlu dikembangkan",
+      "devAreasPlaceholder": "Gap yang perlu perbaikan…",
+      "devProposal": "Usulan pengembangan",
+      "devProposalPlaceholder": "Coaching plan, training, mentoring…",
+      "goalAchievement": "Pencapaian goal (%)",
+      "competencyMeet": "Kompetensi yang memenuhi (%)",
+      "finalPeriodToggle": "Periode Penilaian Akhir",
+      "manajemenAvgLabel": "Rata-rata Manajemen Pekerjaan",
+      "recExtendPermanent": "Angkat sebagai karyawan tetap",
+      "recExtendPkwt3M": "Perpanjang PKWT 3 bulan",
+      "recExtend": "Extend contract",
+      "recNotExtend": "Do not extend",
+      "recommendationLabel": "Recommendation",
+      "recommendationPlaceholder": "Pick a recommendation…",
+      "extensionEndDateLabel": "New contract end date",
+      "extensionEndDateHint": "Enter manually. Must be after {currentEnd}.",
+      "extensionPreviewLabel": "Extension",
+      "extensionDateAfterCurrent": "New contract end date must be after {currentEnd}.",
+      "notExtendHint": "After OM approval, a UPK draft will be auto-created for finance."
+    },
+    "detail": {
+      "kicker": "Evaluation",
+      "back": "Back to evaluations",
+      "timeline": "Approval timeline",
+      "answersSection": "Evaluation items",
+      "answersEmpty": "This template has no items — ask HR to update the template.",
+      "kesimpulanTitle": "Kesimpulan / Penilaian Akhir",
+      "kesimpulanSubtitle": "Kriteria pengangkatan PKWT — minimal 2 dari 3 harus terpenuhi.",
+      "kesimpulanMet": "Kriteria terpenuhi",
+      "kesimpulanRecommendPermanent": "Layak diangkat sebagai karyawan tetap",
+      "kesimpulanRecommendReview": "Perlu review — kurang dari 2 kriteria",
+      "kesimpulanIncomplete": "Data belum lengkap",
+      "kesimpulanCurrentRec": "Rekomendasi SPV",
+      "critGoal": "Goal achievement",
+      "critManajemen": "Management average",
+      "critCompetency": "Competency met",
+      "extensionBadge": "Contract extension"
+    },
+    "templates": {
+      "title": "Evaluation templates",
+      "subtitle": "Master forms used when starting a new evaluation. Weights per item sum to 100%.",
+      "newTemplate": "New template",
+      "editTemplate": "Edit template",
+      "columns": {
+        "name": "Template",
+        "items": "Items",
+        "weight": "Total weight",
+        "status": "Status",
+        "updated": "Updated"
+      },
+      "form": {
+        "name": "Template name",
+        "namePlaceholder": "e.g. Contract Renewal Review",
+        "description": "Description",
+        "descriptionPlaceholder": "Optional context for HR / SPVs (max 2000 chars)",
+        "items": "Evaluation items",
+        "itemsHint": "Each item has a weight (%). Total should sum to 100 to make scoring meaningful.",
+        "addItem": "Add item",
+        "removeItem": "Remove",
+        "itemName": "Item name",
+        "itemNamePlaceholder": "e.g. Quality of work",
+        "itemDescription": "Guidance",
+        "itemDescriptionPlaceholder": "Optional guidance for the SPV",
+        "itemWeight": "Weight (%)",
+        "itemType": "Type",
+        "itemTypeScore": "Score 1-5",
+        "itemTypeText": "Free text",
+        "itemRequired": "Required",
+        "totalWeight": "Total weight",
+        "weightWarning": "Total weight should be 100%. Currently: {total}%",
+        "createSuccess": "Template created.",
+        "updateSuccess": "Template updated.",
+        "toggleActive": "Set active",
+        "toggleInactive": "Set inactive"
+      }
+    }
+  },
+  "upk": {
+    "kicker": "HR · Severance",
+    "title": "UPK notes",
+    "subtitle": "Severance draft notes for non-permanent employees whose contract is not renewed. PM drafts → Finance approves → Director approves (≥ IDR 50 M) → Paid.",
+    "newDraft": "New UPK draft",
+    "empty": "No UPK notes yet",
+    "emptyBody": "When an evaluation finalizes with 'Do not extend', a UPK draft is auto-created here.",
+    "columns": {
+      "employee": "Employee",
+      "contractEnd": "Contract end",
+      "amount": "Computed UPK",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "approvedAt": "Approved",
+      "paidAt": "Paid"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_FINANCE": "Pending Finance",
+      "PENDING_DIRECTOR": "Pending Director",
+      "APPROVED": "Approved",
+      "REJECTED_BY_FINANCE": "Rejected by Finance",
+      "REJECTED_BY_DIRECTOR": "Rejected by Director",
+      "PAID": "Paid",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "employee": "Employee",
+      "baseSalary": "Base salary (IDR / month)",
+      "serviceMonths": "Service length (months)",
+      "multiplier": "Multiplier",
+      "multiplierHint": "Typically 1.0 — one month's salary per year of service.",
+      "computed": "Computed UPK",
+      "justification": "Justification",
+      "justificationPlaceholder": "Explain the calculation, any special conditions, and cite the SPV/PM evaluation…",
+      "submit": "Submit to Finance",
+      "financeApprove": "Approve",
+      "financeReject": "Reject",
+      "directorApprove": "Approve",
+      "directorReject": "Reject",
+      "markPaid": "Mark paid",
+      "paidReference": "Payment reference (optional)",
+      "notesPlaceholder": "Add a note (required when rejecting)…",
+      "directorNeeded": "Amount ≥ IDR 50 M — Director approval required after Finance."
+    }
+  },
+  "monthlyReport": {
+    "kicker": "Delivery · Monthly report",
+    "title": "Monthly reports",
+    "subtitle": "SPV drafts one report per month; PM approves before it flows to client sign-off and collection.",
+    "newReport": "New monthly report",
+    "empty": "No monthly reports yet",
+    "emptyBody": "SPVs draft one report per calendar month. Metrics are pre-computed from milestones, timesheets, and expenses.",
+    "columns": {
+      "period": "Period",
+      "submitter": "Submitter",
+      "status": "Status",
+      "submittedAt": "Submitted",
+      "decidedAt": "Decided",
+      "updatedAt": "Updated"
+    },
+    "status": {
+      "DRAFT_BY_SPV": "Draft (SPV)",
+      "SUBMITTED_TO_PM": "Pending PM review",
+      "APPROVED_BY_PM": "Approved by PM",
+      "RETURNED_TO_SPV": "Returned for revision",
+      "REJECTED_BY_PM": "Rejected by PM",
+      "SENT_TO_CLIENT": "Sent to client",
+      "APPROVED_BY_CLIENT": "Approved by client",
+      "BA_GENERATED": "BA generated",
+      "HANDED_OFF_TO_COLLECTION": "Handed off to collection",
+      "CANCELLED": "Cancelled"
+    },
+    "sections": {
+      "EXECUTIVE_SUMMARY": "Executive summary",
+      "MILESTONE_PROGRESS": "Milestone progress",
+      "HOURS_LOGGED": "Hours logged",
+      "COSTS_INCURRED": "Costs incurred",
+      "BLOCKERS": "Blockers & risks",
+      "NEXT_MONTH_PLAN": "Next month plan"
+    },
+    "form": {
+      "period": "Period (month)",
+      "periodHint": "One report per project per calendar month.",
+      "sectionContent": "Notes",
+      "sectionContentPlaceholder": "Add context, callouts, or a narrative for this section…",
+      "saveSection": "Save section",
+      "spvNotes": "Notes to PM",
+      "spvNotesPlaceholder": "Optional handoff notes for the PM (max 4000 chars)",
+      "pmNotes": "PM notes",
+      "pmNotesPlaceholder": "Add feedback (required when returning or rejecting)",
+      "submit": "Submit to PM",
+      "approve": "Approve",
+      "return": "Return for revision",
+      "reject": "Reject",
+      "cancel": "Cancel report",
+      "requireExecSummary": "Fill the executive summary before submitting.",
+      "submitSuccess": "Report submitted to PM.",
+      "approveSuccess": "Report approved.",
+      "returnSuccess": "Report returned to SPV.",
+      "rejectSuccess": "Report rejected.",
+      "cancelSuccess": "Report cancelled."
+    },
+    "sliceB": {
+      "sendTitle": "Send to client",
+      "sendHint": "Deliver the report to the client via email / WhatsApp / print outside the system, then click below to mark it as sent.",
+      "clientEmail": "Client email (optional)",
+      "sendNotes": "Delivery notes",
+      "sendNotesPlaceholder": "e.g. Sent to Ms. Sari via WhatsApp at 3pm",
+      "sendAction": "Mark sent to client",
+      "sendSuccess": "Report marked as sent to client.",
+      "clientTitle": "Record client decision",
+      "clientHint": "Once the client responds, record it here. Approve advances to Berita Acara generation; Reject loops the report back to PM for revision.",
+      "reviewerName": "Client PIC name",
+      "reviewerEmail": "PIC email (optional)",
+      "reviewerNameRequired": "Client reviewer name is required.",
+      "decidedAt": "Decision date",
+      "signature": "Signed acknowledgement (optional)",
+      "uploadSignature": "Upload",
+      "signatureUploaded": "Signature uploaded.",
+      "clientNotes": "Client notes / feedback",
+      "clientNotesPlaceholder": "Client feedback (required when rejecting)",
+      "rejectNotesRequired": "Notes are required when recording a rejection.",
+      "clientApprove": "Client Approve",
+      "clientReject": "Client Reject",
+      "clientApproveSuccess": "Client approval recorded.",
+      "clientRejectSuccess": "Client rejection recorded. Report is back with PM for revision.",
+      "baTitle": "Generate Berita Acara",
+      "baHint": "BA number auto-generated (format BA/{tenant}/{year}/NNNN). Period defaults to the report period.",
+      "baPeriodStart": "Period start",
+      "baPeriodEnd": "Period end",
+      "baNotes": "BA notes",
+      "baNotesPlaceholder": "Extra points for the BA (optional)",
+      "baGenerate": "Generate BA",
+      "baGeneratedSuccess": "Berita Acara created: {ba}",
+      "periodInvalid": "Period end must be after period start.",
+      "clientCardTitle": "Client sign-off",
+      "sentAt": "Sent",
+      "baCardTitle": "Berita Acara",
+      "baPeriod": "Period",
+      "baGeneratedAt": "Generated"
+    }
+  },
+  "reports": {
+    "kicker": "Analytics · Reports",
+    "title": "Reports",
+    "subtitle": "Analytical exports: budget vs actual, expense & cash-advance registers, petty-cash statements, project portfolio, and budget-request register.",
+    "back": "Back",
+    "scopeLabel": "Scope",
+    "scope": {
+      "org": "organisation-wide",
+      "portfolio": "your portfolio",
+      "assigned": "assigned projects"
+    },
+    "chooseTitle": "Choose a report",
+    "placeholderTitle": "Select a report to begin",
+    "placeholderSubtitle": "Pick one from the list on the left.",
+    "placeholderBody": "Report parameters (date range, project, status) will appear once a report is selected. Preview in-app or download directly as CSV; XLSX & PDF are coming.",
+    "parametersTitle": "Report parameters",
+    "parametersHint": "Adjust the date range and other filters, then click Preview or one of the export buttons.",
+    "previewTitle": "Preview",
+    "previewEmpty": "Set filters then click Preview to load data.",
+    "list": {
+      "portfolio": {
+        "title": "Project Portfolio",
+        "description": "Snapshot of all projects the caller can see, with client, PM, status, contract value, budget health, and progress %."
+      },
+      "expenseRegister": {
+        "title": "Expense Register",
+        "description": "Every expense in the selected date range, with MA code, requester, vendor, amount, and status. Filterable by project, status, category."
+      },
+      "caRegister": {
+        "title": "Cash Advance Register",
+        "description": "Cash advances in the selected date range with disbursement, expected settlement, and variance columns."
+      },
+      "pettyCashStatement": {
+        "title": "Petty Cash Statement",
+        "description": "Opening balance, every posted entry, and closing balance for a fund over the selected period. Custodian-friendly month-end statement."
+      },
+      "budgetVsActual": {
+        "title": "Budget vs Actual",
+        "description": "Per-project · fiscal year: planned vs realized on every MA line, with outstanding advances, remaining headroom, and utilisation."
+      },
+      "budgetRequestRegister": {
+        "title": "Budget Request Register",
+        "description": "All budget-request activity in the selected date range: type (Increase/Decrease/Transfer), source MA, target MA (Transfer only), amount, and applied before → after snapshots."
+      }
+    }
+  },
+  "bulkImport": {
+    "kicker": "Settings · Bulk import",
+    "title": "Bulk import",
+    "subtitle": "Upload Excel (.xlsx / .xls) or CSV files to create Employees, Clients, Projects, or Budget line items in batch. Every file is dry-run first — nothing is written until you click Run import.",
+    "meta": {
+      "rowCap": "Row cap: 500 rows/file",
+      "fileCap": "Max file size: 5 MB"
+    },
+    "resources": {
+      "EMPLOYEE": {
+        "label": "Employees",
+        "subtitle": "One row per employee. Match by email — existing employees are updated, new ones inserted. Salary and bank details stay manual per row for governance."
+      },
+      "CLIENT": {
+        "label": "Clients",
+        "subtitle": "One row per client. Match by name (case-insensitive). Sets contact + status; contracts and projects link separately."
+      },
+      "PROJECT": {
+        "label": "Projects",
+        "subtitle": "One row per project. Match by project code. Client column accepts client name, contract number, or the client's project code."
+      },
+      "BUDGET_LINE": {
+        "label": "Budget line items",
+        "subtitle": "One row per line — many lines per project/year rolled into a DRAFT budget. Cannot mutate APPROVED budgets; use the Budget Request flow instead."
+      }
+    },
+    "panels": {
+      "chooseResource": "Choose a resource",
+      "oneRowRecord": "One row per record",
+      "oneCsvGrid": "One CSV = one grid",
+      "columnHeader": "Columns",
+      "column_col": "Column",
+      "column_label": "Label",
+      "column_type": "Type",
+      "column_required": "Required",
+      "column_example": "Example",
+      "required_yes": "required",
+      "required_no": "optional"
+    },
+    "actions": {
+      "downloadTemplate": "Download template",
+      "downloadTemplateXlsx": "Download .xlsx",
+      "downloadTemplateCsv": "Download .csv",
+      "chooseFile": "Choose Excel/CSV file",
+      "replaceFile": "Replace file",
+      "dryRun": "Dry-run preview",
+      "runImport": "Run import",
+      "running": "Running…"
+    },
+    "preview": {
+      "title": "Dry-run preview",
+      "valid": "Valid rows",
+      "invalid": "Invalid rows",
+      "insert": "Would insert",
+      "update": "Would update",
+      "errors": "Row-level errors",
+      "sample": "Sample of valid rows"
+    },
+    "result": {
+      "ok": "Import committed",
+      "failed": "Import failed",
+      "inserted": "Inserted",
+      "updated": "Updated",
+      "successToast": "Import committed.",
+      "errorToast": "Import failed."
+    },
+    "history": {
+      "title": "Recent imports",
+      "empty": "No imports yet. Start by picking a resource on the left.",
+      "resource": "Resource",
+      "file": "File",
+      "rows": "Rows",
+      "status": "Status",
+      "when": "When",
+      "status_DRY_RUN": "Dry-run",
+      "status_COMMITTED": "Committed",
+      "status_FAILED": "Failed"
+    },
+    "info": {
+      "governanceTitle": "Governance",
+      "governanceBody": "Bulk import is restricted to HR / Finance / Admin tier. Every batch is audit-logged (BULK_IMPORT). Sensitive fields (salary, bank account, role, password) are never accepted via file — enter them per employee in the normal UI.",
+      "atomicTitle": "All-or-nothing",
+      "atomicBody": "If any row fails validation, the whole file is rejected. Fix the file and dry-run again.",
+      "retainTitle": "Job retention",
+      "retainBody": "Import jobs (successful and failed) are retained for postmortem — see the history table. Committed rows follow the normal audit / retention policy of the target resource."
     }
   }
 }

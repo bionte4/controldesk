@@ -49,7 +49,8 @@ export type ActionVerb =
   | "cancel"
   | "disburse"
   | "settle"
-  | "export";
+  | "export"
+  | "bulk_import";
 
 export type ResourceType =
   | "expense"
@@ -76,7 +77,19 @@ export type ResourceType =
   | "employee"
   | "audit_log"
   | "data_archive"
-  | "secret_rotation";
+  | "secret_rotation"
+  | "calendar_sync"
+  | "telegram_bot_config"
+  | "whatsapp_config"
+  | "lookup_option"
+  | "user_admin"
+  | "coa"
+  | "evaluation"
+  | "evaluation_template"
+  | "upk_note"
+  | "monthly_report"
+  | "report"
+  | "import_job";
 
 export type Actor = {
   userId: string;
@@ -183,8 +196,9 @@ export function authorize(input: {
     case "project":
       return decideProject(actor, action);
     case "project_pm_assignment":
+      return decidePmAssignment(actor, action);
     case "project_employee_assignment":
-      return decideAssignment(actor, action);
+      return decideEmployeeAssignment(actor, action);
     case "project_budget":
       return decideProjectBudget(actor, action);
     case "pm_handover":
@@ -192,7 +206,7 @@ export function authorize(input: {
     case "ai_insight":
       return decideAiInsight(actor, action);
     case "work_shift":
-      return decideWorkShift(actor, action);
+      return decideWorkShift(actor, action, attributes);
     case "roster_entry":
       return decideRosterEntry(actor, action);
     case "timesheet":
@@ -207,6 +221,30 @@ export function authorize(input: {
       return decideDataArchive(actor, action);
     case "secret_rotation":
       return decideSecretRotation(actor, action);
+    case "calendar_sync":
+      return decideCalendarSync(actor, action);
+    case "telegram_bot_config":
+      return decideTelegramBotConfig(actor, action);
+    case "whatsapp_config":
+      return decideWhatsAppConfig(actor, action);
+    case "lookup_option":
+      return decideLookupOption(actor, action);
+    case "user_admin":
+      return decideUserAdmin(actor, action);
+    case "coa":
+      return decideCoa(actor, action);
+    case "evaluation_template":
+      return decideEvaluationTemplate(actor, action);
+    case "evaluation":
+      return decideEvaluation(actor, action, attributes);
+    case "upk_note":
+      return decideUpkNote(actor, action, attributes);
+    case "monthly_report":
+      return decideMonthlyReport(actor, action, attributes);
+    case "report":
+      return decideReport(actor, action);
+    case "import_job":
+      return decideImportJob(actor, action);
     default:
       return DENY(`unknown resource type: ${resource satisfies never}`);
   }
@@ -235,6 +273,45 @@ function allowReadWithinTenant(
   if (resource === "secret_rotation") {
     return decideSecretRotation(actor, "read");
   }
+  // Google Calendar sync outbox — admin/GM only (contains project + tenant
+  // configuration; RLS already deny-all for other roles).
+  if (resource === "calendar_sync") {
+    return decideCalendarSync(actor, "read");
+  }
+  // Tenant Telegram bot config — admin/GM only. Row contains an
+  // encrypted bot token which the admin form loader (`loadTenantBotConfig`)
+  // decrypts server-side; PDP guards the surface so non-admins never
+  // hit the loader in the first place.
+  if (resource === "telegram_bot_config") {
+    return decideTelegramBotConfig(actor, "read");
+  }
+  // Tenant WhatsApp Business config — same admin-only gate as Telegram.
+  if (resource === "whatsapp_config") {
+    return decideWhatsAppConfig(actor, "read");
+  }
+  // Lookup options are tenant-scoped reference data — any tenant member
+  // may read (dropdowns everywhere). Write restricted below.
+  if (resource === "lookup_option") {
+    return ALLOW("lookup options readable by any tenant member");
+  }
+  // User admin surface — visible only to admin roles. Non-admins already get
+  // an empty result from the RPC (defense-in-depth), but we keep the PDP in
+  // sync so any server action or `authorize()` call at a page boundary also
+  // enforces the same rule.
+  if (resource === "user_admin") {
+    return decideUserAdmin(actor, "read");
+  }
+  // Chart of Accounts is tenant-scoped master data — any tenant member may
+  // read for dropdowns / display; write is restricted below.
+  if (resource === "coa") {
+    return ALLOW("coa readable by any tenant member");
+  }
+  // Analytical reports are gated to PM+/Finance/Custodian per rules §15b.
+  // EMPLOYEE and SUPERVISOR must be denied even for read — a report is
+  // aggregate financial data, not their own operational record.
+  if (resource === "report") {
+    return decideReport(actor, "read");
+  }
 
   // Self-service reads always allowed.
   if (attrs.ownerEmployeeId === actor.employeeId) {
@@ -262,12 +339,40 @@ function decideMoneyRequest(
 
     case "update":
     case "cancel": {
-      // Only the submitter may edit / cancel, and only while still in DRAFT
-      // or PENDING_L1 state. Higher states are locked.
+      // (a) Trusted operations ladder may re-code (assign MA, adjust
+      // notes) any non-terminal money request. This is the "approver
+      // reclassifies before advancing" path — Employee submits without
+      // MA, PM/Finance codes it during review. Cancel is NOT part of
+      // this branch (only the submitter can withdraw).
+      const TRUSTED_MA_EDITORS: readonly EmployeeRole[] = [
+        "PROJECT_MANAGER",
+        "LEAD_FINANCE",
+        "OPERATIONS_MANAGER",
+        "HEAD_MANAGER",
+        "GENERAL_MANAGER",
+      ];
+      const terminalStates = new Set(["APPROVED", "REJECTED", "CANCELLED"]);
+      if (action === "update" && TRUSTED_MA_EDITORS.includes(actor.role)) {
+        if (attrs.status && terminalStates.has(attrs.status)) {
+          return DENY(`resource is locked at status ${attrs.status}`);
+        }
+        return ALLOW("PM+/Finance may re-code non-terminal money request");
+      }
+
+      // (b) Submitter self-service edit / cancel while still open.
       if (attrs.ownerEmployeeId !== actor.employeeId) {
         return DENY("only submitter may edit");
       }
-      const openStates = new Set(["DRAFT", "PENDING_L1_SUPERVISOR"]);
+      // Legacy: DRAFT / PENDING_L1_SUPERVISOR. Canonical (GAS-aligned)
+      // rows use PENDING_SUPERVISOR — treat as functionally equivalent
+      // for the "still with first-line" window that lets submitters
+      // patch metadata + supporting attachments before Supervisor
+      // triage. Anything past first-line is frozen.
+      const openStates = new Set([
+        "DRAFT",
+        "PENDING_L1_SUPERVISOR",
+        "PENDING_SUPERVISOR",
+      ]);
       if (attrs.status && !openStates.has(attrs.status)) {
         return DENY(`resource is locked at status ${attrs.status}`);
       }
@@ -397,6 +502,17 @@ function decidePettyCashReplenishment(
     return actor.role === "PETTY_CASH_CUSTODIAN"
       ? ALLOW("custodian requests replenishment")
       : DENY("only custodian may request replenishment");
+  }
+  // update = attach/detach supporting docs (memo pendukung, transfer
+  // proof). Custodian handles memo at request time; Lead Finance
+  // handles transfer receipt at disbursement.
+  if (action === "update" || action === "delete") {
+    if (actor.role === "PETTY_CASH_CUSTODIAN") {
+      return ALLOW("custodian manages replenishment memo");
+    }
+    return FINANCE_LIKE.includes(actor.role)
+      ? ALLOW("finance manages disbursement proof")
+      : DENY("only custodian / finance may manage replenishment docs");
   }
   if (action === "approve" || action === "reject" || action === "disburse") {
     return FINANCE_LIKE.includes(actor.role)
@@ -546,9 +662,32 @@ function decideProject(actor: Actor, action: ActionVerb): Decision {
   return DENY(`unsupported action on project: ${action}`);
 }
 
-function decideAssignment(actor: Actor, action: ActionVerb): Decision {
-  // PMs may assign employees to their own projects; OM+ can do PM assignments
-  // and any employee assignment. Rules §7.
+/**
+ * PM assignments (rules §7) — only OM/HM+ may assign a Project Manager to
+ * a project. Matches the RLS policy `ppa_ops_write` in migration 0008.
+ * Previously this decision allowed PROJECT_MANAGER too, which drifted
+ * with RLS and would surface a raw 42501 to the user.
+ */
+function decidePmAssignment(actor: Actor, action: ActionVerb): Decision {
+  if (action === "create" || action === "update" || action === "delete") {
+    const canAssignPm: readonly EmployeeRole[] = [
+      "OPERATIONS_MANAGER",
+      "HEAD_MANAGER",
+      "GENERAL_MANAGER",
+      "TENANT_ADMIN",
+    ];
+    return canAssignPm.includes(actor.role)
+      ? ALLOW("OM+ manages PM assignments")
+      : DENY("only OM/HM+ may manage PM assignments");
+  }
+  return DENY(`unsupported action on PM assignment: ${action}`);
+}
+
+/**
+ * Non-PM employee assignments (rules §7) — PM+ may assign employees to
+ * projects. Matches RLS policy `pea_pm_write`.
+ */
+function decideEmployeeAssignment(actor: Actor, action: ActionVerb): Decision {
   if (action === "create" || action === "update" || action === "delete") {
     const canAssign: readonly EmployeeRole[] = [
       "PROJECT_MANAGER",
@@ -558,10 +697,10 @@ function decideAssignment(actor: Actor, action: ActionVerb): Decision {
       "TENANT_ADMIN",
     ];
     return canAssign.includes(actor.role)
-      ? ALLOW("PM+ manages assignments")
-      : DENY("only PM+ may manage assignments");
+      ? ALLOW("PM+ manages employee assignments")
+      : DENY("only PM+ may manage employee assignments");
   }
-  return DENY(`unsupported action on assignment: ${action}`);
+  return DENY(`unsupported action on employee assignment: ${action}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -672,12 +811,24 @@ function decideAiInsight(actor: Actor, action: ActionVerb): Decision {
 // ---------------------------------------------------------------------------
 // Roster + Timesheets + Payroll (rules §12 + §14).
 // ---------------------------------------------------------------------------
-const SHIFT_WRITERS: readonly EmployeeRole[] = [
+// Base shift catalog (project_id IS NULL) — HR/OM tier only. These
+// rows feed `shift_allowance` which lands in payroll (rules §14).
+const SHIFT_BASE_WRITERS: readonly EmployeeRole[] = [
   "HR_ADMIN",
   "TENANT_ADMIN",
   "GENERAL_MANAGER",
   "HEAD_MANAGER",
   "OPERATIONS_MANAGER",
+] as const;
+
+// Project-scoped shift override writers — SPV/PM assigned to the
+// project may customise time-of-day / labels for their site. The
+// SQL trigger `work_shifts_guard_allowance` forces allowance to
+// inherit from the base row so this cannot leak into payroll.
+const SHIFT_PROJECT_WRITERS: readonly EmployeeRole[] = [
+  ...SHIFT_BASE_WRITERS,
+  "PROJECT_MANAGER",
+  "SUPERVISOR",
 ] as const;
 
 const ROSTER_WRITERS: readonly EmployeeRole[] = [
@@ -705,12 +856,33 @@ const PAYROLL_WRITERS: readonly EmployeeRole[] = [
   "GENERAL_MANAGER",
 ] as const;
 
-function decideWorkShift(actor: Actor, action: ActionVerb): Decision {
+function decideWorkShift(
+  actor: Actor,
+  action: ActionVerb,
+  attrs: ResourceAttributes,
+): Decision {
   if (action === "read") return ALLOW("shifts are tenant-wide reference");
   if (action === "create" || action === "update" || action === "delete") {
-    return SHIFT_WRITERS.includes(actor.role)
-      ? ALLOW("privileged role edits shifts")
-      : DENY("only HR / management may edit shifts");
+    // Base catalog: HR/OM tier only. Empty projectId means this is a
+    // request against the tenant-wide catalog.
+    if (!attrs.projectId) {
+      return SHIFT_BASE_WRITERS.includes(actor.role)
+        ? ALLOW("HR/OM tier edits base shift catalog")
+        : DENY("only HR / OM tier may edit base shift catalog");
+    }
+    // Project-scoped: HR/OM always allowed. SPV/PM only if actively
+    // assigned to the project. The RLS mirrors this check at the
+    // database level as defense-in-depth.
+    if (SHIFT_BASE_WRITERS.includes(actor.role)) {
+      return ALLOW("HR/OM tier edits project shift override");
+    }
+    if (!SHIFT_PROJECT_WRITERS.includes(actor.role)) {
+      return DENY("role may not edit shift catalog");
+    }
+    if (!attrs.isActiveAssignment) {
+      return DENY("PM/SPV must be actively assigned to the project");
+    }
+    return ALLOW("assigned PM/SPV edits project shift override");
   }
   return DENY(`unsupported action on work_shift: ${action}`);
 }
@@ -853,4 +1025,441 @@ function decideSecretRotation(actor: Actor, action: ActionVerb): Decision {
     default:
       return DENY(`unsupported action on secret_rotation: ${action}`);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Google Calendar sync (migration 0039). Admin surface for the outbox that
+// pushes project + milestone changes to a tenant-owned Google Calendar.
+// READ is visible to TENANT_ADMIN + GENERAL_MANAGER (matches the RLS policy
+// `project_calendar_events_tenant_admin_read`). UPDATE covers retry-of-failed
+// and force-reconcile buttons; DELETE is not exposed because rows carry
+// meaningful audit history (attempt count, last_error) even after SKIP.
+// ---------------------------------------------------------------------------
+const CALENDAR_SYNC_ADMINS: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+];
+
+function decideCalendarSync(actor: Actor, action: ActionVerb): Decision {
+  const isAdmin = CALENDAR_SYNC_ADMINS.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isAdmin
+        ? ALLOW("privileged role reads calendar sync outbox")
+        : DENY("calendar sync dashboard restricted to admins + GM");
+    case "update":
+      return isAdmin
+        ? ALLOW("privileged role may retry or skip outbox rows")
+        : DENY("calendar sync mutations restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on calendar_sync: ${action}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Tenant Telegram + WhatsApp integration config (rules §17).
+//
+// These resources gate the **tenant-level bot / sender credentials**, not
+// the per-user chat linking (that surface lives in `/settings/preferences`
+// and is protected by user-scoped RLS, no PDP entry needed).
+//
+// Only TENANT_ADMIN + GENERAL_MANAGER may create / update / delete these
+// configs — mirrors the `secret_rotation` and `calendar_sync` policies.
+// Read is *also* admin-only because the loader decrypts the bot token
+// server-side; showing the row to a non-admin would leak the fact that a
+// bot exists (side-channel not worth allowing).
+// ---------------------------------------------------------------------------
+const INTEGRATION_ADMIN_ROLES: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+];
+
+function decideTelegramBotConfig(
+  actor: Actor,
+  action: ActionVerb,
+): Decision {
+  const isAdmin = INTEGRATION_ADMIN_ROLES.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isAdmin
+        ? ALLOW("admin/GM reads tenant telegram bot config")
+        : DENY("telegram bot config restricted to admins + GM");
+    case "create":
+    case "update":
+      return isAdmin
+        ? ALLOW("admin/GM manages tenant telegram bot config")
+        : DENY("telegram bot mutations restricted to admins + GM");
+    case "delete":
+      return isAdmin
+        ? ALLOW("admin/GM may deactivate tenant telegram bot")
+        : DENY("telegram bot deactivation restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on telegram_bot_config: ${action}`);
+  }
+}
+
+function decideWhatsAppConfig(actor: Actor, action: ActionVerb): Decision {
+  const isAdmin = INTEGRATION_ADMIN_ROLES.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isAdmin
+        ? ALLOW("admin/GM reads tenant whatsapp config")
+        : DENY("whatsapp config restricted to admins + GM");
+    case "create":
+    case "update":
+      return isAdmin
+        ? ALLOW("admin/GM manages tenant whatsapp config")
+        : DENY("whatsapp config mutations restricted to admins + GM");
+    case "delete":
+      return isAdmin
+        ? ALLOW("admin/GM may deactivate tenant whatsapp config")
+        : DENY("whatsapp deactivation restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on whatsapp_config: ${action}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lookup options (migration 0049). Reference data (dropdown vocab) curated
+// by admins. Read is public to every tenant member; create/update/delete
+// restricted to TENANT_ADMIN + GENERAL_MANAGER — the same pair that
+// governs `secret_rotation` and other admin-config surfaces.
+// ---------------------------------------------------------------------------
+const LOOKUP_OPTION_WRITERS: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+];
+
+function decideLookupOption(actor: Actor, action: ActionVerb): Decision {
+  const isWriter = LOOKUP_OPTION_WRITERS.includes(actor.role);
+  switch (action) {
+    case "read":
+      return ALLOW("lookup options readable by any tenant member");
+    case "create":
+    case "update":
+    case "delete":
+      return isWriter
+        ? ALLOW(`${actor.role} may curate lookup options`)
+        : DENY("lookup option writes restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on lookup_option: ${action}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// User admin surface (settings/users — migration 0052 Fase 2/3).
+//
+// Read      → TENANT_ADMIN + HR_ADMIN. Same set the RPC guards; keeps the
+//             `authorize()` decision aligned with the DB-level filter.
+// Create    → INVITE new user (send magic-link, insert employees row).
+//             Only TENANT_ADMIN. HR_ADMIN's provisioning still runs through
+//             the HR employees flow; keeping this narrow avoids two admins
+//             fighting over the same auth.users record.
+// Update    → CHANGE ROLE / SET STATUS. TENANT_ADMIN only.
+// Delete    → FORCE LOGOUT (session invalidation). TENANT_ADMIN only.
+//             We treat "delete" as a soft action — nothing is removed from
+//             the DB, only Supabase sessions are revoked. Hard delete of
+//             auth.users happens outside this app (retention rules §22).
+// ---------------------------------------------------------------------------
+const USER_ADMIN_READERS: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "HR_ADMIN",
+];
+const USER_ADMIN_WRITERS: readonly EmployeeRole[] = ["TENANT_ADMIN"];
+
+function decideUserAdmin(actor: Actor, action: ActionVerb): Decision {
+  const isReader = USER_ADMIN_READERS.includes(actor.role);
+  const isWriter = USER_ADMIN_WRITERS.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isReader
+        ? ALLOW(`${actor.role} may list users`)
+        : DENY("user admin readable only by TENANT_ADMIN / HR_ADMIN");
+    case "create":
+    case "update":
+    case "delete":
+      return isWriter
+        ? ALLOW(`${actor.role} may mutate user accounts`)
+        : DENY("user admin mutations restricted to TENANT_ADMIN");
+    default:
+      return DENY(`unsupported action on user_admin: ${action}`);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chart of Accounts (rules §16 — financial reference master).
+//
+// Reads: every tenant member (dropdowns everywhere) — handled in
+// `allowReadWithinTenant`. Writes: TENANT_ADMIN (via the top-level admin
+// override) + LEAD_FINANCE only. Finance owns the CoA in a service company
+// context; delete is not exposed (accounts are deactivated instead).
+// ---------------------------------------------------------------------------
+const COA_WRITERS: readonly EmployeeRole[] = ["LEAD_FINANCE"];
+
+function decideCoa(actor: Actor, action: ActionVerb): Decision {
+  const isWriter = COA_WRITERS.includes(actor.role);
+  switch (action) {
+    case "create":
+    case "update":
+      return isWriter
+        ? ALLOW(`${actor.role} may curate the chart of accounts`)
+        : DENY("coa mutations restricted to TENANT_ADMIN / LEAD_FINANCE");
+    case "delete":
+      // Guard even for the admin override — CoA rows are soft-deactivated,
+      // never removed, because `budget_details.coa_id` may still reference
+      // them for historical accuracy.
+      return DENY("coa rows must be deactivated, not deleted");
+    default:
+      return DENY(`unsupported action on coa: ${action}`);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Performance evaluations — SPV/Team Lead drafts, PM reviews, OM decides
+// (rules §6, §12 HR).
+// ---------------------------------------------------------------------
+
+/** Roles allowed to author / edit templates. Same as HR admin surface. */
+const EVAL_TEMPLATE_WRITERS: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "HEAD_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HR_ADMIN",
+];
+
+function decideEvaluationTemplate(
+  actor: Actor,
+  action: ActionVerb,
+): Decision {
+  const isWriter = EVAL_TEMPLATE_WRITERS.includes(actor.role);
+  switch (action) {
+    case "read":
+      return ALLOW("evaluation templates readable by any tenant member");
+    case "create":
+    case "update":
+    case "delete":
+      return isWriter
+        ? ALLOW(`${actor.role} may manage evaluation templates`)
+        : DENY(
+            "evaluation template mutations restricted to HR / OM / HM / Admin",
+          );
+    default:
+      return DENY(`unsupported action on evaluation_template: ${action}`);
+  }
+}
+
+/**
+ * Evaluation lifecycle guard. SPV/Team Lead can create + submit; PM
+ * can review; OM decides. HR / Admin can manage everything.
+ * Additional identity checks (is this SPV the one referenced on the
+ * row?) happen inside the action handlers.
+ */
+function decideEvaluation(
+  actor: Actor,
+  action: ActionVerb,
+  _attrs: ResourceAttributes,
+): Decision {
+  const isHrManagement =
+    actor.role === "TENANT_ADMIN" ||
+    actor.role === "HEAD_MANAGER" ||
+    actor.role === "OPERATIONS_MANAGER" ||
+    actor.role === "HR_ADMIN";
+  const isSupervisor = actor.role === "SUPERVISOR";
+  const isPm = actor.role === "PROJECT_MANAGER";
+
+  switch (action) {
+    case "read":
+      // Read visibility is enforced further via RLS (SPV/PM/OM
+      // referenced on the row or HR/Mgmt). PDP lets any staff try.
+      return ALLOW("evaluation read gated by RLS");
+    case "create":
+    case "update":
+      // Only SPV (as author), PM (adding review notes), OM (adding
+      // decision notes), or HR/Mgmt.
+      return isSupervisor || isPm || isHrManagement
+        ? ALLOW(`${actor.role} may draft / edit evaluations`)
+        : DENY(
+            "evaluation drafts restricted to SPV / PM / OM / HR / Admin",
+          );
+    case "submit":
+      return isSupervisor || isHrManagement
+        ? ALLOW("SPV may submit evaluation")
+        : DENY("submit restricted to SPV / HR / Admin");
+    case "approve":
+    case "reject":
+      // Two-stage: PM review + OM final. Both allowed here; action
+      // handler resolves which stage this call maps to based on the
+      // row's current status.
+      return isPm || isHrManagement
+        ? ALLOW("PM / OM / HR may act on evaluation")
+        : DENY("evaluation review restricted to PM / OM / HR / Admin");
+    case "delete":
+    case "cancel":
+      return isHrManagement
+        ? ALLOW("HR / Admin may cancel evaluations")
+        : DENY("cancel restricted to HR / Admin");
+    default:
+      return DENY(`unsupported action on evaluation: ${action}`);
+  }
+}
+
+/**
+ * UPK note guard. Draft/edit: PM (usually) or HR/Mgmt. Finance
+ * approves gate; Director for ≥ 50M. HR/Admin can override.
+ */
+function decideUpkNote(
+  actor: Actor,
+  action: ActionVerb,
+  _attrs: ResourceAttributes,
+): Decision {
+  const isHrManagement =
+    actor.role === "TENANT_ADMIN" ||
+    actor.role === "HEAD_MANAGER" ||
+    actor.role === "HR_ADMIN";
+  const isFinance = actor.role === "LEAD_FINANCE";
+  const isOm = actor.role === "OPERATIONS_MANAGER";
+  const isPm = actor.role === "PROJECT_MANAGER";
+
+  switch (action) {
+    case "read":
+      return ALLOW("upk read gated by RLS");
+    case "create":
+    case "update":
+      return isPm || isOm || isHrManagement || isFinance
+        ? ALLOW(`${actor.role} may draft UPK`)
+        : DENY("UPK drafting restricted to PM / OM / Finance / HR / Admin");
+    case "submit":
+      return isPm || isOm || isHrManagement
+        ? ALLOW("draft may be submitted to finance")
+        : DENY("submit restricted to PM / OM / HR / Admin");
+    case "approve":
+    case "reject":
+      return isFinance || isHrManagement || isOm
+        ? ALLOW("finance / mgmt may decide UPK")
+        : DENY("UPK decision restricted to Finance / HM / Admin");
+    case "cancel":
+      return isHrManagement
+        ? ALLOW("HR / Admin may cancel UPK")
+        : DENY("cancel restricted to HR / Admin");
+    default:
+      return DENY(`unsupported action on upk_note: ${action}`);
+  }
+}
+
+/**
+ * Monthly report guard (rules §26). SPV drafts and submits; PM
+ * approves. OM / HM / Admin can act as PM (broad-view override).
+ * Later slices will extend this with client-portal + finance-facing
+ * transitions.
+ */
+function decideMonthlyReport(
+  actor: Actor,
+  action: ActionVerb,
+  _attrs: ResourceAttributes,
+): Decision {
+  const isSupervisor = actor.role === "SUPERVISOR";
+  const isPm = actor.role === "PROJECT_MANAGER";
+  const isFinance = actor.role === "LEAD_FINANCE";
+  const isMgmt =
+    actor.role === "TENANT_ADMIN" ||
+    actor.role === "HEAD_MANAGER" ||
+    actor.role === "OPERATIONS_MANAGER" ||
+    actor.role === "GENERAL_MANAGER";
+
+  switch (action) {
+    case "read":
+      // RLS narrows further to project members / submitters.
+      return ALLOW("monthly report read gated by RLS");
+    case "create":
+    case "update":
+      return isSupervisor || isPm || isMgmt
+        ? ALLOW(`${actor.role} may draft / edit monthly report`)
+        : DENY("monthly report drafts restricted to SPV / PM / OM / HM / Admin");
+    case "submit":
+      return isSupervisor || isPm || isMgmt
+        ? ALLOW("SPV may submit monthly report")
+        : DENY("submit restricted to SPV / PM / OM / HM / Admin");
+    case "approve":
+    case "reject":
+      // Slice B adds finance-driven BA generation — LEAD_FINANCE can
+      // trigger the BA when a PM is unavailable so billing doesn't
+      // stall. RLS + the action's own status guard still enforce
+      // scope (only APPROVED_BY_CLIENT rows can move to BA_GENERATED).
+      return isPm || isMgmt || isFinance
+        ? ALLOW("PM / mgmt / finance may act on monthly report")
+        : DENY(
+            "review restricted to PM / OM / HM / Admin / Lead Finance",
+          );
+    case "cancel":
+      return isMgmt
+        ? ALLOW("mgmt may cancel monthly report")
+        : DENY("cancel restricted to management");
+    default:
+      return DENY(`unsupported action on monthly_report: ${action}`);
+  }
+}
+
+/**
+ * Reports module guard. Reports are pure `read` operations layered on
+ * top of the tables they aggregate — RLS handles the actual data
+ * scoping. This helper answers the coarse question "may this role run
+ * *any* report?" so the `/reports` route + download API can fail fast
+ * before touching the DB. Per-report visibility (which cards appear)
+ * is enforced separately via `reportsForRole()` in
+ * `src/lib/reports/registry.ts`.
+ */
+const REPORT_RUNNERS: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+  "PETTY_CASH_CUSTODIAN",
+];
+
+function decideReport(actor: Actor, action: ActionVerb): Decision {
+  if (action !== "read") {
+    return DENY(`unsupported action on report: ${action}`);
+  }
+  return REPORT_RUNNERS.includes(actor.role)
+    ? ALLOW(`${actor.role} may run reports`)
+    : DENY("reports restricted to PM+ / Finance / Custodian tiers");
+}
+
+// ---------------------------------------------------------------------------
+// Bulk import (rules §17 + §22).
+// ---------------------------------------------------------------------------
+// Bulk import is a privileged mutation surface that can create hundreds
+// of rows in a single click. Restricted to master-data owners:
+//   - HR_ADMIN         — Employees master
+//   - LEAD_FINANCE     — Budget lines / COA-adjacent data
+//   - TENANT_ADMIN     — Everything (tenant setup)
+//   - OM / HM / GM     — Portfolio-level onboarding
+// PROJECT_MANAGER can't bulk import employees/budgets by design — that
+// would concentrate too much cost authority in one role (rules §6).
+const BULK_IMPORT_ROLES: readonly EmployeeRole[] = [
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+  "HEAD_MANAGER",
+  "OPERATIONS_MANAGER",
+  "LEAD_FINANCE",
+];
+
+function decideImportJob(actor: Actor, action: ActionVerb): Decision {
+  // Read: same allow-list — you can't inspect other people's imports
+  // if you can't run one yourself. Prevents lateral audit exposure.
+  if (action === "read") {
+    return BULK_IMPORT_ROLES.includes(actor.role)
+      ? ALLOW("import history visible to master-data owners")
+      : DENY("bulk import history restricted to master-data owners");
+  }
+  if (action === "bulk_import" || action === "create") {
+    return BULK_IMPORT_ROLES.includes(actor.role)
+      ? ALLOW("role may execute bulk import")
+      : DENY("bulk import restricted to HR / Finance / Admin tier");
+  }
+  return DENY(`unsupported action on import_job: ${action}`);
 }

@@ -69,16 +69,36 @@ SMTP is degraded.
 
 | Variable                         | Scope       | Required | Rotation | Notes |
 | -------------------------------- | ----------- | -------- | -------- | ----- |
-| `OPENAI_API_KEY`                 | server only | ⭕       | 90d      | Falls back to `mock` provider if unset. |
-| `ANTHROPIC_API_KEY`              | server only | ⭕       | 90d      |  |
-| `GOOGLE_GENERATIVE_AI_API_KEY`   | server only | ⭕       | 90d      |  |
+| `OPENAI_API_KEY`                 | server only | ⭕       | 90d      | `sk-...` from [platform.openai.com](https://platform.openai.com/api-keys). No free tier. |
+| `ANTHROPIC_API_KEY`              | server only | ⭕       | 90d      | `sk-ant-...` from [console.anthropic.com](https://console.anthropic.com/settings/keys). No free tier. |
+| `GOOGLE_GENERATIVE_AI_API_KEY`   | server only | ⭕       | 90d      | Format modern `AQ.Ab...` (per Juni 2026) atau legacy `AIza...` (sunset September 2026). Get free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). |
 | `AI_PROVIDER`                    | server only | ⭕       | never    | `openai` \| `anthropic` \| `google` \| `mock`. Default `mock`. |
-| `AI_MODEL_ID`                    | server only | ⭕       | never    | Provider-specific model slug. |
+| `AI_MODEL_ID`                    | server only | ⭕       | never    | Provider-specific model slug. Untuk Gemini: **`gemini-flash-latest`** (recommended — auto-track versi stable terbaru). |
 | `AI_DAILY_TOKEN_CAP`             | server only | ⭕       | never    | Per-tenant daily output-token budget. Default `10000`. Enforced via Redis. |
+
+Details lengkap + troubleshooting → [`integrations/ai-insights-gemini.md`](integrations/ai-insights-gemini.md).
 
 PII redaction (`src/lib/ai/redact.ts`) runs on every prompt before
 dispatch — names hashed, salaries bucketed, KTP dropped, bank accounts
 truncated. Independent of provider.
+
+## Messaging integrations (Telegram + WhatsApp)
+
+| Variable                         | Scope       | Required                       | Rotation | Notes |
+| -------------------------------- | ----------- | ------------------------------ | -------- | ----- |
+| `TELEGRAM_LINK_TOKEN_SECRET`     | server only | ✅ untuk user link             | 90d      | HMAC-SHA256 secret untuk sign deep link `/start` token. Min 32 chars. |
+| `TELEGRAM_WEBHOOK_URL`           | server only | ✅ production                  | never    | URL webhook publik (`https://<domain>/api/telegram/webhook`). Dipakai saat activate bot. |
+| `TELEGRAM_WEBHOOK_SECRET`        | server only | ⭕ recommended                 | 90d      | Secret path parameter untuk validasi webhook authenticity. |
+| `WHATSAPP_OTP_SECRET`            | server only | ✅ untuk user link             | 90d      | HMAC secret untuk OTP verifikasi nomor WA user. Min 32 chars. |
+| `WHATSAPP_WEBHOOK_SECRET`        | server only | ⭕                             | 90d      | Header validation untuk inbound webhook (belum digunakan untuk Fonnte). |
+
+Bot token / device token per-tenant **BUKAN** environment variable —
+disimpan encrypted di kolom `encrypted_bot_token` / `encrypted_api_token`,
+di-enter via UI admin per tenant (`/settings/integrations/*`).
+
+Details lengkap:
+- Telegram → [`integrations/telegram-bot.md`](integrations/telegram-bot.md)
+- WhatsApp (Fonnte) → [`integrations/whatsapp-fonnte.md`](integrations/whatsapp-fonnte.md)
 
 ## Observability
 

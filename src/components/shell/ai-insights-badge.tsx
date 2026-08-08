@@ -135,6 +135,7 @@ export function AiInsightsBadge({
       size="icon"
       className="relative rounded-full"
       aria-label={t("ariaLabel", { count: unread })}
+      nativeButton={false}
       render={<Link href="/insights" />}
     >
       <Sparkles className="size-4" />

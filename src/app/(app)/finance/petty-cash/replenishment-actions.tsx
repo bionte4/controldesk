@@ -1,10 +1,19 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
-import { Check, Loader2, Send, X } from "lucide-react";
+import {
+  Check,
+  FileText,
+  Image as ImageIcon,
+  Loader2,
+  Send,
+  Upload,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +37,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  ALLOWED_MIME_TYPES,
+  DEFAULT_MAX_BYTES,
+} from "@/lib/attachments/constants";
+import {
   approveReplenishmentSchema,
   disburseReplenishmentSchema,
   rejectReplenishmentSchema,
@@ -41,6 +54,7 @@ import {
   disburseReplenishmentAction,
   rejectReplenishmentAction,
 } from "./actions";
+import { uploadReplenishmentAttachmentsAction } from "./replenishment-upload-actions";
 
 export function ReplenishmentActions({
   id,
@@ -50,10 +64,19 @@ export function ReplenishmentActions({
   status: "PENDING_FINANCE" | "APPROVED";
 }) {
   const t = useTranslations("pettyCash.replenishment.actions");
+  const tAttach = useTranslations("pettyCash.replenishment.attachments");
+  const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const [approveOpen, setApproveOpen] = React.useState(false);
   const [rejectOpen, setRejectOpen] = React.useState(false);
   const [disburseOpen, setDisburseOpen] = React.useState(false);
+
+  // Transfer-proof staging (disburse only).
+  const [stagedProof, setStagedProof] = React.useState<File[]>([]);
+  const [uploadPhase, setUploadPhase] = React.useState<
+    "idle" | "saving" | "uploading"
+  >("idle");
+  const proofInputRef = React.useRef<HTMLInputElement>(null);
 
   const approveForm = useForm<ApproveReplenishmentInput>({
     resolver: zodResolver(approveReplenishmentSchema),
@@ -68,33 +91,86 @@ export function ReplenishmentActions({
     defaultValues: { id, disbursement_ref: "" },
   });
 
+  function onProofPicked(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = e.target.files;
+    if (!picked || picked.length === 0) return;
+    const next: File[] = [...stagedProof];
+    for (const f of Array.from(picked)) {
+      if (!(ALLOWED_MIME_TYPES as readonly string[]).includes(f.type)) {
+        toast.error(tAttach("unsupportedType", { name: f.name }));
+        continue;
+      }
+      if (f.size > DEFAULT_MAX_BYTES) {
+        toast.error(tAttach("tooLarge", { name: f.name }));
+        continue;
+      }
+      next.push(f);
+    }
+    setStagedProof(next);
+    if (proofInputRef.current) proofInputRef.current.value = "";
+  }
+
+  function removeProof(idx: number) {
+    setStagedProof((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   function onApprove(values: ApproveReplenishmentInput) {
     startTransition(async () => {
       const result = await approveReplenishmentAction(values);
       if (result.ok) {
         toast.success(t("approvedToast"));
         setApproveOpen(false);
+        router.refresh();
       } else toast.error(result.reason);
     });
   }
+
   function onReject(values: RejectReplenishmentInput) {
     startTransition(async () => {
       const result = await rejectReplenishmentAction(values);
       if (result.ok) {
         toast.success(t("rejectedToast"));
         setRejectOpen(false);
+        router.refresh();
       } else toast.error(result.reason);
     });
   }
+
   function onDisburse(values: DisburseReplenishmentInput) {
     startTransition(async () => {
+      setUploadPhase("saving");
       const result = await disburseReplenishmentAction(values);
-      if (result.ok) {
-        toast.success(t("disbursedToast"));
-        setDisburseOpen(false);
-      } else toast.error(result.reason);
+      if (!result.ok) {
+        setUploadPhase("idle");
+        toast.error(result.reason);
+        return;
+      }
+
+      // Attach transfer proof (soft-recommended, so best-effort — a
+      // failed upload here surfaces a toast but does not roll back
+      // the disbursement which has already updated the fund balance).
+      if (stagedProof.length > 0) {
+        setUploadPhase("uploading");
+        const fd = new FormData();
+        fd.set("replenishment_id", id);
+        for (const f of stagedProof) fd.append("files", f);
+        const upRes = await uploadReplenishmentAttachmentsAction(fd);
+        if (!upRes.ok) {
+          toast.error(
+            tAttach("partialUploadFailed", { reason: upRes.reason }),
+          );
+        }
+      }
+
+      toast.success(t("disbursedToast"));
+      setStagedProof([]);
+      setUploadPhase("idle");
+      setDisburseOpen(false);
+      router.refresh();
     });
   }
+
+  const busy = isPending || uploadPhase !== "idle";
 
   if (status === "APPROVED") {
     return (
@@ -106,7 +182,7 @@ export function ReplenishmentActions({
             </Button>
           }
         />
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>{t("disburseTitle")}</DialogTitle>
             <DialogDescription>{t("disburseDescription")}</DialogDescription>
@@ -114,7 +190,7 @@ export function ReplenishmentActions({
           <Form {...disburseForm}>
             <form
               onSubmit={disburseForm.handleSubmit(onDisburse)}
-              className="flex flex-col gap-3"
+              className="flex flex-col gap-4"
             >
               <FormField
                 control={disburseForm.control}
@@ -129,20 +205,108 @@ export function ReplenishmentActions({
                   </FormItem>
                 )}
               />
+
+              {/* ---- Transfer proof staging (recommended) ---- */}
+              <section className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">
+                    {tAttach("labelTransferProof")}
+                  </label>
+                  <span className="text-[11px] text-muted-foreground">
+                    {tAttach("hint")}
+                  </span>
+                </div>
+                <input
+                  ref={proofInputRef}
+                  type="file"
+                  accept={ALLOWED_MIME_TYPES.join(",")}
+                  multiple
+                  className="sr-only"
+                  onChange={onProofPicked}
+                  disabled={busy}
+                  aria-label={tAttach("pickerLabelProof")}
+                />
+                <div className="flex flex-col gap-2 rounded-lg border border-dashed border-input bg-muted/20 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => proofInputRef.current?.click()}
+                      disabled={busy}
+                      className="w-fit"
+                    >
+                      <Upload className="size-4" />
+                      {tAttach("addProof")}
+                    </Button>
+                    <span className="text-[11px] text-muted-foreground">
+                      {stagedProof.length > 0
+                        ? tAttach("attached", { n: stagedProof.length })
+                        : tAttach("none")}
+                    </span>
+                  </div>
+                  {stagedProof.length > 0 ? (
+                    <ul className="flex flex-col gap-1">
+                      {stagedProof.map((file, i) => {
+                        const isImg = file.type.startsWith("image/");
+                        return (
+                          <li
+                            key={`${file.name}-${i}`}
+                            className="flex items-center justify-between gap-2 rounded-md border border-input bg-background/60 px-2 py-1.5 text-xs"
+                          >
+                            <span className="flex min-w-0 items-center gap-2">
+                              {isImg ? (
+                                <ImageIcon
+                                  className="size-3.5 shrink-0 text-muted-foreground"
+                                  aria-hidden
+                                />
+                              ) : (
+                                <FileText
+                                  className="size-3.5 shrink-0 text-muted-foreground"
+                                  aria-hidden
+                                />
+                              )}
+                              <span className="truncate">{file.name}</span>
+                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                                {(file.size / 1024).toFixed(0)} KB
+                              </span>
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeProof(i)}
+                              disabled={busy}
+                              aria-label={tAttach("removeAria", {
+                                name: file.name,
+                              })}
+                            >
+                              <X className="size-3.5" />
+                            </Button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
+                </div>
+              </section>
+
               <DialogFooter>
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setDisburseOpen(false)}
-                  disabled={isPending}
+                  disabled={busy}
                 >
                   {t("cancel")}
                 </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? (
+                <Button type="submit" disabled={busy}>
+                  {busy ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : null}
-                  {t("confirmDisburse")}
+                  {uploadPhase === "uploading"
+                    ? tAttach("uploading")
+                    : t("confirmDisburse")}
                 </Button>
               </DialogFooter>
             </form>

@@ -86,6 +86,11 @@ export const createPettyCashVoucherSchema = z.object({
       `Petty cash vouchers cannot exceed Rp ${(PETTY_CASH_VOUCHER_MAX_IDR - 1).toLocaleString("id-ID")}.`,
     ),
   category: pettyCashCategorySchema,
+  // Optional Chart of Accounts binding. See `finance/petty-cash` server
+  // actions for the active + postable + tenant check.
+  coa_id: uuidSchema
+    .nullish()
+    .transform((v) => (v === null || v === undefined ? undefined : v)),
   description: z.string().trim().min(4).max(2000),
   incurred_on: isoDateSchema,
   receipt_url: z

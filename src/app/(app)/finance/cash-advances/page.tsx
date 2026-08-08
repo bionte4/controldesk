@@ -12,9 +12,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
+import { businessDaysUntil } from "@/lib/format/business-days";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
+import {
+  toCanonicalRole,
+  type AnyDbEmployeeRole,
+  type CanonicalRole,
+} from "@/lib/rbac/roles";
 import { CA_STATUS_LABEL, CA_STATUS_TONE } from "@/lib/cash-advance/state";
 import {
   CANONICAL_CA_STATUS_LABEL,
@@ -26,6 +33,7 @@ import {
   NewCashAdvanceSheet,
   type ProjectOption,
 } from "./new-cash-advance-sheet";
+import { NewFieldOpsSheet } from "./new-field-ops-sheet";
 
 export const metadata: Metadata = {
   title: "Cash Advances",
@@ -39,6 +47,7 @@ type Row = {
   ca_type: CashAdvanceType;
   needed_by: string | null;
   created_at: string;
+  settlement_due_at: string | null;
   project_code: string;
   requester_name: string;
 };
@@ -51,6 +60,7 @@ type RawRow = {
   ca_type: CashAdvanceType | null;
   needed_by: string | null;
   created_at: string;
+  settlement_due_at: string | null;
   projects: { code: string } | null;
   requester: { full_name: string } | null;
 };
@@ -60,7 +70,7 @@ async function loadRequests(): Promise<Row[]> {
   const { data, error } = await supabase
     .from("cash_advances")
     .select(
-      "id, amount, purpose, status, ca_type, needed_by, created_at, projects(code), requester:requester_employee_id(full_name)",
+      "id, amount, purpose, status, ca_type, needed_by, created_at, settlement_due_at, projects(code), requester:requester_employee_id(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
@@ -75,9 +85,39 @@ async function loadRequests(): Promise<Row[]> {
     ca_type: row.ca_type ?? "GENERAL",
     needed_by: row.needed_by,
     created_at: row.created_at,
+    settlement_due_at: row.settlement_due_at,
     project_code: row.projects?.code ?? "—",
     requester_name: row.requester?.full_name ?? "—",
   }));
+}
+
+/**
+ * Compute a "SLA hint" for a DISBURSED cash advance based on how many
+ * business days remain until `settlement_due_at`. Returns null if the row
+ * is not DISBURSED (nothing to remind about) or missing a due date.
+ */
+function computeSettlementSlaHint(
+  row: Pick<Row, "status" | "settlement_due_at">,
+): { tone: string; label: string } | null {
+  if (row.status !== "DISBURSED" || !row.settlement_due_at) return null;
+  const delta = businessDaysUntil(row.settlement_due_at, new Date());
+  if (delta > 3) return null;
+  if (delta > 0) {
+    return {
+      tone: "border-amber-400/40 bg-amber-500/10 text-amber-300",
+      label: `SLA H-${delta}`,
+    };
+  }
+  if (delta === 0) {
+    return {
+      tone: "border-amber-500/50 bg-amber-500/20 text-amber-200",
+      label: "SLA hari ini",
+    };
+  }
+  return {
+    tone: "border-rose-500/40 bg-rose-500/15 text-rose-300",
+    label: `Overdue ${Math.abs(delta)} wd`,
+  };
 }
 
 /**
@@ -105,27 +145,138 @@ const CA_TYPE_TONE: Record<CashAdvanceType, string> = {
   FIELD_OPS: "border-amber-400/30 bg-amber-500/10 text-amber-300",
 };
 
-async function loadProjectOptions(): Promise<ProjectOption[]> {
+/**
+ * Load project options for the New Cash Advance sheet.
+ *
+ * Scoping mirrors the PDP contract in `pdp-canonical.ts::decideGeneralCa`:
+ *   - PM / OM / DIRECTOR / ADMIN / FINANCE  → all live projects in tenant.
+ *   - Everyone else (Employee / Supervisor) → only projects with an ACTIVE
+ *     assignment for the actor, unioned across the three assignment sources
+ *     (`project_employee_assignments`, `project_pm_assignments`,
+ *     `project_assignments`) — same union the RLS gate uses.
+ *
+ * Serving the full list to unassigned employees was both a privacy leak
+ * (they could see every project code/name in the tenant) and a UX trap:
+ * picking a project they weren't assigned to would fail PDP with an
+ * opaque "not authorized" error.
+ */
+async function loadProjectOptions(
+  actor: { id: string; role: string },
+): Promise<ProjectOption[]> {
   const supabase = await createClient();
+  const canonical = toCanonicalRole(actor.role as AnyDbEmployeeRole);
+  const bypassRoles: readonly CanonicalRole[] = [
+    "PM",
+    "OM",
+    "DIRECTOR",
+    "ADMIN",
+    "FINANCE",
+  ];
+  const shouldBypass = bypassRoles.includes(canonical);
+
+  if (shouldBypass) {
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, code, name")
+      .in("status", ["PLANNING", "ACTIVE"])
+      .order("name", { ascending: true })
+      .limit(500);
+    if (error || !data) return [];
+    return data.map((p) => ({ id: p.id, label: `${p.code} · ${p.name}` }));
+  }
+
+  const [pea, ppa, pa] = await Promise.all([
+    supabase
+      .from("project_employee_assignments")
+      .select("project_id")
+      .eq("employee_id", actor.id)
+      .eq("status", "ACTIVE"),
+    supabase
+      .from("project_pm_assignments")
+      .select("project_id")
+      .eq("pm_employee_id", actor.id)
+      .eq("status", "ACTIVE"),
+    supabase
+      .from("project_assignments")
+      .select("project_id")
+      .eq("employee_id", actor.id)
+      .eq("status", "ACTIVE"),
+  ]);
+
+  const ids = new Set<string>();
+  for (const row of pea.data ?? []) if (row.project_id) ids.add(row.project_id);
+  for (const row of ppa.data ?? []) if (row.project_id) ids.add(row.project_id);
+  for (const row of pa.data ?? []) if (row.project_id) ids.add(row.project_id);
+  if (ids.size === 0) return [];
+
   const { data, error } = await supabase
     .from("projects")
     .select("id, code, name")
+    .in("id", Array.from(ids))
     .in("status", ["PLANNING", "ACTIVE"])
     .order("name", { ascending: true })
-    .limit(200);
+    .limit(500);
   if (error || !data) return [];
   return data.map((p) => ({ id: p.id, label: `${p.code} · ${p.name}` }));
 }
 
 export default async function CashAdvancesPage() {
-  const [employee, rows, projectOptions, t, tTypes] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  const [rows, projectOptions, lookups, t, tTypes] = await Promise.all([
     loadRequests(),
-    loadProjectOptions(),
+    loadProjectOptions({ id: employee.id, role: employee.role }),
+    loadFieldOpsFormLookups(),
     getTranslations("cashAdvances"),
     getTranslations("cashAdvances.types"),
   ]);
-  void employee;
+
+  // Field-tech gating: the "Pengajuan Operasional" button is enabled
+  // whenever the actor has at least one ACTIVE FIELD_TECHNICIAN
+  // assignment. Higher-rank roles (Supervisor+, PM, OM, Finance,
+  // Director, Admin) always get access as an escalation lane — this
+  // mirrors the PDP contract in `pdp-canonical.ts::decideFieldOpsCa`.
+  const supabase = await createClient();
+  const { data: fieldTechFlag } = await supabase.rpc(
+    "has_active_field_tech_assignment",
+    { p_emp_id: employee.id },
+  );
+  const escalationRoles: readonly string[] = [
+    "SUPERVISOR",
+    "PROJECT_MANAGER",
+    "PM",
+    "OPERATIONS_MANAGER",
+    "OM",
+    "LEAD_FINANCE",
+    "FINANCE",
+    "HEAD_MANAGER",
+    "GENERAL_MANAGER",
+    "DIRECTOR",
+    "TENANT_ADMIN",
+    "ADMIN",
+  ];
+  const isFieldTech = Boolean(fieldTechFlag);
+  const isEscalation = escalationRoles.includes(employee.role as string);
+  const canFieldOps = isFieldTech || isEscalation;
+  // Base employees who are field techs shouldn't be able to file the
+  // regular "General" CA — they've been onboarded to the Field-Ops flow
+  // instead. Escalation roles keep access to both.
+  const canGeneral = !isFieldTech || isEscalation;
+
+  // Only classification-eligible roles (PM / Finance / OM+ / Admin) see
+  // the inline CoA picker on the New CA sheet + per-RAB CoA on Field
+  // Ops. Field Tech + Employee submitters get their advances coded by
+  // Finance during review. Same policy as the expense sheet.
+  const CA_COA_ROLES: readonly string[] = [
+    "PROJECT_MANAGER",
+    "LEAD_FINANCE",
+    "OPERATIONS_MANAGER",
+    "HEAD_MANAGER",
+    "GENERAL_MANAGER",
+    "DIRECTOR",
+    "TENANT_ADMIN",
+    "ADMIN",
+  ];
+  const canPickCoa = CA_COA_ROLES.includes(employee.role as string);
 
   const typeLabel: Record<CashAdvanceType, string> = {
     GENERAL: tTypes("general"),
@@ -144,7 +295,25 @@ export default async function CashAdvancesPage() {
             {t("subtitle")}
           </p>
         </div>
-        <NewCashAdvanceSheet projects={projectOptions} />
+        <div className="flex flex-wrap items-center gap-2">
+          <NewFieldOpsSheet
+            projects={projectOptions}
+            isFieldTech={canFieldOps}
+            disabled={!canFieldOps}
+            disabledReason={
+              canFieldOps ? undefined : t("newFieldOpsDisabled")
+            }
+            lookups={lookups}
+            canPickCoa={canPickCoa}
+          />
+          <NewCashAdvanceSheet
+            projects={projectOptions}
+            disabled={!canGeneral}
+            disabledReason={canGeneral ? undefined : t("newGeneralDisabled")}
+            canFieldOps={canFieldOps}
+            canPickCoa={canPickCoa}
+          />
+        </div>
       </header>
 
       {rows.length === 0 ? (
@@ -216,9 +385,26 @@ export default async function CashAdvancesPage() {
                           : "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={caTone(r.status)}>
-                          {caLabel(r.status)}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={caTone(r.status)}
+                          >
+                            {caLabel(r.status)}
+                          </Badge>
+                          {(() => {
+                            const hint = computeSettlementSlaHint(r);
+                            return hint ? (
+                              <Badge
+                                variant="outline"
+                                className={hint.tone}
+                                aria-label={`Settlement SLA — ${hint.label}`}
+                              >
+                                {hint.label}
+                              </Badge>
+                            ) : null;
+                          })()}
+                        </div>
                       </td>
                     </tr>
                   ))}

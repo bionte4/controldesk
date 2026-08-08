@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
+import { businessDaysUntil } from "@/lib/format/business-days";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import {
   formatRole,
@@ -42,9 +43,17 @@ import type {
   CashAdvanceType,
 } from "@/types/database";
 
+import { listAttachmentsSigned } from "@/lib/attachments";
+
 import { CashAdvanceActionButtons } from "../cash-advance-action-buttons";
 import { SubmitSettlementDialog } from "../settlement-panel";
 import { SettlementReviewButtons } from "../settlement-review-buttons";
+import {
+  AttachedCashAdvanceFiles,
+  SettlementAttachmentList,
+  UploadCashAdvanceAttachments,
+  type CashAdvanceAttachmentEntry,
+} from "../attachment-widgets";
 
 export const metadata: Metadata = { title: "Cash Advance" };
 
@@ -78,10 +87,11 @@ export default async function CashAdvanceDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, t, tSlots] = await Promise.all([
+  const [employee, t, tSlots, tAttach] = await Promise.all([
     requireCurrentEmployee(),
     getTranslations("cashAdvances.detail"),
     getTranslations("cashAdvances.chainSlot"),
+    getTranslations("cashAdvances.attachments"),
   ]);
 
   const supabase = await createClient();
@@ -96,10 +106,14 @@ export default async function CashAdvanceDetailPage(props: {
     created_at: string;
     rejection_reason: string | null;
     net_settlement_amount: string | null;
+    settlement_due_at: string | null;
+    disbursed_at: string | null;
     requester_employee_id: string;
     project_id: string;
+    coa_id: string | null;
     projects: { id: string; code: string; name: string } | null;
     requester: { id: string; full_name: string; role: string } | null;
+    coa: { id: string; code: string; name: string } | null;
   };
   type LogView = {
     id: number;
@@ -128,7 +142,7 @@ export default async function CashAdvanceDetailPage(props: {
       supabase
         .from("cash_advances")
         .select(
-          "*, projects(id, code, name), requester:requester_employee_id(id, full_name, role)",
+          "*, projects(id, code, name), requester:requester_employee_id(id, full_name, role), coa:coa_id(id, code, name)",
         )
         .eq("id", id)
         .eq("tenant_id", employee.tenant_id)
@@ -157,6 +171,43 @@ export default async function CashAdvanceDetailPage(props: {
   const logs = (logsRaw ?? []) as unknown as LogView[];
   const settlements = (settlementsRaw ?? []) as unknown as SettlementView[];
 
+  // Load nota/struk attachments for every settlement in parallel. These
+  // are separate from CA-level supporting docs (resource_type = "cash_advance")
+  // so Finance can review evidence per-submission when the CA has multiple
+  // settlement iterations (RETURNED + resubmit).
+  const settlementAttachmentEntries = await Promise.all(
+    settlements.map(async (s) => {
+      const rows = await listAttachmentsSigned(
+        "cash_advance_settlement",
+        s.id,
+      );
+      return {
+        settlementId: s.id,
+        files: rows.map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          mime_type: a.mime_type,
+          size_bytes: a.size_bytes,
+          signed_url: a.signed_url,
+        })),
+      };
+    }),
+  );
+  const settlementAttachmentMap = new Map(
+    settlementAttachmentEntries.map((e) => [e.settlementId, e.files]),
+  );
+
+  // Latest RETURNED submission's attachments will be copy-forwarded into
+  // the new submission — surface the count so the requester knows.
+  const latestReturned = settlements
+    .filter((s) => s.status === "RETURNED")
+    .sort((a, b) =>
+      (b.returned_at ?? "").localeCompare(a.returned_at ?? ""),
+    )[0];
+  const priorReturnedAttachmentCount = latestReturned
+    ? (settlementAttachmentMap.get(latestReturned.id)?.length ?? 0)
+    : 0;
+
   const status = ca.status;
   const project = ca.projects;
   const requester = ca.requester;
@@ -183,6 +234,29 @@ export default async function CashAdvanceDetailPage(props: {
   const canonicalChain: CanonicalApprovalSlot[] = isCanonicalRow
     ? caCanonicalChain({ type: caType, amountIDR })
     : [];
+
+  // Supporting attachments (Gmap screenshot, memo pendukung, foto site).
+  // Load-and-sign in the RSC so client widgets get short-lived URLs. The
+  // owner can add/remove while the CA is still editable; approvers see
+  // the same set read-only.
+  const attachmentsSigned = await listAttachmentsSigned("cash_advance", ca.id);
+  const attachmentEntries: CashAdvanceAttachmentEntry[] = attachmentsSigned.map(
+    (a) => ({
+      id: a.id,
+      filename: a.filename,
+      mime_type: a.mime_type,
+      size_bytes: a.size_bytes,
+      signed_url: a.signed_url,
+    }),
+  );
+
+  const ATTACHMENT_EDITABLE_STATES: CashAdvanceStatus[] = [
+    "DRAFT",
+    "PENDING_SUPERVISOR",
+    "PENDING_L1_SUPERVISOR",
+  ];
+  const canEditAttachments =
+    isRequester && ATTACHMENT_EDITABLE_STATES.includes(status);
 
   function caLabel(s: CashAdvanceStatus): string {
     const canonical =
@@ -226,7 +300,10 @@ export default async function CashAdvanceDetailPage(props: {
             />
           ) : null}
           {canSubmitSettlement ? (
-            <SubmitSettlementDialog cashAdvanceId={ca.id} flow={flow} />
+            <SubmitSettlementDialog
+              cashAdvanceId={ca.id}
+              priorReturnedAttachmentCount={priorReturnedAttachmentCount}
+            />
           ) : null}
         </div>
       </div>
@@ -285,8 +362,50 @@ export default async function CashAdvanceDetailPage(props: {
               })}
             </p>
           ) : null}
+          {ca.coa ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {t("coaLabel")}: {ca.coa.code} · {ca.coa.name}
+            </p>
+          ) : null}
         </div>
       </header>
+
+      {status === "DISBURSED" && ca.settlement_due_at ? (
+        (() => {
+          const delta = businessDaysUntil(ca.settlement_due_at, new Date());
+          const dueLabel = formatInTz(ca.settlement_due_at, "dd MMM yyyy");
+          let tone = "";
+          let icon: React.ReactNode = null;
+          let title = "";
+          let body = "";
+          if (delta > 3) {
+            return null; // > 3 wd tersisa — belum perlu banner.
+          } else if (delta > 0) {
+            tone =
+              "border-amber-400/40 bg-amber-500/10 text-amber-100";
+            title = `Settlement deadline dalam ${delta} hari kerja`;
+            body = `Deadline: ${dueLabel}. Segera submit nota + total pengeluaran supaya settlement diproses tepat waktu.`;
+          } else if (delta === 0) {
+            tone =
+              "border-amber-500/60 bg-amber-500/20 text-amber-50";
+            title = `Hari terakhir submit settlement`;
+            body = `Hari ini (${dueLabel}) adalah hari kerja terakhir untuk submit settlement.`;
+          } else {
+            tone = "border-rose-500/50 bg-rose-500/15 text-rose-100";
+            title = `Settlement lewat ${Math.abs(delta)} hari kerja`;
+            body = `Deadline ${dueLabel} sudah terlewati. Mohon segera submit settlement — sistem akan mengeskalasi ke Supervisor/PM/OM sesuai jadwal reminder.`;
+          }
+          return (
+            <div
+              role="status"
+              className={`rounded-2xl border ${tone} p-4 text-sm`}
+            >
+              <p className="font-semibold">{title}</p>
+              <p className="mt-1 text-xs opacity-90">{body}</p>
+            </div>
+          );
+        })()
+      ) : null}
 
       {isCanonicalRow ? (
         <Card className="glass">
@@ -403,6 +522,36 @@ export default async function CashAdvanceDetailPage(props: {
       </div>
 
       <Card className="glass">
+        <CardHeader className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{tAttach("title")}</CardTitle>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {caType === "FIELD_OPS"
+                ? tAttach("subtitleFieldOps")
+                : tAttach("subtitleGeneral")}
+            </p>
+          </div>
+          {canEditAttachments ? (
+            <UploadCashAdvanceAttachments cashAdvanceId={ca.id} />
+          ) : (
+            <span
+              className="text-[11px] text-muted-foreground"
+              title={tAttach("lockedTitle")}
+            >
+              {tAttach("locked")}
+            </span>
+          )}
+        </CardHeader>
+        <CardContent>
+          <AttachedCashAdvanceFiles
+            cashAdvanceId={ca.id}
+            attachments={attachmentEntries}
+            canDelete={canEditAttachments}
+          />
+        </CardContent>
+      </Card>
+
+      <Card className="glass">
         <CardHeader>
           <CardTitle>{t("settlementsTitle")}</CardTitle>
         </CardHeader>
@@ -413,50 +562,64 @@ export default async function CashAdvanceDetailPage(props: {
             </p>
           ) : (
             <ol className="divide-y divide-border/50">
-              {settlements.map((s) => (
-                <li
-                  key={s.id}
-                  className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className={SETTLEMENT_TONE[s.status]}>
-                        {s.status}
-                      </Badge>
-                      <p className="text-sm">
-                        {s.submitter?.full_name ?? "—"}
-                      </p>
+              {settlements.map((s) => {
+                const files = settlementAttachmentMap.get(s.id) ?? [];
+                const canDetachOwn =
+                  s.status === "SUBMITTED" && isRequester;
+                return (
+                  <li key={s.id} className="flex flex-col gap-2 px-4 py-3">
+                    <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className={SETTLEMENT_TONE[s.status]}
+                          >
+                            {s.status}
+                          </Badge>
+                          <p className="text-sm">
+                            {s.submitter?.full_name ?? "—"}
+                          </p>
+                        </div>
+                        {s.notes ? (
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {s.notes}
+                          </p>
+                        ) : null}
+                        {s.return_reason ? (
+                          <p className="mt-1 text-xs text-rose-400">
+                            {t("returnedReason", { reason: s.return_reason })}
+                          </p>
+                        ) : null}
+                        {canReviewSettlement && s.status === "SUBMITTED" ? (
+                          <SettlementReviewButtons
+                            settlementId={s.id}
+                            flow={flow}
+                          />
+                        ) : null}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold tabular-nums">
+                          {formatIDR(parseMoneyFromDb(s.total_spent))}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatInTz(
+                            s.submitted_at ?? s.accepted_at ?? new Date(),
+                            "dd MMM, HH:mm",
+                          )}
+                        </p>
+                      </div>
                     </div>
-                    {s.notes ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {s.notes}
-                      </p>
-                    ) : null}
-                    {s.return_reason ? (
-                      <p className="mt-1 text-xs text-rose-400">
-                        {t("returnedReason", { reason: s.return_reason })}
-                      </p>
-                    ) : null}
-                    {canReviewSettlement && s.status === "SUBMITTED" ? (
-                      <SettlementReviewButtons
-                        settlementId={s.id}
-                        flow={flow}
-                      />
-                    ) : null}
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold tabular-nums">
-                      {formatIDR(parseMoneyFromDb(s.total_spent))}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatInTz(
-                        s.submitted_at ?? s.accepted_at ?? new Date(),
-                        "dd MMM, HH:mm",
-                      )}
-                    </p>
-                  </div>
-                </li>
-              ))}
+
+                    {/* Nota/struk attached to this settlement submission */}
+                    <SettlementAttachmentList
+                      settlementId={s.id}
+                      files={files}
+                      canDetach={canDetachOwn}
+                    />
+                  </li>
+                );
+              })}
             </ol>
           )}
         </CardContent>

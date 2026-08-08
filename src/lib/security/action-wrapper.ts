@@ -53,6 +53,7 @@ export type ActionResultErr = {
     | "FORBIDDEN"
     | "VALIDATION"
     | "AUDIT_FAILED"
+    | "PRECONDITION"
     | "INTERNAL";
 };
 

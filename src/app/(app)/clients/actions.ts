@@ -37,6 +37,8 @@ export const createClientAction = withSecureAction({
         contact_email: input.contact_email ?? null,
         contact_phone: input.contact_phone ?? null,
         status: input.status,
+        contract_number: input.contract_number ?? null,
+        project_code: input.project_code ?? null,
         notes: input.notes ?? null,
       })
       .select("id, name, status")
@@ -91,6 +93,10 @@ export const updateClientAction = withSecureAction({
     if (input.contact_phone !== undefined)
       patch.contact_phone = input.contact_phone ?? null;
     if (input.status !== undefined) patch.status = input.status;
+    if (input.contract_number !== undefined)
+      patch.contract_number = input.contract_number ?? null;
+    if (input.project_code !== undefined)
+      patch.project_code = input.project_code ?? null;
     if (input.notes !== undefined) patch.notes = input.notes ?? null;
 
     const { data, error } = await supabase

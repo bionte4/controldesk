@@ -22,11 +22,22 @@ export const budgetStatusSchema = z.enum(BUDGET_STATUSES);
 export type BudgetStatus = z.infer<typeof budgetStatusSchema>;
 
 /**
- * Curated list of budget categories mirroring GAS `BudgetService`. Keeping
- * the enum short in v1 — accounting can propose additions without a schema
- * change (the DB column is `text`).
+ * Budget categories are admin-curated at runtime via `lookup_options`
+ * (domain: `budget_category`, migration 0054). Migration 0054 seeds the
+ * codes below as defaults for every tenant — historic rows keep working
+ * because the `code` values are unchanged. Accounting can add new codes
+ * (e.g. SOFTWARE_LICENSE) via `/settings/lookups` without a code deploy.
+ *
+ * The Zod schema no longer pins the enum literal — it validates format
+ * only (uppercase snake_case, 1..64 chars). The server action performs a
+ * defence-in-depth SELECT against `lookup_options` to reject unknown or
+ * inactive codes.
+ *
+ * `LEGACY_BUDGET_CATEGORY_DEFAULTS` remains exported as a compile-time
+ * constant so tests and any client fallback (before lookups load) can
+ * still tree-shake against a well-known baseline.
  */
-export const BUDGET_CATEGORIES = [
+export const LEGACY_BUDGET_CATEGORY_DEFAULTS = [
   "DIRECT_LABOUR",
   "SUBCONTRACTOR",
   "INFRASTRUCTURE",
@@ -38,7 +49,19 @@ export const BUDGET_CATEGORIES = [
   "CONTINGENCY",
   "OTHER",
 ] as const;
-export const budgetCategorySchema = z.enum(BUDGET_CATEGORIES);
+
+/** @deprecated Kept for backward compat with existing tests. Use runtime lookup. */
+export const BUDGET_CATEGORIES = LEGACY_BUDGET_CATEGORY_DEFAULTS;
+
+export const budgetCategorySchema = z
+  .string()
+  .trim()
+  .min(1, "Category is required.")
+  .max(64, "Category code is too long.")
+  .regex(
+    /^[A-Z][A-Z0-9_]*$/,
+    "Category code must be UPPER_SNAKE_CASE (letters, digits, underscores).",
+  );
 export type BudgetCategory = z.infer<typeof budgetCategorySchema>;
 
 // ---------------------------------------------------------------------------
@@ -68,6 +91,16 @@ export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 // ---------------------------------------------------------------------------
 // Line items.
 // ---------------------------------------------------------------------------
+/**
+ * `coa_id` — optional FK to a postable CoA account (migration 0056). It is
+ * accepted as `null` too so the form can serialize "no CoA selected" without
+ * sending an empty string. When present, the server action verifies the
+ * account is active and `is_postable=true` in the caller's tenant.
+ */
+const coaIdField = uuidSchema
+  .nullish()
+  .transform((v) => (v === null || v === undefined ? undefined : v));
+
 export const addBudgetLineItemSchema = z.object({
   budget_id: uuidSchema,
   seq: z
@@ -75,6 +108,7 @@ export const addBudgetLineItemSchema = z.object({
     .int("Sequence must be a whole number.")
     .positive("Sequence must be > 0."),
   category: budgetCategorySchema,
+  coa_id: coaIdField,
   description: z
     .string()
     .trim()
@@ -91,6 +125,7 @@ export type AddBudgetLineItemInput = z.infer<typeof addBudgetLineItemSchema>;
 export const updateBudgetLineItemSchema = z.object({
   id: uuidSchema,
   category: budgetCategorySchema.optional(),
+  coa_id: coaIdField,
   description: z
     .string()
     .trim()

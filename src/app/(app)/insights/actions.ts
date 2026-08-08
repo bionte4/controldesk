@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 
 import { requireCurrentEmployee } from "@/lib/auth/session";
@@ -10,6 +11,12 @@ import { commit, reserve } from "@/lib/ai/cost-cap";
 import { AI_INSIGHT_KINDS, runInsight } from "@/lib/ai/generators";
 import { schemaForKind, type AiInsightKindLiteral } from "@/lib/ai/schemas";
 import { runAllInsightsSchema, runInsightSchema } from "@/lib/validation/insights";
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE,
+  isLocale,
+  type Locale,
+} from "@/lib/i18n/config";
 import type {
   AiInsightKind,
   AiInsightSeverity,
@@ -18,8 +25,20 @@ import type {
 
 const ESTIMATED_OUTPUT_TOKENS = 800;
 
+/**
+ * Resolve the caller's UI locale from the `NEXT_LOCALE` cookie so the AI
+ * emits every text field in the same language as the surrounding page
+ * (rules §18 — locale hygiene, plus better UX for Indonesian operators).
+ */
+async function resolveInsightLocale(): Promise<Locale> {
+  const cookieStore = await cookies();
+  const stored = cookieStore.get(LOCALE_COOKIE)?.value;
+  return isLocale(stored) ? stored : DEFAULT_LOCALE;
+}
+
 async function generateAndStore(kind: AiInsightKindLiteral) {
   const actor = await requireCurrentEmployee();
+  const locale = await resolveInsightLocale();
 
   const reservation = await reserve({
     tenantId: actor.tenant_id,
@@ -31,7 +50,7 @@ async function generateAndStore(kind: AiInsightKindLiteral) {
     );
   }
 
-  const outcome = await runInsight(kind, actor);
+  const outcome = await runInsight(kind, actor, locale);
 
   // Reconcile the reservation with the actual usage.
   await commit({

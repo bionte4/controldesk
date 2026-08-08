@@ -227,6 +227,73 @@ describe("pdp — money request editing", () => {
     // If the admin override changes to respect verb blocklists, update here.
     expect(d.effect).toBe("ALLOW");
   });
+
+  it("PROJECT_MANAGER may re-code (assign MA) a non-terminal expense they don't own", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "update",
+      resource: "expense",
+      attributes: attrs({
+        ownerEmployeeId: "some-employee",
+        status: "PENDING_L2_PROJECT_MANAGER",
+      }),
+    });
+    expect(d.effect).toBe("ALLOW");
+    expect(d.reason).toMatch(/re-code/i);
+  });
+
+  it("LEAD_FINANCE may re-code an expense at any pending step", () => {
+    const d = authorize({
+      actor: actor("LEAD_FINANCE"),
+      action: "update",
+      resource: "expense",
+      attributes: attrs({
+        ownerEmployeeId: "some-employee",
+        status: "PENDING_L2_5_FINANCE",
+      }),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("PROJECT_MANAGER cannot re-code a terminal (APPROVED) expense", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "update",
+      resource: "expense",
+      attributes: attrs({
+        ownerEmployeeId: "some-employee",
+        status: "APPROVED",
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/locked/i);
+  });
+
+  it("EMPLOYEE cannot re-code someone else's expense (not a TRUSTED_MA_EDITOR)", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "update",
+      resource: "expense",
+      attributes: attrs({
+        ownerEmployeeId: "some-other-employee",
+        status: "PENDING_L1_SUPERVISOR",
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("SUPERVISOR cannot re-code (not a TRUSTED_MA_EDITOR)", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "update",
+      resource: "expense",
+      attributes: attrs({
+        ownerEmployeeId: "some-other-employee",
+        status: "PENDING_L2_PROJECT_MANAGER",
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+  });
 });
 
 describe("pdp — cash advance disbursement", () => {
@@ -376,6 +443,7 @@ describe("pdp — bpo_contracts (rules §5)", () => {
 });
 
 describe("pdp — project assignments (rules §7)", () => {
+  // ---- Employee (non-PM) assignments — PM+ writers ----
   it("PROJECT_MANAGER may assign employees", () => {
     const d = authorize({
       actor: actor("PROJECT_MANAGER"),
@@ -396,9 +464,80 @@ describe("pdp — project assignments (rules §7)", () => {
     expect(d.effect).toBe("DENY");
   });
 
+  it("EMPLOYEE cannot manage assignments", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "create",
+      resource: "project_employee_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("LEAD_FINANCE cannot manage assignments (not a delivery role)", () => {
+    const d = authorize({
+      actor: actor("LEAD_FINANCE"),
+      action: "create",
+      resource: "project_employee_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("OPERATIONS_MANAGER may create employee assignments", () => {
+    const d = authorize({
+      actor: actor("OPERATIONS_MANAGER"),
+      action: "create",
+      resource: "project_employee_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  // ---- PM assignments — OM/HM+ ONLY (rules §7, matches RLS ppa_ops_write) ----
   it("OPERATIONS_MANAGER may create PM assignments", () => {
     const d = authorize({
       actor: actor("OPERATIONS_MANAGER"),
+      action: "create",
+      resource: "project_pm_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("HEAD_MANAGER may create PM assignments", () => {
+    const d = authorize({
+      actor: actor("HEAD_MANAGER"),
+      action: "create",
+      resource: "project_pm_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("PROJECT_MANAGER may NOT create PM assignments (aligns with RLS)", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "create",
+      resource: "project_pm_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("SUPERVISOR may NOT create PM assignments", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "create",
+      resource: "project_pm_assignment",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("TENANT_ADMIN may create PM assignments", () => {
+    const d = authorize({
+      actor: actor("TENANT_ADMIN"),
       action: "create",
       resource: "project_pm_assignment",
       attributes: attrs(),
@@ -641,6 +780,215 @@ describe("pdp — secret_rotation registry", () => {
   });
 });
 
+describe("pdp — cash_advance attachment authorization (upload/detach)", () => {
+  // Attachment mutations reuse the `update` action on `cash_advance`.
+  // Rules (mirrors upload-actions.ts):
+  //   - Owner (submitter) may attach/detach while status ∈ {DRAFT,
+  //     PENDING_L1_SUPERVISOR, PENDING_SUPERVISOR} — the "still with
+  //     first-line" window.
+  //   - Non-owner base roles cannot touch someone else's files.
+  //   - PM+/Finance may re-code (update MA) any non-terminal row.
+  //   - Cross-tenant is denied at step 1 of `authorize()`.
+
+  const SUBMITTER_OPEN_STATES = [
+    "DRAFT",
+    "PENDING_L1_SUPERVISOR",
+    "PENDING_SUPERVISOR",
+  ] as const;
+
+  const LOCKED_STATES = [
+    "PENDING_L2_PROJECT_MANAGER",
+    "PENDING_L2_5_FINANCE",
+    "PENDING_L3_OPERATIONS_MANAGER",
+    "PENDING_L4_HEAD_MANAGER",
+    "PENDING_L5_GENERAL_MANAGER",
+    "PENDING_PM",
+    "PENDING_OM",
+    "PENDING_FINANCE",
+    "PENDING_DIRECTOR",
+    "APPROVED",
+    "REJECTED",
+    "CANCELLED",
+    "DISBURSED",
+    "SETTLED",
+  ] as const;
+
+  it.each(SUBMITTER_OPEN_STATES)(
+    "owner (EMPLOYEE) may update their own CA when status=%s",
+    (status) => {
+      const a = actor("EMPLOYEE");
+      const d = authorize({
+        actor: a,
+        action: "update",
+        resource: "cash_advance",
+        attributes: attrs({
+          projectId: "proj-1",
+          ownerEmployeeId: a.employeeId,
+          status,
+        }),
+      });
+      expect(d.effect).toBe("ALLOW");
+    },
+  );
+
+  it("non-owner EMPLOYEE cannot update someone else's DRAFT CA", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "update",
+      resource: "cash_advance",
+      attributes: attrs({
+        projectId: "proj-1",
+        ownerEmployeeId: "someone-else",
+        status: "DRAFT",
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/only submitter/i);
+  });
+
+  it("owner cannot update after PENDING_L2 (locked once past first-line)", () => {
+    const a = actor("EMPLOYEE");
+    const d = authorize({
+      actor: a,
+      action: "update",
+      resource: "cash_advance",
+      attributes: attrs({
+        projectId: "proj-1",
+        ownerEmployeeId: a.employeeId,
+        status: "PENDING_L2_PROJECT_MANAGER",
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/locked/i);
+  });
+
+  it.each(LOCKED_STATES.filter((s) => s !== "APPROVED" && s !== "REJECTED" && s !== "CANCELLED"))(
+    "PROJECT_MANAGER may still re-code (attach files) on non-terminal CA at status=%s",
+    (status) => {
+      const d = authorize({
+        actor: actor("PROJECT_MANAGER"),
+        action: "update",
+        resource: "cash_advance",
+        attributes: attrs({
+          projectId: "proj-1",
+          ownerEmployeeId: "someone-else",
+          status,
+        }),
+      });
+      expect(d.effect).toBe("ALLOW");
+    },
+  );
+
+  it.each(["APPROVED", "REJECTED", "CANCELLED"] as const)(
+    "PROJECT_MANAGER cannot re-code terminal CA at status=%s",
+    (status) => {
+      const d = authorize({
+        actor: actor("PROJECT_MANAGER"),
+        action: "update",
+        resource: "cash_advance",
+        attributes: attrs({
+          projectId: "proj-1",
+          ownerEmployeeId: "someone-else",
+          status,
+        }),
+      });
+      expect(d.effect).toBe("DENY");
+      expect(d.reason).toMatch(/locked/i);
+    },
+  );
+
+  it("cross-tenant attachment upload is denied even for TENANT_ADMIN", () => {
+    const d = authorize({
+      actor: actor("TENANT_ADMIN", TENANT_A),
+      action: "update",
+      resource: "cash_advance",
+      attributes: {
+        tenantId: TENANT_B,
+        projectId: "proj-b",
+        ownerEmployeeId: "emp-b",
+        status: "DRAFT",
+      },
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/cross-tenant/i);
+  });
+});
+
+describe("pdp — lookup_option (admin reference data)", () => {
+  const WRITE_ALLOWED: EmployeeRole[] = ["TENANT_ADMIN", "GENERAL_MANAGER"];
+  const WRITE_DENIED: EmployeeRole[] = [
+    "HEAD_MANAGER",
+    "OPERATIONS_MANAGER",
+    "PROJECT_MANAGER",
+    "LEAD_FINANCE",
+    "HR_ADMIN",
+    "SUPERVISOR",
+    "EMPLOYEE",
+    "PETTY_CASH_CUSTODIAN",
+  ];
+  const ALL_ROLES: EmployeeRole[] = [...WRITE_ALLOWED, ...WRITE_DENIED];
+
+  it.each(ALL_ROLES)("%s may read lookup options", (role) => {
+    const d = authorize({
+      actor: actor(role),
+      action: "read",
+      resource: "lookup_option",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it.each(WRITE_ALLOWED)("%s may create/update/delete lookup options", (role) => {
+    for (const action of ["create", "update", "delete"] as const) {
+      const d = authorize({
+        actor: actor(role),
+        action,
+        resource: "lookup_option",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("ALLOW");
+    }
+  });
+
+  it.each(WRITE_DENIED)("%s cannot write lookup options", (role) => {
+    for (const action of ["create", "update", "delete"] as const) {
+      const d = authorize({
+        actor: actor(role),
+        action,
+        resource: "lookup_option",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("DENY");
+    }
+  });
+
+  it("cross-tenant lookup writes are denied even for TENANT_ADMIN", () => {
+    const d = authorize({
+      actor: actor("TENANT_ADMIN", TENANT_A),
+      action: "update",
+      resource: "lookup_option",
+      attributes: { tenantId: TENANT_B },
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/cross-tenant/i);
+  });
+
+  it("unsupported actions on lookup_option are denied (GM path — TENANT_ADMIN has a global override)", () => {
+    // NOTE: TENANT_ADMIN gets an unconditional ALLOW at step 2 of
+    // `authorize()`, so it bypasses `decideLookupOption`. Exercise the
+    // GM writer path instead, which does hit the switch.
+    for (const action of ["submit", "approve", "reject", "cancel"] as const) {
+      const d = authorize({
+        actor: actor("GENERAL_MANAGER"),
+        action,
+        resource: "lookup_option",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("DENY");
+    }
+  });
+});
+
 describe("pdp — ai_insight", () => {
   const ALLOWED_ROLES: EmployeeRole[] = [
     "TENANT_ADMIN",
@@ -725,6 +1073,150 @@ describe("pdp — work_shift / roster / timesheet / payroll", () => {
     });
     expect(okHr.effect).toBe("ALLOW");
     expect(denyEmp.effect).toBe("DENY");
+  });
+
+  // ---- Project-scoped shift catalog (migration 0066) --------------
+
+  const PROJECT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+
+  it("HR admin can create BASE catalog shift (project_id absent)", () => {
+    const d = authorize({
+      actor: actor("HR_ADMIN"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("SPV cannot create BASE catalog shift (project_id absent)", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/base shift catalog/);
+  });
+
+  it("PM cannot create BASE catalog shift (project_id absent)", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/base shift catalog/);
+  });
+
+  it("SPV can create PROJECT shift when actively assigned", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: true,
+      }),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("PM can create PROJECT shift when actively assigned", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: true,
+      }),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("SPV CANNOT create PROJECT shift when NOT assigned", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: false,
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/actively assigned/);
+  });
+
+  it("PM CANNOT create PROJECT shift when NOT assigned", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: false,
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/actively assigned/);
+  });
+
+  it("EMPLOYEE cannot create ANY shift, even with assignment", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: true,
+      }),
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/may not edit shift catalog/);
+  });
+
+  it("OM bypasses assignment check for project shift (HR/OM tier)", () => {
+    const d = authorize({
+      actor: actor("OPERATIONS_MANAGER"),
+      action: "create",
+      resource: "work_shift",
+      attributes: attrs({
+        projectId: PROJECT_ID,
+        isActiveAssignment: false,
+      }),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("SPV can update / delete project shift when assigned", () => {
+    for (const action of ["update", "delete"] as const) {
+      const d = authorize({
+        actor: actor("SUPERVISOR"),
+        action,
+        resource: "work_shift",
+        attributes: attrs({
+          projectId: PROJECT_ID,
+          isActiveAssignment: true,
+        }),
+      });
+      expect(d.effect).toBe("ALLOW");
+    }
+  });
+
+  it("read is always allowed within tenant for authenticated roles", () => {
+    for (const role of ["EMPLOYEE", "SUPERVISOR", "PROJECT_MANAGER"] as const) {
+      const d = authorize({
+        actor: actor(role),
+        action: "read",
+        resource: "work_shift",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("ALLOW");
+    }
   });
 
   it("Supervisor can create roster entries but EMPLOYEE cannot", () => {
@@ -813,6 +1305,214 @@ describe("pdp — work_shift / roster / timesheet / payroll", () => {
         actor: actor(role),
         action: "read",
         resource: "payroll_period",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("DENY");
+    }
+  });
+});
+
+describe("pdp — employee self profile update", () => {
+  it("any role can update its own employee record", () => {
+    for (const role of [
+      "EMPLOYEE",
+      "SUPERVISOR",
+      "PROJECT_MANAGER",
+      "LEAD_FINANCE",
+      "PETTY_CASH_CUSTODIAN",
+    ] as const) {
+      const a = actor(role);
+      const d = authorize({
+        actor: a,
+        action: "update",
+        resource: "employee",
+        attributes: attrs({ ownerEmployeeId: a.employeeId }),
+      });
+      expect(d.effect).toBe("ALLOW");
+      expect(d.reason).toMatch(/self/i);
+    }
+  });
+
+  it("non-HR roles cannot update someone else's employee record", () => {
+    for (const role of [
+      "EMPLOYEE",
+      "SUPERVISOR",
+      "PROJECT_MANAGER",
+      "LEAD_FINANCE",
+      "PETTY_CASH_CUSTODIAN",
+    ] as const) {
+      const d = authorize({
+        actor: actor(role),
+        action: "update",
+        resource: "employee",
+        attributes: attrs({ ownerEmployeeId: "emp-other" }),
+      });
+      expect(d.effect).toBe("DENY");
+    }
+  });
+
+  it("HR admin can update any employee record within its tenant", () => {
+    const d = authorize({
+      actor: actor("HR_ADMIN"),
+      action: "update",
+      resource: "employee",
+      attributes: attrs({ ownerEmployeeId: "emp-other" }),
+    });
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("self-update still respects tenant isolation", () => {
+    const a = actor("EMPLOYEE", TENANT_A);
+    const d = authorize({
+      actor: a,
+      action: "update",
+      resource: "employee",
+      attributes: { tenantId: TENANT_B, ownerEmployeeId: a.employeeId },
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/cross-tenant/i);
+  });
+});
+
+describe("pdp — report (analytics module)", () => {
+  // These tests protect the coarse gate in `runReport()` — the fine
+  // gate (which specific report kinds a role sees) lives in the
+  // registry and is covered by registry.test.ts. Together they
+  // enforce §15b's PM+/Finance/Custodian tier for the module.
+  const REPORT_ROLES: EmployeeRole[] = [
+    "PROJECT_MANAGER",
+    "OPERATIONS_MANAGER",
+    "HEAD_MANAGER",
+    "GENERAL_MANAGER",
+    "LEAD_FINANCE",
+    "HR_ADMIN",
+    "TENANT_ADMIN",
+    "PETTY_CASH_CUSTODIAN",
+  ];
+
+  for (const role of REPORT_ROLES) {
+    it(`allows ${role} to read reports`, () => {
+      const d = authorize({
+        actor: actor(role),
+        action: "read",
+        resource: "report",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("ALLOW");
+    });
+  }
+
+  it("denies EMPLOYEE from reading reports (no analytics for staff)", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "read",
+      resource: "report",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("denies SUPERVISOR from reading reports (Slice 1 scope, not in §15b tier)", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "read",
+      resource: "report",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("denies non-read actions on report resource for non-admin roles", () => {
+    // Reports are read-only — the runner never mutates. Any other
+    // action being smuggled in should trip the guard clause. We probe
+    // via LEAD_FINANCE (would have report access) not TENANT_ADMIN,
+    // because the admin override at step 2 legitimately allows every
+    // action within the tenant for that role by design.
+    for (const action of ["update", "delete", "create"] as const) {
+      const d = authorize({
+        actor: actor("LEAD_FINANCE"),
+        action,
+        resource: "report",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("DENY");
+      expect(d.reason).toMatch(/unsupported action on report/);
+    }
+  });
+});
+
+describe("pdp — import_job (bulk import)", () => {
+  // Rules §17 requires bulk import to sit behind a tight allow-list:
+  // master-data owners only. PM / SPV / EMPLOYEE deliberately not
+  // included — bulk import would concentrate cost authority.
+  const IMPORT_ROLES: EmployeeRole[] = [
+    "HR_ADMIN",
+    "TENANT_ADMIN",
+    "GENERAL_MANAGER",
+    "HEAD_MANAGER",
+    "OPERATIONS_MANAGER",
+    "LEAD_FINANCE",
+  ];
+
+  for (const role of IMPORT_ROLES) {
+    it(`allows ${role} to bulk_import`, () => {
+      const d = authorize({
+        actor: actor(role),
+        action: "bulk_import",
+        resource: "import_job",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("ALLOW");
+    });
+    it(`allows ${role} to read import history`, () => {
+      const d = authorize({
+        actor: actor(role),
+        action: "read",
+        resource: "import_job",
+        attributes: attrs(),
+      });
+      expect(d.effect).toBe("ALLOW");
+    });
+  }
+
+  it("denies EMPLOYEE from bulk_import", () => {
+    const d = authorize({
+      actor: actor("EMPLOYEE"),
+      action: "bulk_import",
+      resource: "import_job",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("denies PROJECT_MANAGER from bulk_import (concentration risk)", () => {
+    const d = authorize({
+      actor: actor("PROJECT_MANAGER"),
+      action: "bulk_import",
+      resource: "import_job",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("denies SUPERVISOR from bulk_import", () => {
+    const d = authorize({
+      actor: actor("SUPERVISOR"),
+      action: "bulk_import",
+      resource: "import_job",
+      attributes: attrs(),
+    });
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("denies non-import actions on import_job resource for non-admin roles", () => {
+    // We probe via HR_ADMIN (has bulk_import) not TENANT_ADMIN so we
+    // avoid the admin override that would legitimately allow anything.
+    for (const action of ["update", "delete", "approve", "submit"] as const) {
+      const d = authorize({
+        actor: actor("HR_ADMIN"),
+        action,
+        resource: "import_job",
         attributes: attrs(),
       });
       expect(d.effect).toBe("DENY");

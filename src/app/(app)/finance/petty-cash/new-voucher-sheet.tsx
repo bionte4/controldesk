@@ -42,9 +42,14 @@ import {
 
 import { recordPettyCashVoucherAction } from "./actions";
 
+export type CoaOption = { id: string; code: string; name: string };
+
+const COA_NONE = "__none__";
+
 type FormValues = {
   amount_idr: string;
   category: (typeof PETTY_CASH_CATEGORIES)[number];
+  coa_id: string;
   description: string;
   incurred_on: string;
   receipt_url: string;
@@ -53,12 +58,24 @@ type FormValues = {
 const DEFAULT_VALUES: FormValues = {
   amount_idr: "",
   category: "SUPPLIES",
+  coa_id: "",
   description: "",
   incurred_on: new Date().toISOString().slice(0, 10),
   receipt_url: "",
 };
 
-export function NewVoucherSheet({ fundId }: { fundId: string }) {
+export function NewVoucherSheet({
+  fundId,
+  coaOptions = [],
+}: {
+  fundId: string;
+  /**
+   * Active + postable Chart of Accounts entries for this tenant. Empty
+   * → CoA picker hidden. Since custodians are typically Finance staff
+   * we default to showing the picker whenever accounts exist.
+   */
+  coaOptions?: readonly CoaOption[];
+}) {
   const t = useTranslations("pettyCash");
   const tf = useTranslations("pettyCash.voucherForm");
   const tCat = useTranslations("pettyCash.categories");
@@ -73,6 +90,10 @@ export function NewVoucherSheet({ fundId }: { fundId: string }) {
         fund_id: fundId,
         amount_idr: Number(values.amount_idr.replaceAll(/\D/g, "")),
         category: values.category,
+        coa_id:
+          values.coa_id && values.coa_id !== COA_NONE
+            ? values.coa_id
+            : undefined,
         description: values.description,
         incurred_on: values.incurred_on,
         receipt_url: values.receipt_url || undefined,
@@ -94,6 +115,10 @@ export function NewVoucherSheet({ fundId }: { fundId: string }) {
       fund_id: fundId,
       amount_idr: Number(values.amount_idr.replaceAll(/\D/g, "")),
       category: values.category,
+      coa_id:
+        values.coa_id && values.coa_id !== COA_NONE
+          ? values.coa_id
+          : undefined,
       description: values.description,
       incurred_on: values.incurred_on,
       receipt_url: values.receipt_url || undefined,
@@ -120,7 +145,10 @@ export function NewVoucherSheet({ fundId }: { fundId: string }) {
           </Button>
         }
       />
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
+      >
         <SheetHeader>
           <SheetTitle>{tf("title")}</SheetTitle>
           <SheetDescription>{tf("description")}</SheetDescription>
@@ -201,6 +229,50 @@ export function NewVoucherSheet({ fundId }: { fundId: string }) {
                 </FormItem>
               )}
             />
+
+            {coaOptions.length > 0 ? (
+              <FormField
+                control={form.control}
+                name="coa_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("coaAccount")}</FormLabel>
+                    <Select
+                      value={field.value || COA_NONE}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={tf("coaPlaceholder")}>
+                            {(value) => {
+                              if (!value || value === COA_NONE) {
+                                return tf("coaNone");
+                              }
+                              const hit = coaOptions.find(
+                                (o) => o.id === value,
+                              );
+                              return hit ? `${hit.code} · ${hit.name}` : value;
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent alignItemWithTrigger={false}>
+                        <SelectItem value={COA_NONE}>{tf("coaNone")}</SelectItem>
+                        {coaOptions.map((o) => (
+                          <SelectItem key={o.id} value={o.id}>
+                            {o.code} · {o.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {tf("coaHint")}
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
 
             <FormField
               control={form.control}

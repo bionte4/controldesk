@@ -1,0 +1,2 @@
+# Empty on purpose — required by Dockerfile's `COPY /app/public ./public` step.
+# Next.js needs a public/ directory even when no static assets are shipped.

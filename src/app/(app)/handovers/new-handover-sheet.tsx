@@ -81,6 +81,9 @@ export function NewHandoverSheet({
   const form = useForm<FormValues>({ defaultValues: DEFAULT_VALUES });
 
   const selectedProjectId = form.watch("project_id");
+  const fromPmId = form.watch("from_pm_employee_id");
+  const toPmId = form.watch("to_pm_employee_id");
+
   React.useEffect(() => {
     const proj = projects.find((p) => p.id === selectedProjectId);
     if (proj?.currentPmId) {
@@ -89,6 +92,22 @@ export function NewHandoverSheet({
       });
     }
   }, [selectedProjectId, projects, form]);
+
+  // Pre-compute label lookups — Base UI Select renders the raw value
+  // in the trigger unless we pass children that map value → label. Without
+  // this the trigger shows a UUID (see roster-upsert-sheet fix).
+  const selectedProject = React.useMemo(
+    () => projects.find((p) => p.id === selectedProjectId),
+    [projects, selectedProjectId],
+  );
+  const selectedFromPm = React.useMemo(
+    () => pms.find((p) => p.id === fromPmId),
+    [pms, fromPmId],
+  );
+  const selectedToPm = React.useMemo(
+    () => pms.find((p) => p.id === toPmId),
+    [pms, toPmId],
+  );
 
   const canSubmit = projects.length > 0 && pms.length >= 2;
 
@@ -135,7 +154,10 @@ export function NewHandoverSheet({
           </Button>
         }
       />
-      <SheetContent side="right" className="w-full sm:max-w-lg">
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
+      >
         <SheetHeader>
           <SheetTitle>{t("title")}</SheetTitle>
           <SheetDescription>
@@ -148,6 +170,8 @@ export function NewHandoverSheet({
             onSubmit={form.handleSubmit(onSubmit)}
             className="flex flex-1 flex-col gap-4 px-4 py-4"
           >
+            {/* Project spans full width — it's the primary context
+                and often has the longest label. */}
             <FormField
               control={form.control}
               name="project_id"
@@ -161,7 +185,9 @@ export function NewHandoverSheet({
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder={t("projectPlaceholder")} />
+                        <SelectValue placeholder={t("projectPlaceholder")}>
+                          {selectedProject?.label}
+                        </SelectValue>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -177,63 +203,71 @@ export function NewHandoverSheet({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="from_pm_employee_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("fromPm")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!canSubmit}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("fromPmPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {pms.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Outgoing / Incoming PM on the same row — makes the
+                transition intent obvious at a glance ("A → B"). */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="from_pm_employee_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("fromPm")}</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!canSubmit}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("fromPmPlaceholder")}>
+                            {selectedFromPm?.label}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {pms.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="to_pm_employee_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t("toPm")}</FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    disabled={!canSubmit}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder={t("toPmPlaceholder")} />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {pms.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="to_pm_employee_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("toPm")}</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      disabled={!canSubmit}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("toPmPlaceholder")}>
+                            {selectedToPm?.label}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {pms.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

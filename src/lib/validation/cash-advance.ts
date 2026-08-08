@@ -42,6 +42,12 @@ export const submitCashAdvanceSchema = z.object({
     .min(4, "Purpose is too short.")
     .max(2000, "Purpose is too long."),
   needed_by: isoDateSchema.optional(),
+  // Optional GL classification. When present the server action verifies
+  // the CoA row is active + postable in the caller's tenant. Nullable-
+  // safe: `null` / omitted / empty string all fold to undefined.
+  coa_id: uuidSchema
+    .nullish()
+    .transform((v) => (v === null || v === undefined ? undefined : v)),
 });
 export type SubmitCashAdvanceInput = z.infer<typeof submitCashAdvanceSchema>;
 

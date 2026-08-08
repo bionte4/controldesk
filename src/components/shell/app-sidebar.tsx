@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Command, Sparkles } from "lucide-react";
 
 import {
@@ -19,7 +19,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { filterNavForRole } from "@/lib/nav/config";
+import { filterNavForRole, type NavItem } from "@/lib/nav/config";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 
 export function AppSidebar({
@@ -32,10 +32,44 @@ export function AppSidebar({
   tenantSlug: string;
 }) {
   const pathname = usePathname();
+  const locale = useLocale();
   const tSections = useTranslations("nav.sections");
   const tItems = useTranslations("nav.items");
   const tNav = useTranslations("nav");
   const sections = React.useMemo(() => filterNavForRole(role), [role]);
+
+  /**
+   * Per-section sort: `pinned` items first (preserving their
+   * config-file order), then everything else alphabetized against
+   * the resolved translated label. `Intl.Collator` respects the
+   * active locale — Indonesian and English both sort correctly
+   * without extra config.
+   *
+   * Section order itself is NOT sorted; the config's section order
+   * reflects intentional business grouping (Overview → Delivery →
+   * Finance → People → Analytics → Settings).
+   */
+  const collator = React.useMemo(
+    () => new Intl.Collator(locale, { sensitivity: "base" }),
+    [locale],
+  );
+
+  const sortedSections = React.useMemo(
+    () =>
+      sections.map((section) => {
+        const pinned = section.items.filter((i) => i.pinned);
+        const rest = section.items
+          .filter((i) => !i.pinned)
+          .slice()
+          .sort((a, b) =>
+            collator.compare(tItems(a.titleKey), tItems(b.titleKey)),
+          );
+        return { ...section, items: [...pinned, ...rest] as NavItem[] };
+      }),
+    // `tItems` and `collator` change together with locale; including
+    // both keeps ESLint's exhaustive-deps rule happy.
+    [sections, tItems, collator],
+  );
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -56,7 +90,7 @@ export function AppSidebar({
       </SidebarHeader>
 
       <SidebarContent>
-        {sections.map((section) => (
+        {sortedSections.map((section) => (
           <SidebarGroup key={section.labelKey}>
             <SidebarGroupLabel>{tSections(section.labelKey)}</SidebarGroupLabel>
             <SidebarGroupContent>

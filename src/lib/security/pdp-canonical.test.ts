@@ -427,7 +427,7 @@ describe("authorizeCanonical — cash_advance_field_ops", () => {
     }
   });
 
-  it("EMPLOYEE cannot create field-ops CA (Supervisor-initiated by design)", () => {
+  it("EMPLOYEE cannot create field-ops CA without an active field-tech assignment", () => {
     const d = decide(
       actor("EMPLOYEE"),
       "create",
@@ -435,6 +435,72 @@ describe("authorizeCanonical — cash_advance_field_ops", () => {
       attrs({ projectId: "proj-1" }),
     );
     expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/supervisor|field technician/i);
+  });
+
+  it("EMPLOYEE with isFieldTech=true may initiate field-ops CA (rules §7 + §11)", () => {
+    const d = decide(
+      actor("EMPLOYEE"),
+      "create",
+      "cash_advance_field_ops",
+      attrs({ projectId: "proj-1", isFieldTech: true }),
+    );
+    expect(d.effect).toBe("ALLOW");
+    expect(d.reason).toMatch(/field.?tech/i);
+  });
+
+  it("EMPLOYEE with isFieldTech=false is treated as a base employee (DENY)", () => {
+    const d = decide(
+      actor("EMPLOYEE"),
+      "create",
+      "cash_advance_field_ops",
+      attrs({ projectId: "proj-1", isFieldTech: false }),
+    );
+    expect(d.effect).toBe("DENY");
+  });
+
+  it("SUPERVISOR does NOT need isFieldTech to initiate (supervisor+ always allowed)", () => {
+    const d = decide(
+      actor("SUPERVISOR"),
+      "create",
+      "cash_advance_field_ops",
+      attrs({ projectId: "proj-1", isFieldTech: false }),
+    );
+    expect(d.effect).toBe("ALLOW");
+  });
+
+  it("cross-tenant access is denied even with isFieldTech=true (defense in depth)", () => {
+    const d = authorizeCanonical({
+      actor: actor("EMPLOYEE", TENANT_A),
+      action: "create",
+      resource: "cash_advance_field_ops",
+      attributes: {
+        tenantId: TENANT_B,
+        projectId: "proj-b",
+        isFieldTech: true,
+      },
+    });
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/cross-tenant/);
+  });
+
+  it("submit follows the same policy as create (field-tech allowed, plain employee denied)", () => {
+    expect(
+      decide(
+        actor("EMPLOYEE"),
+        "submit",
+        "cash_advance_field_ops",
+        attrs({ projectId: "proj-1", isFieldTech: true }),
+      ).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide(
+        actor("EMPLOYEE"),
+        "submit",
+        "cash_advance_field_ops",
+        attrs({ projectId: "proj-1" }),
+      ).effect,
+    ).toBe("DENY");
   });
 
   it("missing project_id is denied", () => {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { moneyToDbString, parseMoneyFromDb } from "@/lib/format/money";
 import { createClient } from "@/lib/supabase/server";
+import { assertPostableCoa } from "@/lib/data/coa";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import {
   approveReplenishmentSchema,
@@ -95,6 +96,8 @@ export const recordPettyCashVoucherAction = withSecureAction({
       throw new Error("Insufficient fund balance for this voucher.");
     }
 
+    const validCoaId = await assertPostableCoa(input.coa_id);
+
     const { data: inserted, error: insertErr } = await supabase
       .from("petty_cash_vouchers")
       .insert({
@@ -103,6 +106,7 @@ export const recordPettyCashVoucherAction = withSecureAction({
         created_by: ctx.actor.employeeId,
         amount: amountDb as unknown as number,
         category: input.category,
+        coa_id: validCoaId,
         description: input.description,
         incurred_on: input.incurred_on,
         receipt_url: input.receipt_url ?? null,

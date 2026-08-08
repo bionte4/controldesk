@@ -85,12 +85,19 @@ async function loadOptions() {
       .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(200),
+    // Return base + project shifts in one query — the form filters
+    // client-side based on the selected project. Includes `project_id`
+    // + `project.code` so the dropdown can show "Custom" tags for
+    // project-scoped rows.
     supabase
       .from("work_shifts")
-      .select("id, code, name")
+      .select(
+        "id, code, name, project_id, project:project_id(code)",
+      )
       .eq("is_active", true)
+      .order("project_id", { ascending: true, nullsFirst: true })
       .order("code", { ascending: true })
-      .limit(50),
+      .limit(500),
     supabase
       .from("projects")
       .select("id, code, name")
@@ -98,14 +105,25 @@ async function loadOptions() {
       .limit(200),
   ]);
 
+  type ShiftRow = {
+    id: string;
+    code: string;
+    name: string;
+    project_id: string | null;
+    project: { code: string } | null;
+  };
+  const shiftRows = (shifts.data ?? []) as unknown as ShiftRow[];
+
   return {
     employees: (emps.data ?? []).map((e) => ({
       value: e.id,
       label: `${e.full_name} · ${e.role}`,
     })),
-    shifts: (shifts.data ?? []).map((s) => ({
+    shifts: shiftRows.map((s) => ({
       value: s.id,
       label: `${s.code} — ${s.name}`,
+      projectId: s.project_id,
+      projectCode: s.project?.code ?? null,
     })),
     projects: (projects.data ?? []).map((p) => ({
       value: p.id,

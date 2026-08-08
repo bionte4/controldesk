@@ -26,10 +26,32 @@ import {
 } from "@/components/ui/select";
 import {
   addBudgetLineItemSchema,
-  BUDGET_CATEGORIES,
+  LEGACY_BUDGET_CATEGORY_DEFAULTS,
   type AddBudgetLineItemInput,
   type BudgetCategory,
 } from "@/lib/validation/budget";
+
+/**
+ * Runtime-loaded category option (from `lookup_options` domain
+ * `budget_category`). Parent passes an array so admin-added categories
+ * (e.g. `SOFTWARE_LICENSE`) show up without a code change.
+ */
+export type BudgetCategoryOption = {
+  code: string;
+  label: string;
+};
+
+/**
+ * Postable CoA account option (from `chart_of_accounts` filtered to
+ * `is_active=true` AND `is_postable=true`). Parent passes an array so
+ * finance-curated accounts (`5101`, `5102`, …) show up without needing
+ * a code change. `code` doubles as the visual key in the dropdown.
+ */
+export type CoaAccountOption = {
+  id: string;
+  code: string;
+  name: string;
+};
 
 import {
   addBudgetLineItemAction,
@@ -39,6 +61,7 @@ import {
 type FormValues = {
   seq: string;
   category: BudgetCategory;
+  coa_id: string;
   description: string;
   planned_amount: string;
 };
@@ -47,10 +70,13 @@ function makeDefaults(nextSeq: number): FormValues {
   return {
     seq: String(nextSeq),
     category: "OPERATIONS",
+    coa_id: "",
     description: "",
     planned_amount: "",
   };
 }
+
+const COA_NONE = "__none__";
 
 /**
  * Inline "add row" form rendered under the line-items table. Locked out
@@ -63,15 +89,49 @@ export function AddBudgetLineItem({
   budgetId,
   nextSeq,
   readOnly,
+  categoryOptions,
+  coaOptions,
 }: {
   budgetId: string;
   nextSeq: number;
   readOnly: boolean;
+  /**
+   * Active budget categories loaded from `lookup_options` at the parent
+   * server component. If omitted (older callers), we fall back to the
+   * seeded defaults so nothing breaks during rollout.
+   */
+  categoryOptions?: readonly BudgetCategoryOption[];
+  /**
+   * Postable CoA accounts (see `loadPostableAccounts`). When omitted or
+   * empty, the CoA dropdown is hidden — Fase 2 nullable rollout keeps
+   * pre-CoA tenants working while adopters onboard.
+   */
+  coaOptions?: readonly CoaAccountOption[];
 }) {
   const t = useTranslations("budgets.lineItems");
   const tCat = useTranslations("budgets.categories");
   const [isPending, startTransition] = React.useTransition();
   const [open, setOpen] = React.useState(false);
+  const coaEnabled = (coaOptions?.length ?? 0) > 0;
+
+  const effectiveCategories: readonly BudgetCategoryOption[] = React.useMemo(
+    () => {
+      if (categoryOptions && categoryOptions.length > 0) return categoryOptions;
+      // Fallback path — the parent server component didn't pass a lookup
+      // (older caller). Translate what we can, degrade to code otherwise.
+      return LEGACY_BUDGET_CATEGORY_DEFAULTS.map((code) => {
+        let label: string = code;
+        try {
+          const translated = tCat(code);
+          if (translated && translated !== code) label = translated;
+        } catch {
+          // next-intl throws for missing keys; keep the code verbatim.
+        }
+        return { code, label };
+      });
+    },
+    [categoryOptions, tCat],
+  );
 
   const form = useForm<FormValues>({
     defaultValues: makeDefaults(nextSeq),
@@ -80,6 +140,8 @@ export function AddBudgetLineItem({
         budget_id: budgetId,
         seq: Number(values.seq),
         category: values.category,
+        coa_id:
+          values.coa_id && values.coa_id !== COA_NONE ? values.coa_id : undefined,
         description: values.description || undefined,
         planned_amount: Number(
           values.planned_amount.replaceAll(".", "").replaceAll(",", ""),
@@ -109,6 +171,8 @@ export function AddBudgetLineItem({
       budget_id: budgetId,
       seq: Number(values.seq),
       category: values.category,
+      coa_id:
+        values.coa_id && values.coa_id !== COA_NONE ? values.coa_id : undefined,
       description: values.description || undefined,
       planned_amount: Number(cleaned),
     };
@@ -172,9 +236,9 @@ export function AddBudgetLineItem({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {BUDGET_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {tCat(c)}
+                  {effectiveCategories.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -200,6 +264,38 @@ export function AddBudgetLineItem({
             </FormItem>
           )}
         />
+        {coaEnabled ? (
+          <FormField
+            control={form.control}
+            name="coa_id"
+            render={({ field }) => (
+              <FormItem className="sm:col-span-6">
+                <FormLabel>{t("coaAccount")}</FormLabel>
+                <Select
+                  value={field.value || COA_NONE}
+                  onValueChange={(v) =>
+                    field.onChange(v === COA_NONE ? "" : v)
+                  }
+                >
+                  <FormControl>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t("coaPlaceholder")} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value={COA_NONE}>{t("coaNone")}</SelectItem>
+                    {coaOptions!.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.code} · {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        ) : null}
         <FormField
           control={form.control}
           name="description"

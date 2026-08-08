@@ -281,23 +281,23 @@ begin
   insert into public.project_milestones
     (tenant_id, project_id, seq, name, description, weight_bps, planned_start_date, planned_end_date, actual_start_date, actual_end_date, status, owner_employee_id, created_by)
   values
-    (tenant_id, proj_nusa_cs_id, 1, 'Q1 SLA review',
-     'Quarterly service review with client. Deliverable: signed SLA report.',
+    (tenant_id, proj_nusa_cs_id, 1, 'Q1 Quarterly Business Review',
+     'Quarterly business review with client. Deliverable: signed QBR report covering uptime, response time & CSAT metrics.',
      2500, current_date - interval '400 days', current_date - interval '310 days',
      current_date - interval '400 days', current_date - interval '312 days',
      'DONE', pm_eid, pm_eid),
-    (tenant_id, proj_nusa_cs_id, 2, 'Q2 SLA review',
-     'Quarterly service review with client. Deliverable: signed SLA report.',
+    (tenant_id, proj_nusa_cs_id, 2, 'Q2 Quarterly Business Review',
+     'Quarterly business review with client. Deliverable: signed QBR report covering uptime, response time & CSAT metrics.',
      2500, current_date - interval '310 days', current_date - interval '220 days',
      current_date - interval '310 days', current_date - interval '218 days',
      'DONE', pm_eid, pm_eid),
-    (tenant_id, proj_nusa_cs_id, 3, 'Q3 SLA review',
-     'Quarterly service review with client. Deliverable: signed SLA report.',
+    (tenant_id, proj_nusa_cs_id, 3, 'Q3 Quarterly Business Review',
+     'Quarterly business review with client. Deliverable: signed QBR report covering uptime, response time & CSAT metrics.',
      2500, current_date - interval '220 days', current_date - interval '130 days',
      current_date - interval '220 days', current_date - interval '128 days',
      'DONE', pm_eid, pm_eid),
-    (tenant_id, proj_nusa_cs_id, 4, 'Q4 SLA review',
-     'Quarterly service review with client. Deliverable: signed SLA report.',
+    (tenant_id, proj_nusa_cs_id, 4, 'Q4 Quarterly Business Review',
+     'Quarterly business review with client. Deliverable: signed QBR report covering uptime, response time & CSAT metrics.',
      2500, current_date - interval '130 days', current_date - interval '40 days',
      null, null,
      'AT_RISK', pm_eid, pm_eid);
@@ -321,15 +321,22 @@ begin
   end if;
 
   -- Employee assignments (rules §7). Total ≤100% enforced by trigger.
+  --
+  -- Assignment roles carry semantic meaning:
+  --   - SITE_SUPERVISOR on Sinta   → she is the L2 approver for Field-Ops
+  --     cash advances on her assigned projects (migration 0048's
+  --     resolve_field_ops_l2_approver preference order).
+  --   - FIELD_TECHNICIAN on Eko    → he unlocks the "Pengajuan Operasional"
+  --     button (has_active_field_tech_assignment returns TRUE).
   if sup_eid is not null and emp_eid is not null then
-    insert into public.project_employee_assignments (tenant_id, project_id, employee_id, allocation_percentage, status, created_by)
+    insert into public.project_employee_assignments (tenant_id, project_id, employee_id, role, allocation_percentage, status, created_by)
     values
       -- Supervisor: 60% Nusa CS + 40% Indo Helpdesk = 100%
-      (tenant_id, proj_nusa_cs_id,       sup_eid, 60, 'ACTIVE', pm_eid),
-      (tenant_id, proj_indo_helpdesk_id, sup_eid, 40, 'ACTIVE', pm_eid),
+      (tenant_id, proj_nusa_cs_id,       sup_eid, 'SITE_SUPERVISOR',  60, 'ACTIVE', pm_eid),
+      (tenant_id, proj_indo_helpdesk_id, sup_eid, 'SITE_SUPERVISOR',  40, 'ACTIVE', pm_eid),
       -- Employee: 80% Nusa CS + 20% Nusa BO = 100%
-      (tenant_id, proj_nusa_cs_id, emp_eid, 80, 'ACTIVE', pm_eid),
-      (tenant_id, proj_nusa_bo_id, emp_eid, 20, 'ACTIVE', pm_eid);
+      (tenant_id, proj_nusa_cs_id, emp_eid, 'FIELD_TECHNICIAN', 80, 'ACTIVE', pm_eid),
+      (tenant_id, proj_nusa_bo_id, emp_eid, 'FIELD_TECHNICIAN', 20, 'ACTIVE', pm_eid);
   end if;
 
   -- Sample expenses to demonstrate the state machine + approval inbox.
@@ -1155,6 +1162,100 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- 20e. Demo budgets for the other two active retainer projects so the
+--      Expenses "MA (budget line)" dropdown has options no matter which
+--      project the submitter picks. Idempotent via stable UUIDs +
+--      `on conflict do nothing`.
+-- ---------------------------------------------------------------------------
+do $$
+#variable_conflict use_variable
+declare
+  v_tenant_id      constant uuid := '11111111-1111-1111-1111-111111111111';
+  v_proj_nusa_bo   constant uuid := '33333333-1111-4111-8111-222222222222';
+  v_proj_indo_help constant uuid := '33333333-1111-4111-8111-333333333333';
+  v_budget_bo_id   constant uuid := '99999999-1111-4111-8111-222222222222';
+  v_budget_help_id constant uuid := '99999999-1111-4111-8111-333333333333';
+  v_pm_eid  uuid;
+  v_fin_eid uuid;
+  v_dir_eid uuid;
+begin
+  select id into v_pm_eid  from public.employees
+    where tenant_id = v_tenant_id and role = 'PROJECT_MANAGER'    limit 1;
+  select id into v_fin_eid from public.employees
+    where tenant_id = v_tenant_id and role = 'LEAD_FINANCE'       limit 1;
+  select id into v_dir_eid from public.employees
+    where tenant_id = v_tenant_id and role = 'GENERAL_MANAGER'    limit 1;
+
+  if v_pm_eid is null then return; end if;
+
+  -- NUSA-BO — APPROVED FY2026 budget.
+  insert into public.budgets
+    (id, tenant_id, project_id, fiscal_year, title, currency, status,
+     total_planned_amount, approved_at, approved_by, created_by, updated_by)
+  values
+    (v_budget_bo_id, v_tenant_id, v_proj_nusa_bo, 2026,
+     'FY2026 — Nusa Back-Office',
+     'IDR', 'APPROVED',
+     95000000,
+     now() - interval '20 days',
+     coalesce(v_dir_eid, v_fin_eid),
+     v_pm_eid, v_pm_eid)
+  on conflict (id) do nothing;
+
+  insert into public.budget_details
+    (tenant_id, budget_id, seq, category, description,
+     planned_amount, realized_amount, outstanding_amount, created_by, updated_by)
+  values
+    (v_tenant_id, v_budget_bo_id, 1, 'DIRECT_LABOUR',
+     'Back-office verifier hourly wages.',
+     60000000, 8000000, 1500000, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_bo_id, 2, 'INFRASTRUCTURE',
+     'Document scanner + workflow tool seats.',
+     18000000, 2500000, 0, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_bo_id, 3, 'TOOLING',
+     'OCR license + QA sampling suite.',
+     10000000, 0, 0, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_bo_id, 4, 'CONTINGENCY',
+     '~7% buffer for volume spikes.',
+     7000000, 0, 0, v_pm_eid, v_pm_eid)
+  on conflict do nothing;
+
+  -- INDO-HELP — APPROVED FY2026 budget.
+  insert into public.budgets
+    (id, tenant_id, project_id, fiscal_year, title, currency, status,
+     total_planned_amount, approved_at, approved_by, created_by, updated_by)
+  values
+    (v_budget_help_id, v_tenant_id, v_proj_indo_help, 2026,
+     'FY2026 — Indo Helpdesk 24/7',
+     'IDR', 'APPROVED',
+     210000000,
+     now() - interval '15 days',
+     coalesce(v_dir_eid, v_fin_eid),
+     v_pm_eid, v_pm_eid)
+  on conflict (id) do nothing;
+
+  insert into public.budget_details
+    (tenant_id, budget_id, seq, category, description,
+     planned_amount, realized_amount, outstanding_amount, created_by, updated_by)
+  values
+    (v_tenant_id, v_budget_help_id, 1, 'DIRECT_LABOUR',
+     'L1/L2 agents 24/7 shift + on-call escalation.',
+     140000000, 22000000, 6000000, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_help_id, 2, 'INFRASTRUCTURE',
+     'PBX + softphone + CRM concurrent seats.',
+     40000000, 6500000, 0, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_help_id, 3, 'TOOLING',
+     'Ticketing + observability + shift scheduler.',
+     20000000, 0, 0, v_pm_eid, v_pm_eid),
+    (v_tenant_id, v_budget_help_id, 4, 'CONTINGENCY',
+     '~5% buffer for spike volume.',
+     10000000, 0, 0, v_pm_eid, v_pm_eid)
+  on conflict do nothing;
+
+  perform v_fin_eid;
+end $$;
+
+-- ---------------------------------------------------------------------------
 -- 21. Weekly Timesheet seed (Fase 2, GAS §27). Materialises two weekly
 --     packets for the demo employee — one SUBMITTED (awaiting PM approval)
 --     and one APPROVED — so the /hr/timesheets/weekly UI + approvals inbox
@@ -1419,11 +1520,224 @@ begin
   values
     (v_tenant_id, v_client_indo_id, v_portal_user_indo_id,
      'MILESTONE_UPDATE',
-     'Milestone at risk: Q3 SLA review',
+     'Milestone at risk: Q3 Quarterly Business Review',
      'Project INDO-HELP — Indo Retail 24/7 Helpdesk',
      '/portal/projects/' || v_proj_indo_helpdesk_id::text,
      now() - interval '2 hours',
      null);
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Lookup options — admin-managed reference data (migration 0049).
+-- Populated per demo tenant so the Field-Ops CA form and any other
+-- combobox surfaces have sensible Day-1 choices.
+-- ---------------------------------------------------------------------------
+do $$
+#variable_conflict use_variable
+declare
+  v_tenant_id constant uuid := '11111111-1111-1111-1111-111111111111';
+  v_admin_eid uuid;
+begin
+  select id into v_admin_eid
+    from public.employees
+   where tenant_id = v_tenant_id
+     and role = 'TENANT_ADMIN'
+   limit 1;
+
+  insert into public.lookup_options
+    (tenant_id, domain, code, label, description, sort_order, created_by, updated_by)
+  values
+    -- unit_pengaju --------------------------------------------------------
+    (v_tenant_id, 'unit_pengaju', 'NOC-JKT',      'NOC Jakarta',       'Network Operations Center — Jakarta HQ.',            10, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'OPS-NUSA',     'Ops Nusa',          'Operations team — Nusa contract.',                   20, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'FIELD-JKT',    'Field Team JKT',    'On-site technicians — Greater Jakarta.',             30, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'FIELD-BDG',    'Field Team BDG',    'On-site technicians — Bandung region.',              40, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'PROJECT-OPS',  'Project Operations','Cross-project delivery & PMO.',                      50, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'SALES-JKT',    'Sales Jakarta',     'Pre-sales & account team — Jakarta.',                60, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'HRD',          'HRD',               'Human Resources Development.',                       70, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'IT-SUPPORT',   'IT Support',        'Internal IT / helpdesk.',                            80, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'MANAGEMENT',   'Management',        'Executive / management operational.',                90, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'unit_pengaju', 'OTHER',        'Lain-lain',         'Jelaskan detail di kolom Justifikasi.',              999, v_admin_eid, v_admin_eid),
+
+    -- transport_need ------------------------------------------------------
+    (v_tenant_id, 'transport_need', 'MOTOR-PRIBADI', 'Motor Pribadi',   'Reimburse BBM sesuai jarak PP.',                    10, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'MOBIL-PRIBADI', 'Mobil Pribadi',   'Reimburse BBM + toll sesuai jarak PP.',             20, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'RENTAL-MOTOR',  'Rental Motor',    null,                                                30, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'RENTAL-MOBIL',  'Rental Mobil',    null,                                                40, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'CARTER',        'Carter Kendaraan','Charter kendaraan + driver.',                       50, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'TAKSI-GRAB',    'Taksi / Grab',    'Ride-hailing atau taksi meteran.',                  60, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'PESAWAT',       'Pesawat',         'Tiket pesawat untuk trip antar-pulau.',             70, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'KERETA',        'Kereta',          'Tiket KAI antar-kota.',                             80, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'KAPAL',         'Kapal / Ferry',   'Penyeberangan antar-pulau.',                        90, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'transport_need', 'OTHER',         'Lain-lain',       'Jelaskan detail di kolom Justifikasi.',             999, v_admin_eid, v_admin_eid),
+
+    -- area ----------------------------------------------------------------
+    (v_tenant_id, 'area', 'JABODETABEK',  'Jabodetabek',            'Jakarta, Bogor, Depok, Tangerang, Bekasi.',            10, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'JABAR',        'Jawa Barat',             null,                                                   20, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'JATENG-DIY',   'Jawa Tengah & DIY',      null,                                                   30, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'JATIM',        'Jawa Timur',             null,                                                   40, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'SUMATERA',     'Sumatera',               null,                                                   50, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'KALIMANTAN',   'Kalimantan',             null,                                                   60, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'SULAWESI',     'Sulawesi',               null,                                                   70, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'BALI-NTB',     'Bali & NTB',             null,                                                   80, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'MALUKU',       'Maluku',                 'Maluku & Maluku Utara.',                               90, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'PAPUA',        'Papua',                  'Papua & Papua Barat.',                                 100, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'area', 'OTHER',        'Lain-lain',              'Jelaskan detail di kolom Tujuan / Justifikasi.',       999, v_admin_eid, v_admin_eid),
+
+    -- rab_category --------------------------------------------------------
+    (v_tenant_id, 'rab_category', 'TRANSPORTASI',  'Transportasi',      'BBM, tiket, ride-hailing.',                        10, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'KONSUMSI',      'Konsumsi',          'Makan / snack tim di lapangan.',                   20, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'AKOMODASI',     'Akomodasi',         'Hotel / menginap.',                                30, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'TOLL-PARKIR',   'Toll & Parkir',     null,                                               40, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'TIKET-PESAWAT', 'Tiket Pesawat',     'Termasuk PP + bagasi.',                            45, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'SEWA-ALAT',     'Sewa Alat',         'Sewa alat lapangan / genset.',                     50, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'MATERIAL',      'Material / Sparepart','Kabel, konektor, komponen jaringan.',            55, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'KOMUNIKASI',    'Komunikasi',        'Pulsa / paket data on-site.',                      60, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'DOKUMEN-LEGAL', 'Dokumen & Legal',   'Perizinan, ijin masuk site, stempel notaris.',     65, v_admin_eid, v_admin_eid),
+    (v_tenant_id, 'rab_category', 'LAIN-LAIN',     'Lain-lain',         'Tambah detail di kolom Detail.',                   999, v_admin_eid, v_admin_eid)
+  on conflict do nothing;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 22. Default evaluation template — "Contract Renewal Review"
+-- ---------------------------------------------------------------------
+-- Idempotent: skipped when either the tenant is missing or a template
+-- with the same name already exists. Total item weights sum to 100%.
+do $$
+declare
+  v_tenant_id     uuid;
+  v_admin_eid     uuid;
+  v_template_id   uuid := 'aaaaaaaa-1111-4111-8111-000000000001';
+begin
+  select id into v_tenant_id from public.tenants where slug = 'demo';
+  if v_tenant_id is null then
+    raise notice 'Skipping evaluation template seed — demo tenant missing.';
+    return;
+  end if;
+
+  if exists (
+    select 1 from public.evaluation_templates
+    where tenant_id = v_tenant_id and name = 'Contract Renewal Review'
+  ) then
+    raise notice 'Skipping evaluation template seed — template already exists.';
+    return;
+  end if;
+
+  select id into v_admin_eid from public.employees
+    where tenant_id = v_tenant_id and role = 'TENANT_ADMIN' limit 1;
+
+  insert into public.evaluation_templates
+    (id, tenant_id, name, description, is_active, created_by)
+  values
+    (
+      v_template_id,
+      v_tenant_id,
+      'Contract Renewal Review',
+      'Default contract-renewal evaluation form. Adjust weights as needed for your team.',
+      true,
+      v_admin_eid
+    );
+
+  insert into public.evaluation_template_items
+    (tenant_id, template_id, seq, name, description, weight_pct, question_type, is_required)
+  values
+    (v_tenant_id, v_template_id, 1, 'Quality of work',
+      'How consistently does the employee meet the quality bar for deliverables?',
+      25, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 2, 'Productivity & throughput',
+      'Volume of tickets / milestones delivered vs. expectations.',
+      20, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 3, 'Reliability & discipline',
+      'Attendance, timesheet compliance, adherence to SLA.',
+      15, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 4, 'Teamwork & communication',
+      'How well the employee collaborates and communicates with peers / client.',
+      15, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 5, 'Initiative & ownership',
+      'Ability to take ownership, propose improvements, and unblock others.',
+      15, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 6, 'Growth vs. previous cycle',
+      'Improvement compared to the previous evaluation cycle.',
+      10, 'SCORE_1_5', false),
+    (v_tenant_id, v_template_id, 7, 'Areas for coaching',
+      'Free-form notes: gaps to close, coaching plan, follow-ups.',
+      0, 'TEXT', false);
+end $$;
+
+-- ---------------------------------------------------------------------
+-- 23. Default PKWT evaluation template — 10 aspek "Manajemen Pekerjaan"
+-- ---------------------------------------------------------------------
+-- Idempotent: skipped when tenant is missing or template already exists.
+-- Mirrors the in-country PKWT quarterly evaluation form (skor 1-5 +
+-- komentar wajib per aspek).
+do $$
+declare
+  v_tenant_id   uuid;
+  v_admin_eid   uuid;
+  v_template_id uuid := 'aaaaaaaa-1111-4111-8111-000000000002';
+begin
+  select id into v_tenant_id from public.tenants where slug = 'demo';
+  if v_tenant_id is null then
+    raise notice 'Skipping PKWT template seed — demo tenant missing.';
+    return;
+  end if;
+
+  if exists (
+    select 1 from public.evaluation_templates
+    where tenant_id = v_tenant_id and name = 'Evaluasi Triwulanan PKWT'
+  ) then
+    raise notice 'Skipping PKWT template seed — already exists.';
+    return;
+  end if;
+
+  select id into v_admin_eid from public.employees
+    where tenant_id = v_tenant_id and role = 'TENANT_ADMIN' limit 1;
+
+  insert into public.evaluation_templates
+    (id, tenant_id, name, description, is_active, created_by)
+  values
+    (
+      v_template_id,
+      v_tenant_id,
+      'Evaluasi Triwulanan PKWT',
+      'Formulir baku evaluasi triwulanan untuk karyawan PKWT. Skala 1-5, komentar wajib per aspek.',
+      true,
+      v_admin_eid
+    );
+
+  insert into public.evaluation_template_items
+    (tenant_id, template_id, seq, name, description, weight_pct, question_type, is_required)
+  values
+    (v_tenant_id, v_template_id, 1, 'Ketepatan hasil kerja dengan target dan batas waktu',
+      'Sejauh mana karyawan dapat menyelesaikan pekerjaan sesuai target dan batas waktu yang telah ditetapkan.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 2, 'Kualitas pekerjaan',
+      'Sejauh mana pekerjaan karyawan terselesaikan dengan baik, efektif, dan akurat.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 3, 'Pemahaman mengenai pekerjaan',
+      'Sejauh mana karyawan memahami dan mengaplikasikan bagaimana dan mengapa perlu mengerjakan hal-hal yang menjadi tugasnya, sesuai peran saat ini.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 4, 'Hubungan kerja dengan atasan langsung',
+      'Sejauh mana karyawan menunjukkan sikap responsif terhadap arahan atasan, serta seberapa proaktif mencari bimbingan untuk pengembangan diri.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 5, 'Kerjasama dengan karyawan lain',
+      'Sejauh mana karyawan dapat menjalin hubungan baik dengan sesama karyawan.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 6, 'Kehadiran dan kedisiplinan',
+      'Sejauh mana karyawan dapat hadir tepat waktu dan menunjukkan kedisiplinan konsisten.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 7, 'Inisiatif dan kreativitas',
+      'Sejauh mana karyawan mampu mengelola pengerjaan tugasnya secara mandiri dan menerapkan metode kreatif.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 8, 'Keterbukaan untuk belajar dan berkembang',
+      'Sejauh mana karyawan menunjukkan kemampuan dan kesiapan menerima tugas / tanggung jawab baru yang lebih kompleks.',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 9, 'Kemampuan berkomunikasi',
+      'Sejauh mana karyawan dapat menyampaikan ide / pendapat secara efektif (lisan, tertulis, verbal, non-verbal).',
+      10, 'SCORE_1_5', true),
+    (v_tenant_id, v_template_id, 10, 'Kemampuan mengambil keputusan dan menyelesaikan masalah',
+      'Sejauh mana karyawan dapat mengelola prioritas pekerjaan secara efektif, mempertimbangkan resiko sebelum bertindak.',
+      10, 'SCORE_1_5', true);
 end $$;
 
 -- Cleanup: drop the seed helper so it doesn't linger in the migrated schema.

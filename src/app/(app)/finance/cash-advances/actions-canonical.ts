@@ -28,7 +28,10 @@ import {
   parseMoneyFromDb,
 } from "@/lib/format/money";
 import { createClient } from "@/lib/supabase/server";
+import { assertPostableCoa } from "@/lib/data/coa";
+import { assertProjectOperational } from "@/lib/data/projects";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
+import { translatorFor } from "@/lib/notifications/localize";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import {
   CANONICAL_CA_STATUS_SLOT,
@@ -128,7 +131,10 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
   },
   handler: async (input, ctx) => {
     const supabase = await createClient();
+    // Fase 1 gate — refuse ops on projects still in DRAFT/PLANNING.
+    await assertProjectOperational(input.project_id);
     const amountDb = moneyToDbString(BigInt(input.amount_idr));
+    const validCoaId = await assertPostableCoa(input.coa_id);
 
     const nextStatus = nextCanonicalCaStatus({
       type: input.ca_type,
@@ -147,6 +153,7 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
         amount: amountDb as unknown as number,
         purpose: input.purpose,
         needed_by: input.needed_by ?? null,
+        coa_id: validCoaId,
         status: nextStatus satisfies CashAdvanceStatus,
       })
       .select("id, status, ca_type")
@@ -349,24 +356,100 @@ export const approveCanonicalCashAdvanceAction = withCanonicalSecureAction({
       });
     if (logErr) throw new Error(logErr.message);
 
+    // Load requester so we can push locale-scoped notifications back to the
+    // pengaju at every step (Opsi A · progress updates — mirrors Expenses).
+    const { data: requester } = await supabase
+      .from("employees")
+      .select("user_id, id")
+      .eq("id", current.requester_employee_id)
+      .maybeSingle();
+
+    const { t: tSubmitter } = await translatorFor({
+      employeeId: current.requester_employee_id,
+      tenantId: ctx.actor.tenantId,
+      namespace: "notifications.cashAdvances",
+    });
+    const { t: tApproverBlast } = await translatorFor({
+      employeeId: ctx.actor.employeeId,
+      tenantId: ctx.actor.tenantId,
+      namespace: "notifications.cashAdvances",
+    });
+    const slotLabel = (slot: CanonicalApprovalSlot | null): string => {
+      switch (slot) {
+        case "SUPERVISOR":
+          return tSubmitter("roles.SUPERVISOR");
+        case "PM":
+          return tSubmitter("roles.PROJECT_MANAGER");
+        case "FINANCE":
+          return tSubmitter("roles.LEAD_FINANCE");
+        case "OM":
+          return tSubmitter("roles.OPERATIONS_MANAGER");
+        case "DIRECTOR":
+          return tSubmitter("roles.HEAD_MANAGER");
+        default:
+          return "";
+      }
+    };
+
     if (nextStatus === "APPROVED") {
+      // 1. Fan out to Finance so they can disburse.
       await notifyRoles({
         tenantId: ctx.actor.tenantId,
         roles: slotToNotifyRoles("FINANCE"),
         kind: "APPROVAL_APPROVED",
-        title: "Cash advance approved · awaiting disbursement",
+        title: tApproverBlast("approverInbox.titleGeneric", {
+          amount: amountIDR.toLocaleString("id-ID"),
+        }),
         actionUrl: `/finance/cash-advances/${input.id}`,
       });
+      // 2. Terminal receipt to the pengaju.
+      if (requester) {
+        await notifyUser({
+          recipient: { userId: requester.user_id, employeeId: requester.id },
+          kind: "APPROVAL_APPROVED",
+          title: tSubmitter("submitterApproved.title"),
+          body: tSubmitter("submitterApproved.body", {
+            amount: amountIDR.toLocaleString("id-ID"),
+          }),
+          actionUrl: `/finance/cash-advances/${input.id}`,
+        });
+      }
     } else {
       const nextSlot = slotForCanonicalStatus(nextStatus);
       if (nextSlot) {
+        // 1. Next-slot approver inbox.
         await notifyRoles({
           tenantId: ctx.actor.tenantId,
           roles: slotToNotifyRoles(nextSlot),
           kind: "APPROVAL_REQUESTED",
-          title: "Cash advance awaiting your approval",
+          title: tApproverBlast("approverInbox.titleGeneric", {
+            amount: amountIDR.toLocaleString("id-ID"),
+          }),
           actionUrl: `/finance/cash-advances/${input.id}`,
         });
+        // 2. Progress update to the pengaju — "X approved, now waiting Y".
+        if (requester) {
+          await notifyUser({
+            recipient: {
+              userId: requester.user_id,
+              employeeId: requester.id,
+            },
+            kind: "APPROVAL_APPROVED",
+            title: tSubmitter("submitterProgress.title", {
+              stepRoleLabel: slotLabel(currentSlot),
+            }),
+            body: tSubmitter("submitterProgress.body", {
+              amount: amountIDR.toLocaleString("id-ID"),
+              nextRoleLabel: slotLabel(nextSlot),
+            }),
+            actionUrl: `/finance/cash-advances/${input.id}`,
+            payload: {
+              cash_advance_id: input.id,
+              from_status: currentStatus,
+              to_status: nextStatus,
+            },
+          });
+        }
       }
     }
 
@@ -475,11 +558,19 @@ export const rejectCanonicalCashAdvanceAction = withCanonicalSecureAction({
       .eq("id", current.requester_employee_id)
       .maybeSingle();
     if (requester) {
+      const { t: tSubmitter } = await translatorFor({
+        employeeId: current.requester_employee_id,
+        tenantId: ctx.actor.tenantId,
+        namespace: "notifications.cashAdvances",
+      });
+      const reason = input.reason.trim();
       await notifyUser({
         recipient: { userId: requester.user_id, employeeId: requester.id },
         kind: "APPROVAL_REJECTED",
-        title: "Cash advance rejected",
-        body: input.reason,
+        title: tSubmitter("submitterRejected.title"),
+        body: reason.length > 0
+          ? tSubmitter("submitterRejected.bodyWithReason", { reason })
+          : tSubmitter("submitterRejected.bodyGeneric"),
         actionUrl: `/finance/cash-advances/${input.id}`,
       });
     }
@@ -645,11 +736,18 @@ export const disburseCanonicalCashAdvanceAction = withCanonicalSecureAction({
       .eq("id", current.requester_employee_id)
       .maybeSingle();
     if (requester) {
+      const { t: tSubmitter } = await translatorFor({
+        employeeId: current.requester_employee_id,
+        tenantId: ctx.actor.tenantId,
+        namespace: "notifications.cashAdvances",
+      });
       await notifyUser({
         recipient: { userId: requester.user_id, employeeId: requester.id },
         kind: "CASH_ADVANCE_DISBURSED",
-        title: "Cash advance disbursed",
-        body: `Ref ${input.disbursement_ref}. Please submit settlement after use.`,
+        title: tSubmitter("submitterDisbursed.title"),
+        body: tSubmitter("submitterDisbursed.body", {
+          ref: input.disbursement_ref,
+        }),
         actionUrl: `/finance/cash-advances/${input.id}`,
       });
     }
@@ -778,6 +876,25 @@ export const acceptCanonicalSettlementAction = withCanonicalSecureAction({
       throw new Error("Only SUBMITTED settlements can be accepted.");
     }
 
+    // Hard rule (rules §22, UU KUP audit trail): if the settlement claims
+    // any spend, at least one receipt attachment MUST exist so Finance is
+    // reviewing against evidence and the row survives a future audit.
+    const totalSpentMoney = parseMoneyFromDb(settlement.total_spent);
+    if (totalSpentMoney > 0) {
+      const { count: attachmentCount, error: countErr } = await supabase
+        .from("attachments")
+        .select("id", { count: "exact", head: true })
+        .eq("resource_type", "cash_advance_settlement")
+        .eq("resource_id", settlement.id)
+        .eq("tenant_id", ctx.actor.tenantId);
+      if (countErr) throw new Error(countErr.message);
+      if (!attachmentCount || attachmentCount === 0) {
+        throw new Error(
+          "Cannot accept settlement without receipts. Return to the submitter to attach nota/struk first.",
+        );
+      }
+    }
+
     const nowIso = new Date().toISOString();
     const { error: updateErr } = await supabase
       .from("cash_advance_settlements")
@@ -841,10 +958,20 @@ export const acceptCanonicalSettlementAction = withCanonicalSecureAction({
       .eq("id", ca.requester_employee_id)
       .maybeSingle();
     if (requester) {
+      const { t: tSubmitter } = await translatorFor({
+        employeeId: ca.requester_employee_id,
+        tenantId: ctx.actor.tenantId,
+        namespace: "notifications.cashAdvances",
+      });
       await notifyUser({
         recipient: { userId: requester.user_id, employeeId: requester.id },
         kind: "CASH_ADVANCE_SETTLED",
-        title: "Cash advance settled",
+        title: tSubmitter("submitterSettled.title"),
+        body: tSubmitter("submitterSettled.body", {
+          amount: parseMoneyFromDb(settlement.total_spent).toLocaleString(
+            "id-ID",
+          ),
+        }),
         actionUrl: `/finance/cash-advances/${ca.id}`,
       });
     }
@@ -898,6 +1025,39 @@ export const returnCanonicalSettlementAction = withCanonicalSecureAction({
       .eq("id", input.settlement_id)
       .eq("tenant_id", ctx.actor.tenantId);
     if (updateErr) throw new Error(updateErr.message);
+
+    const { data: ca } = await supabase
+      .from("cash_advances")
+      .select("requester_employee_id")
+      .eq("id", settlement.cash_advance_id)
+      .eq("tenant_id", ctx.actor.tenantId)
+      .maybeSingle();
+    if (ca?.requester_employee_id) {
+      const { data: requester } = await supabase
+        .from("employees")
+        .select("user_id, id")
+        .eq("id", ca.requester_employee_id)
+        .maybeSingle();
+      if (requester) {
+        const { t: tSubmitter } = await translatorFor({
+          employeeId: ca.requester_employee_id,
+          tenantId: ctx.actor.tenantId,
+          namespace: "notifications.cashAdvances",
+        });
+        const reason = input.reason.trim();
+        await notifyUser({
+          recipient: { userId: requester.user_id, employeeId: requester.id },
+          kind: "APPROVAL_REJECTED",
+          title: tSubmitter("submitterSettlementReturned.title"),
+          body: reason.length > 0
+            ? tSubmitter("submitterSettlementReturned.bodyWithReason", {
+                reason,
+              })
+            : tSubmitter("submitterSettlementReturned.bodyGeneric"),
+          actionUrl: `/finance/cash-advances/${settlement.cash_advance_id}`,
+        });
+      }
+    }
 
     revalidatePath(`/finance/cash-advances/${settlement.cash_advance_id}`);
     revalidatePath("/finance/cash-advances");

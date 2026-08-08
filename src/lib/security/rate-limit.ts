@@ -148,4 +148,14 @@ export const RateLimitPresets = {
   expensiveMutation: (): RateLimitOptions => ({ max: 30, windowSeconds: 60 }),
   aiCall: (): RateLimitOptions => ({ max: 20, windowSeconds: 60 }),
   publicApi: (): RateLimitOptions => ({ max: 60, windowSeconds: 60 }),
+  // Report exports are heavy (multi-page PDFs can hit 5+ MB) — cap
+  // per-user to 20 exports per minute. Preview requests hit the RSC
+  // page and don't go through this preset.
+  reportExport: (): RateLimitOptions => ({ max: 20, windowSeconds: 60 }),
+  // Bulk imports touch hundreds of rows per call. Cap tightly to 5
+  // executions per hour per user; dry-runs count separately (also 5/h)
+  // so someone can iterate on their file without exhausting the
+  // committed-import budget.
+  bulkImport: (): RateLimitOptions => ({ max: 5, windowSeconds: 3600 }),
+  bulkImportDryRun: (): RateLimitOptions => ({ max: 20, windowSeconds: 3600 }),
 } as const;

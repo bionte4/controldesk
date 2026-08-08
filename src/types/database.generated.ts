@@ -105,6 +105,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ai_insights_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "ai_insights_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -184,6 +191,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "approval_thresholds_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "approval_thresholds_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -203,6 +217,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_thresholds_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -264,6 +285,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -336,6 +364,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bpo_contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "bpo_contracts_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -348,6 +383,8 @@ export type Database = {
         Row: {
           budget_id: string
           category: string
+          coa_id: string | null
+          code: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -364,6 +401,8 @@ export type Database = {
         Insert: {
           budget_id: string
           category: string
+          coa_id?: string | null
+          code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -380,6 +419,8 @@ export type Database = {
         Update: {
           budget_id?: string
           category?: string
+          coa_id?: string | null
+          code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -402,6 +443,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_details_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "budget_details_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -414,6 +462,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_details_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "budget_details_tenant_id_fkey"
@@ -435,6 +490,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_details_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -491,6 +553,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_request_approval_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budget_request_approval_logs_budget_request_id_fkey"
             columns: ["budget_request_id"]
             isOneToOne: false
@@ -541,6 +610,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "budget_details"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_request_lines_budget_detail_id_fkey"
+            columns: ["budget_detail_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_budget_lines"
+            referencedColumns: ["budget_detail_id"]
           },
           {
             foreignKeyName: "budget_request_lines_budget_request_id_fkey"
@@ -656,6 +732,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_requests_applied_by_fkey"
+            columns: ["applied_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budget_requests_budget_id_fkey"
             columns: ["budget_id"]
             isOneToOne: false
@@ -677,6 +760,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_requests_cancelled_by_fkey"
+            columns: ["cancelled_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budget_requests_director_approver_id_fkey"
             columns: ["director_approver_id"]
             isOneToOne: false
@@ -689,6 +779,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_requests_director_approver_id_fkey"
+            columns: ["director_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "budget_requests_finance_approver_id_fkey"
@@ -705,6 +802,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_requests_finance_approver_id_fkey"
+            columns: ["finance_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budget_requests_pm_approver_id_fkey"
             columns: ["pm_approver_id"]
             isOneToOne: false
@@ -717,6 +821,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_requests_pm_approver_id_fkey"
+            columns: ["pm_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "budget_requests_rejected_by_fkey"
@@ -733,6 +844,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budget_requests_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budget_requests_requester_employee_id_fkey"
             columns: ["requester_employee_id"]
             isOneToOne: false
@@ -745,6 +863,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_requests_requester_employee_id_fkey"
+            columns: ["requester_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "budget_requests_tenant_id_fkey"
@@ -823,6 +948,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "budgets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "budgets_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -835,6 +967,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "budgets_project_id_fkey"
@@ -863,6 +1002,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -919,6 +1065,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advance_approval_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advance_approval_logs_cash_advance_id_fkey"
             columns: ["cash_advance_id"]
             isOneToOne: false
@@ -927,6 +1080,202 @@ export type Database = {
           },
           {
             foreignKeyName: "cash_advance_approval_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_advance_field_ops_details: {
+        Row: {
+          area: string | null
+          bank_account_no: string | null
+          bank_name: string | null
+          bank_owner_name: string | null
+          cash_advance_id: string
+          cid_company: string | null
+          created_at: string
+          created_by: string | null
+          driver_phone: string | null
+          gmap_duration: string | null
+          id: string
+          jarak_pp_km: number | null
+          justification: string | null
+          pic_name: string | null
+          pic_phone: string | null
+          pickup_key_bts: boolean
+          tenant_id: string
+          ticket_number: string
+          transport_need: string | null
+          tujuan: string | null
+          unit_pengaju: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          area?: string | null
+          bank_account_no?: string | null
+          bank_name?: string | null
+          bank_owner_name?: string | null
+          cash_advance_id: string
+          cid_company?: string | null
+          created_at?: string
+          created_by?: string | null
+          driver_phone?: string | null
+          gmap_duration?: string | null
+          id?: string
+          jarak_pp_km?: number | null
+          justification?: string | null
+          pic_name?: string | null
+          pic_phone?: string | null
+          pickup_key_bts?: boolean
+          tenant_id: string
+          ticket_number: string
+          transport_need?: string | null
+          tujuan?: string | null
+          unit_pengaju?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          area?: string | null
+          bank_account_no?: string | null
+          bank_name?: string | null
+          bank_owner_name?: string | null
+          cash_advance_id?: string
+          cid_company?: string | null
+          created_at?: string
+          created_by?: string | null
+          driver_phone?: string | null
+          gmap_duration?: string | null
+          id?: string
+          jarak_pp_km?: number | null
+          justification?: string | null
+          pic_name?: string | null
+          pic_phone?: string | null
+          pickup_key_bts?: boolean
+          tenant_id?: string
+          ticket_number?: string
+          transport_need?: string | null
+          tujuan?: string | null
+          unit_pengaju?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_advance_field_ops_details_cash_advance_id_fkey"
+            columns: ["cash_advance_id"]
+            isOneToOne: true
+            referencedRelation: "cash_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_field_ops_details_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+        ]
+      }
+      cash_advance_rab_lines: {
+        Row: {
+          amount: number
+          cash_advance_id: string
+          category: string
+          coa_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          seq: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          cash_advance_id: string
+          category: string
+          coa_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          seq?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          cash_advance_id?: string
+          category?: string
+          coa_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          seq?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_advance_rab_lines_cash_advance_id_fkey"
+            columns: ["cash_advance_id"]
+            isOneToOne: false
+            referencedRelation: "cash_advances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_rab_lines_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advance_rab_lines_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1002,6 +1351,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advance_settlements_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advance_settlements_cash_advance_id_fkey"
             columns: ["cash_advance_id"]
             isOneToOne: false
@@ -1023,6 +1379,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advance_settlements_returned_by_fkey"
+            columns: ["returned_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advance_settlements_submitted_by_fkey"
             columns: ["submitted_by"]
             isOneToOne: false
@@ -1037,6 +1400,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advance_settlements_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advance_settlements_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1049,6 +1419,7 @@ export type Database = {
         Row: {
           amount: number
           ca_type: Database["public"]["Enums"]["cash_advance_type"]
+          coa_id: string | null
           created_at: string
           currency: string
           director_approved_at: string | null
@@ -1074,6 +1445,7 @@ export type Database = {
           rejection_reason: string | null
           requester_employee_id: string
           settled_at: string | null
+          settlement_due_at: string | null
           status: Database["public"]["Enums"]["cash_advance_status"]
           supervisor_approved_at: string | null
           supervisor_approver_id: string | null
@@ -1083,6 +1455,7 @@ export type Database = {
         Insert: {
           amount: number
           ca_type?: Database["public"]["Enums"]["cash_advance_type"]
+          coa_id?: string | null
           created_at?: string
           currency?: string
           director_approved_at?: string | null
@@ -1108,6 +1481,7 @@ export type Database = {
           rejection_reason?: string | null
           requester_employee_id: string
           settled_at?: string | null
+          settlement_due_at?: string | null
           status?: Database["public"]["Enums"]["cash_advance_status"]
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
@@ -1117,6 +1491,7 @@ export type Database = {
         Update: {
           amount?: number
           ca_type?: Database["public"]["Enums"]["cash_advance_type"]
+          coa_id?: string | null
           created_at?: string
           currency?: string
           director_approved_at?: string | null
@@ -1142,6 +1517,7 @@ export type Database = {
           rejection_reason?: string | null
           requester_employee_id?: string
           settled_at?: string | null
+          settlement_due_at?: string | null
           status?: Database["public"]["Enums"]["cash_advance_status"]
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
@@ -1150,6 +1526,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "cash_advances_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_advances_director_approver_id_fkey"
             columns: ["director_approver_id"]
             isOneToOne: false
@@ -1162,6 +1545,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advances_director_approver_id_fkey"
+            columns: ["director_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "cash_advances_disbursed_by_fkey"
@@ -1178,6 +1568,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advances_disbursed_by_fkey"
+            columns: ["disbursed_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advances_final_approver_id_fkey"
             columns: ["final_approver_id"]
             isOneToOne: false
@@ -1190,6 +1587,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advances_final_approver_id_fkey"
+            columns: ["final_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "cash_advances_finance_approver_id_fkey"
@@ -1206,6 +1610,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advances_finance_approver_id_fkey"
+            columns: ["finance_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advances_om_approver_id_fkey"
             columns: ["om_approver_id"]
             isOneToOne: false
@@ -1220,6 +1631,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advances_om_approver_id_fkey"
+            columns: ["om_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advances_pm_approver_id_fkey"
             columns: ["pm_approver_id"]
             isOneToOne: false
@@ -1232,6 +1650,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advances_pm_approver_id_fkey"
+            columns: ["pm_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "cash_advances_project_id_fkey"
@@ -1255,6 +1680,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advances_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advances_requester_employee_id_fkey"
             columns: ["requester_employee_id"]
             isOneToOne: false
@@ -1269,6 +1701,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_advances_requester_employee_id_fkey"
+            columns: ["requester_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "cash_advances_supervisor_approver_id_fkey"
             columns: ["supervisor_approver_id"]
             isOneToOne: false
@@ -1281,6 +1720,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_advances_supervisor_approver_id_fkey"
+            columns: ["supervisor_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "cash_advances_tenant_id_fkey"
@@ -1288,6 +1734,114 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      chart_of_accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["coa_account_type"]
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          is_postable: boolean
+          name: string
+          normal_side: Database["public"]["Enums"]["coa_normal_side"]
+          parent_id: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["coa_account_type"]
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_postable?: boolean
+          name: string
+          normal_side: Database["public"]["Enums"]["coa_normal_side"]
+          parent_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["coa_account_type"]
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          is_postable?: boolean
+          name?: string
+          normal_side?: Database["public"]["Enums"]["coa_normal_side"]
+          parent_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -1417,6 +1971,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "client_users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "client_users_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -1430,6 +1991,7 @@ export type Database = {
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
+          contract_number: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -1437,6 +1999,7 @@ export type Database = {
           name: string
           notes: string | null
           onboarded_at: string | null
+          project_code: string | null
           status: Database["public"]["Enums"]["client_status"]
           tenant_id: string
           updated_at: string
@@ -1445,6 +2008,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1452,6 +2016,7 @@ export type Database = {
           name: string
           notes?: string | null
           onboarded_at?: string | null
+          project_code?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id: string
           updated_at?: string
@@ -1460,6 +2025,7 @@ export type Database = {
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
+          contract_number?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1467,6 +2033,7 @@ export type Database = {
           name?: string
           notes?: string | null
           onboarded_at?: string | null
+          project_code?: string | null
           status?: Database["public"]["Enums"]["client_status"]
           tenant_id?: string
           updated_at?: string
@@ -1485,6 +2052,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "clients_tenant_id_fkey"
@@ -1711,6 +2285,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employee_rosters_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "employee_rosters_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
@@ -1723,6 +2304,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_rosters_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "employee_rosters_project_id_fkey"
@@ -1749,58 +2337,97 @@ export type Database = {
       }
       employees: {
         Row: {
+          availability: Database["public"]["Enums"]["employee_availability"]
           bank_account_number: string | null
+          contract_end_date: string | null
           created_at: string
+          date_of_birth: string | null
+          department: string | null
           email: string
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          first_name: string | null
           full_name: string
           hourly_rate: number
           id: string
           is_active: boolean
+          join_date: string
+          last_name: string | null
           monthly_salary: number
+          notes: string | null
+          phone: string | null
           pii_anonymized_at: string | null
+          position_title: string | null
           preferred_locale: string | null
           reports_to_employee_id: string | null
           role: Database["public"]["Enums"]["employee_role"]
           tenant_id: string
           terminated_at: string | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
+          availability?: Database["public"]["Enums"]["employee_availability"]
           bank_account_number?: string | null
+          contract_end_date?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
           email: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          first_name?: string | null
           full_name: string
           hourly_rate?: number
           id?: string
           is_active?: boolean
+          join_date?: string
+          last_name?: string | null
           monthly_salary?: number
+          notes?: string | null
+          phone?: string | null
           pii_anonymized_at?: string | null
+          position_title?: string | null
           preferred_locale?: string | null
           reports_to_employee_id?: string | null
           role?: Database["public"]["Enums"]["employee_role"]
           tenant_id: string
           terminated_at?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
+          availability?: Database["public"]["Enums"]["employee_availability"]
           bank_account_number?: string | null
+          contract_end_date?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          department?: string | null
           email?: string
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          first_name?: string | null
           full_name?: string
           hourly_rate?: number
           id?: string
           is_active?: boolean
+          join_date?: string
+          last_name?: string | null
           monthly_salary?: number
+          notes?: string | null
+          phone?: string | null
           pii_anonymized_at?: string | null
+          position_title?: string | null
           preferred_locale?: string | null
           reports_to_employee_id?: string | null
           role?: Database["public"]["Enums"]["employee_role"]
           tenant_id?: string
           terminated_at?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1818,7 +2445,185 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employees_reports_to_employee_id_fkey"
+            columns: ["reports_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_answers: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          item_id: string
+          numeric_score: number | null
+          tenant_id: string
+          text_answer: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          item_id: string
+          numeric_score?: number | null
+          tenant_id: string
+          text_answer?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          item_id?: string
+          numeric_score?: number | null
+          tenant_id?: string
+          text_answer?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_answers_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "performance_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_answers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_template_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_answers_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_template_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_required: boolean
+          name: string
+          question_type: Database["public"]["Enums"]["evaluation_question_type"]
+          seq: number
+          template_id: string
+          tenant_id: string
+          weight_pct: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          name: string
+          question_type?: Database["public"]["Enums"]["evaluation_question_type"]
+          seq: number
+          template_id: string
+          tenant_id: string
+          weight_pct?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_required?: boolean
+          name?: string
+          question_type?: Database["public"]["Enums"]["evaluation_question_type"]
+          seq?: number
+          template_id?: string
+          tenant_id?: string
+          weight_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_template_items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "evaluation_templates_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -1879,6 +2684,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "expense_approval_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "expense_approval_logs_expense_id_fkey"
             columns: ["expense_id"]
             isOneToOne: false
@@ -1889,6 +2701,50 @@ export type Database = {
             foreignKeyName: "expense_approval_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      google_calendar_credentials: {
+        Row: {
+          calendar_id: string
+          client_email: string | null
+          created_at: string
+          encrypted_refresh_token: string
+          is_active: boolean
+          last_error: string | null
+          last_refreshed_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          calendar_id?: string
+          client_email?: string | null
+          created_at?: string
+          encrypted_refresh_token: string
+          is_active?: boolean
+          last_error?: string | null
+          last_refreshed_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          calendar_id?: string
+          client_email?: string | null
+          created_at?: string
+          encrypted_refresh_token?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_refreshed_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_calendar_credentials_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -1945,6 +2801,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_approval_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "hr_approval_logs_request_id_fkey"
@@ -2042,6 +2905,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hr_requests_final_approver_id_fkey"
+            columns: ["final_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "hr_requests_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -2063,6 +2933,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hr_requests_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "hr_requests_requester_employee_id_fkey"
             columns: ["requester_employee_id"]
             isOneToOne: false
@@ -2077,11 +2954,535 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hr_requests_requester_employee_id_fkey"
+            columns: ["requester_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "hr_requests_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_jobs: {
+        Row: {
+          committed_at: string | null
+          created_at: string
+          created_by: string | null
+          errors: Json
+          file_name: string
+          file_size_bytes: number
+          id: string
+          inserted_count: number
+          invalid_row_count: number
+          resource: Database["public"]["Enums"]["import_job_resource"]
+          row_count: number
+          stats: Json
+          status: Database["public"]["Enums"]["import_job_status"]
+          tenant_id: string
+          updated_count: number
+          valid_row_count: number
+        }
+        Insert: {
+          committed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          errors?: Json
+          file_name: string
+          file_size_bytes: number
+          id?: string
+          inserted_count?: number
+          invalid_row_count?: number
+          resource: Database["public"]["Enums"]["import_job_resource"]
+          row_count?: number
+          stats?: Json
+          status: Database["public"]["Enums"]["import_job_status"]
+          tenant_id: string
+          updated_count?: number
+          valid_row_count?: number
+        }
+        Update: {
+          committed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          errors?: Json
+          file_name?: string
+          file_size_bytes?: number
+          id?: string
+          inserted_count?: number
+          invalid_row_count?: number
+          resource?: Database["public"]["Enums"]["import_job_resource"]
+          row_count?: number
+          stats?: Json
+          status?: Database["public"]["Enums"]["import_job_status"]
+          tenant_id?: string
+          updated_count?: number
+          valid_row_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_jobs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lookup_options: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          domain: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          domain?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lookup_options_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lookup_options_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lookup_options_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "lookup_options_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lookup_options_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lookup_options_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lookup_options_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+        ]
+      }
+      monthly_report_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          mime_type: string | null
+          report_id: string
+          size_bytes: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          report_id: string
+          size_bytes?: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          report_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tenant_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_report_attachments_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_report_attachments_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_report_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_report_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_report_attachments_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+        ]
+      }
+      monthly_report_sections: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["monthly_report_section_kind"]
+          metrics: Json
+          report_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["monthly_report_section_kind"]
+          metrics?: Json
+          report_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["monthly_report_section_kind"]
+          metrics?: Json
+          report_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_report_sections_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "monthly_reports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_report_sections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_reports: {
+        Row: {
+          ba_generated_at: string | null
+          ba_generated_by: string | null
+          ba_notes: string | null
+          ba_number: string | null
+          ba_period_end: string | null
+          ba_period_start: string | null
+          client_decided_at: string | null
+          client_decision_notes: string | null
+          client_reviewer_email: string | null
+          client_reviewer_name: string | null
+          client_signature_file_name: string | null
+          client_signature_path: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          period_month: string
+          pm_decided_at: string | null
+          pm_notes: string | null
+          pm_reviewer_id: string | null
+          project_id: string
+          sent_to_client_at: string | null
+          sent_to_client_by: string | null
+          spv_notes: string | null
+          status: Database["public"]["Enums"]["monthly_report_status"]
+          submitted_at: string | null
+          submitter_employee_id: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ba_generated_at?: string | null
+          ba_generated_by?: string | null
+          ba_notes?: string | null
+          ba_number?: string | null
+          ba_period_end?: string | null
+          ba_period_start?: string | null
+          client_decided_at?: string | null
+          client_decision_notes?: string | null
+          client_reviewer_email?: string | null
+          client_reviewer_name?: string | null
+          client_signature_file_name?: string | null
+          client_signature_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_month: string
+          pm_decided_at?: string | null
+          pm_notes?: string | null
+          pm_reviewer_id?: string | null
+          project_id: string
+          sent_to_client_at?: string | null
+          sent_to_client_by?: string | null
+          spv_notes?: string | null
+          status?: Database["public"]["Enums"]["monthly_report_status"]
+          submitted_at?: string | null
+          submitter_employee_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ba_generated_at?: string | null
+          ba_generated_by?: string | null
+          ba_notes?: string | null
+          ba_number?: string | null
+          ba_period_end?: string | null
+          ba_period_start?: string | null
+          client_decided_at?: string | null
+          client_decision_notes?: string | null
+          client_reviewer_email?: string | null
+          client_reviewer_name?: string | null
+          client_signature_file_name?: string | null
+          client_signature_path?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          period_month?: string
+          pm_decided_at?: string | null
+          pm_notes?: string | null
+          pm_reviewer_id?: string | null
+          project_id?: string
+          sent_to_client_at?: string | null
+          sent_to_client_by?: string | null
+          spv_notes?: string | null
+          status?: Database["public"]["Enums"]["monthly_report_status"]
+          submitted_at?: string | null
+          submitter_employee_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_reports_ba_generated_by_fkey"
+            columns: ["ba_generated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_ba_generated_by_fkey"
+            columns: ["ba_generated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_ba_generated_by_fkey"
+            columns: ["ba_generated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_pm_reviewer_id_fkey"
+            columns: ["pm_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_pm_reviewer_id_fkey"
+            columns: ["pm_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_pm_reviewer_id_fkey"
+            columns: ["pm_reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_sent_to_client_by_fkey"
+            columns: ["sent_to_client_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_sent_to_client_by_fkey"
+            columns: ["sent_to_client_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_sent_to_client_by_fkey"
+            columns: ["sent_to_client_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_submitter_employee_id_fkey"
+            columns: ["submitter_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_submitter_employee_id_fkey"
+            columns: ["submitter_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_submitter_employee_id_fkey"
+            columns: ["submitter_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_reports_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -2139,6 +3540,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "notifications_tenant_id_fkey"
@@ -2209,6 +3617,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payroll_lines_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "payroll_lines_period_id_fkey"
@@ -2282,6 +3697,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payroll_periods_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "payroll_periods_generated_by_fkey"
             columns: ["generated_by"]
             isOneToOne: false
@@ -2296,7 +3718,218 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payroll_periods_generated_by_fkey"
+            columns: ["generated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "payroll_periods_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      performance_evaluations: {
+        Row: {
+          competency_meet_pct: number | null
+          contract_end_date: string
+          contract_extension_end_date: string | null
+          contract_extension_months: number | null
+          created_at: string
+          dev_areas: string | null
+          dev_proposal: string | null
+          employee_id: string
+          finalized_at: string | null
+          goal_achievement_pct: number | null
+          id: string
+          is_final_period: boolean
+          om_decided_at: string | null
+          om_employee_id: string | null
+          om_notes: string | null
+          period_end_date: string | null
+          period_start_date: string | null
+          pm_employee_id: string | null
+          pm_notes: string | null
+          pm_reviewed_at: string | null
+          spv_employee_id: string
+          spv_notes: string | null
+          spv_recommendation:
+            | Database["public"]["Enums"]["contract_recommendation"]
+            | null
+          status: Database["public"]["Enums"]["evaluation_status"]
+          strengths: string | null
+          submitted_at: string | null
+          template_id: string
+          tenant_id: string
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          competency_meet_pct?: number | null
+          contract_end_date: string
+          contract_extension_end_date?: string | null
+          contract_extension_months?: number | null
+          created_at?: string
+          dev_areas?: string | null
+          dev_proposal?: string | null
+          employee_id: string
+          finalized_at?: string | null
+          goal_achievement_pct?: number | null
+          id?: string
+          is_final_period?: boolean
+          om_decided_at?: string | null
+          om_employee_id?: string | null
+          om_notes?: string | null
+          period_end_date?: string | null
+          period_start_date?: string | null
+          pm_employee_id?: string | null
+          pm_notes?: string | null
+          pm_reviewed_at?: string | null
+          spv_employee_id: string
+          spv_notes?: string | null
+          spv_recommendation?:
+            | Database["public"]["Enums"]["contract_recommendation"]
+            | null
+          status?: Database["public"]["Enums"]["evaluation_status"]
+          strengths?: string | null
+          submitted_at?: string | null
+          template_id: string
+          tenant_id: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          competency_meet_pct?: number | null
+          contract_end_date?: string
+          contract_extension_end_date?: string | null
+          contract_extension_months?: number | null
+          created_at?: string
+          dev_areas?: string | null
+          dev_proposal?: string | null
+          employee_id?: string
+          finalized_at?: string | null
+          goal_achievement_pct?: number | null
+          id?: string
+          is_final_period?: boolean
+          om_decided_at?: string | null
+          om_employee_id?: string | null
+          om_notes?: string | null
+          period_end_date?: string | null
+          period_start_date?: string | null
+          pm_employee_id?: string | null
+          pm_notes?: string | null
+          pm_reviewed_at?: string | null
+          spv_employee_id?: string
+          spv_notes?: string | null
+          spv_recommendation?:
+            | Database["public"]["Enums"]["contract_recommendation"]
+            | null
+          status?: Database["public"]["Enums"]["evaluation_status"]
+          strengths?: string | null
+          submitted_at?: string | null
+          template_id?: string
+          tenant_id?: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_evaluations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_om_employee_id_fkey"
+            columns: ["om_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_om_employee_id_fkey"
+            columns: ["om_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_om_employee_id_fkey"
+            columns: ["om_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_pm_employee_id_fkey"
+            columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_pm_employee_id_fkey"
+            columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_pm_employee_id_fkey"
+            columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_spv_employee_id_fkey"
+            columns: ["spv_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_spv_employee_id_fkey"
+            columns: ["spv_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_spv_employee_id_fkey"
+            columns: ["spv_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -2355,6 +3988,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_funds_custodian_employee_id_fkey"
+            columns: ["custodian_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "petty_cash_funds_tenant_id_fkey"
@@ -2439,6 +4079,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "petty_cash_replenishments_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "petty_cash_replenishments_disbursed_by_fkey"
             columns: ["disbursed_by"]
             isOneToOne: false
@@ -2451,6 +4098,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_replenishments_disbursed_by_fkey"
+            columns: ["disbursed_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "petty_cash_replenishments_fund_id_fkey"
@@ -2474,6 +4128,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "petty_cash_replenishments_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "petty_cash_replenishments_requested_by_fkey"
             columns: ["requested_by"]
             isOneToOne: false
@@ -2488,6 +4149,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "petty_cash_replenishments_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "petty_cash_replenishments_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2500,6 +4168,7 @@ export type Database = {
         Row: {
           amount: number
           category: string
+          coa_id: string | null
           created_at: string
           created_by: string
           description: string
@@ -2517,6 +4186,7 @@ export type Database = {
         Insert: {
           amount: number
           category: string
+          coa_id?: string | null
           created_at?: string
           created_by: string
           description: string
@@ -2534,6 +4204,7 @@ export type Database = {
         Update: {
           amount?: number
           category?: string
+          coa_id?: string | null
           created_at?: string
           created_by?: string
           description?: string
@@ -2550,6 +4221,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "petty_cash_vouchers_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "petty_cash_vouchers_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -2562,6 +4240,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_vouchers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "petty_cash_vouchers_fund_id_fkey"
@@ -2590,6 +4275,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_vouchers_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -2644,6 +4336,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_handover_audit_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "pm_handover_audit_logs_handover_id_fkey"
@@ -2747,6 +4446,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pm_handovers_executed_by_fkey"
+            columns: ["executed_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "pm_handovers_from_pm_employee_id_fkey"
             columns: ["from_pm_employee_id"]
             isOneToOne: false
@@ -2759,6 +4465,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_handovers_from_pm_employee_id_fkey"
+            columns: ["from_pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "pm_handovers_hm_approver_id_fkey"
@@ -2775,6 +4488,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pm_handovers_hm_approver_id_fkey"
+            columns: ["hm_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "pm_handovers_initiated_by_fkey"
             columns: ["initiated_by"]
             isOneToOne: false
@@ -2789,6 +4509,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pm_handovers_initiated_by_fkey"
+            columns: ["initiated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "pm_handovers_om_approver_id_fkey"
             columns: ["om_approver_id"]
             isOneToOne: false
@@ -2801,6 +4528,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_handovers_om_approver_id_fkey"
+            columns: ["om_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "pm_handovers_project_id_fkey"
@@ -2824,6 +4558,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pm_handovers_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "pm_handovers_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -2843,6 +4584,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pm_handovers_to_pm_employee_id_fkey"
+            columns: ["to_pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
         ]
       }
@@ -3023,6 +4771,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_assignments_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
@@ -3035,6 +4790,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_assignments_project_id_fkey"
@@ -3097,6 +4859,79 @@ export type Database = {
           },
         ]
       }
+      project_calendar_events: {
+        Row: {
+          attempts: number
+          created_at: string
+          google_event_id: string | null
+          id: string
+          kind: Database["public"]["Enums"]["calendar_event_kind"]
+          last_error: string | null
+          milestone_id: string | null
+          payload: Json
+          project_id: string
+          scheduled_at: string
+          sent_at: string | null
+          status: Database["public"]["Enums"]["calendar_event_status"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          google_event_id?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["calendar_event_kind"]
+          last_error?: string | null
+          milestone_id?: string | null
+          payload?: Json
+          project_id: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["calendar_event_status"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          google_event_id?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["calendar_event_kind"]
+          last_error?: string | null
+          milestone_id?: string | null
+          payload?: Json
+          project_id?: string
+          scheduled_at?: string
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["calendar_event_status"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_calendar_events_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_calendar_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_calendar_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_employee_assignments: {
         Row: {
           allocation_percentage: number
@@ -3105,7 +4940,9 @@ export type Database = {
           employee_id: string
           ended_at: string | null
           id: string
+          notes: string | null
           project_id: string
+          role: Database["public"]["Enums"]["project_member_role"]
           started_at: string
           status: Database["public"]["Enums"]["assignment_status"]
           tenant_id: string
@@ -3117,7 +4954,9 @@ export type Database = {
           employee_id: string
           ended_at?: string | null
           id?: string
+          notes?: string | null
           project_id: string
+          role?: Database["public"]["Enums"]["project_member_role"]
           started_at?: string
           status?: Database["public"]["Enums"]["assignment_status"]
           tenant_id: string
@@ -3129,7 +4968,9 @@ export type Database = {
           employee_id?: string
           ended_at?: string | null
           id?: string
+          notes?: string | null
           project_id?: string
+          role?: Database["public"]["Enums"]["project_member_role"]
           started_at?: string
           status?: Database["public"]["Enums"]["assignment_status"]
           tenant_id?: string
@@ -3150,6 +4991,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_employee_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_employee_assignments_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
@@ -3162,6 +5010,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_employee_assignments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_employee_assignments_project_id_fkey"
@@ -3182,7 +5037,9 @@ export type Database = {
       project_expenses: {
         Row: {
           amount: number
+          budget_detail_id: string | null
           category: string
+          coa_id: string | null
           created_at: string
           currency: string
           description: string
@@ -3192,19 +5049,27 @@ export type Database = {
           finance_approver_id: string | null
           id: string
           incurred_on: string
+          late_submission_reason: string | null
+          notes: string | null
+          payment_method:
+            | Database["public"]["Enums"]["expense_payment_method"]
+            | null
           project_id: string
           receipt_url: string | null
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string | null
           status: Database["public"]["Enums"]["expense_status"]
+          submitted_at: string | null
           submitter_employee_id: string
           tenant_id: string
           updated_at: string
         }
         Insert: {
           amount: number
+          budget_detail_id?: string | null
           category: string
+          coa_id?: string | null
           created_at?: string
           currency?: string
           description: string
@@ -3214,19 +5079,27 @@ export type Database = {
           finance_approver_id?: string | null
           id?: string
           incurred_on: string
+          late_submission_reason?: string | null
+          notes?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["expense_payment_method"]
+            | null
           project_id: string
           receipt_url?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["expense_status"]
+          submitted_at?: string | null
           submitter_employee_id: string
           tenant_id: string
           updated_at?: string
         }
         Update: {
           amount?: number
+          budget_detail_id?: string | null
           category?: string
+          coa_id?: string | null
           created_at?: string
           currency?: string
           description?: string
@@ -3236,18 +5109,45 @@ export type Database = {
           finance_approver_id?: string | null
           id?: string
           incurred_on?: string
+          late_submission_reason?: string | null
+          notes?: string | null
+          payment_method?:
+            | Database["public"]["Enums"]["expense_payment_method"]
+            | null
           project_id?: string
           receipt_url?: string | null
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string | null
           status?: Database["public"]["Enums"]["expense_status"]
+          submitted_at?: string | null
           submitter_employee_id?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "project_expenses_budget_detail_id_fkey"
+            columns: ["budget_detail_id"]
+            isOneToOne: false
+            referencedRelation: "budget_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_budget_detail_id_fkey"
+            columns: ["budget_detail_id"]
+            isOneToOne: false
+            referencedRelation: "v_project_budget_lines"
+            referencedColumns: ["budget_detail_id"]
+          },
+          {
+            foreignKeyName: "project_expenses_coa_id_fkey"
+            columns: ["coa_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_expenses_final_approver_id_fkey"
             columns: ["final_approver_id"]
             isOneToOne: false
@@ -3262,6 +5162,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_expenses_final_approver_id_fkey"
+            columns: ["final_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_expenses_finance_approver_id_fkey"
             columns: ["finance_approver_id"]
             isOneToOne: false
@@ -3274,6 +5181,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_finance_approver_id_fkey"
+            columns: ["finance_approver_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_expenses_project_id_fkey"
@@ -3297,6 +5211,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_expenses_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_expenses_submitter_employee_id_fkey"
             columns: ["submitter_employee_id"]
             isOneToOne: false
@@ -3309,6 +5230,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_submitter_employee_id_fkey"
+            columns: ["submitter_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_expenses_tenant_id_fkey"
@@ -3384,6 +5312,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_issue_events_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_issue_events_from_assignee_fkey"
             columns: ["from_assignee"]
             isOneToOne: false
@@ -3396,6 +5331,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_issue_events_from_assignee_fkey"
+            columns: ["from_assignee"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_issue_events_issue_id_fkey"
@@ -3425,18 +5367,29 @@ export type Database = {
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_issue_events_to_assignee_fkey"
+            columns: ["to_assignee"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
         ]
       }
       project_issues: {
         Row: {
           assignee_employee_id: string | null
+          category: Database["public"]["Enums"]["project_issue_category"]
           closed_at: string | null
           closed_by: string | null
           created_at: string
           description: string
+          due_date: string | null
           escalation_level: number
           id: string
           last_escalated_at: string | null
+          milestone_id: string | null
+          notes: string | null
           project_id: string
           reopened_at: string | null
           reopened_by: string | null
@@ -3446,19 +5399,24 @@ export type Database = {
           severity: Database["public"]["Enums"]["project_issue_severity"]
           sla_due_at: string
           status: Database["public"]["Enums"]["project_issue_status"]
+          tags: string[]
           tenant_id: string
           title: string
           updated_at: string
         }
         Insert: {
           assignee_employee_id?: string | null
+          category?: Database["public"]["Enums"]["project_issue_category"]
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
           description?: string
+          due_date?: string | null
           escalation_level?: number
           id?: string
           last_escalated_at?: string | null
+          milestone_id?: string | null
+          notes?: string | null
           project_id: string
           reopened_at?: string | null
           reopened_by?: string | null
@@ -3468,19 +5426,24 @@ export type Database = {
           severity?: Database["public"]["Enums"]["project_issue_severity"]
           sla_due_at: string
           status?: Database["public"]["Enums"]["project_issue_status"]
+          tags?: string[]
           tenant_id: string
           title: string
           updated_at?: string
         }
         Update: {
           assignee_employee_id?: string | null
+          category?: Database["public"]["Enums"]["project_issue_category"]
           closed_at?: string | null
           closed_by?: string | null
           created_at?: string
           description?: string
+          due_date?: string | null
           escalation_level?: number
           id?: string
           last_escalated_at?: string | null
+          milestone_id?: string | null
+          notes?: string | null
           project_id?: string
           reopened_at?: string | null
           reopened_by?: string | null
@@ -3490,6 +5453,7 @@ export type Database = {
           severity?: Database["public"]["Enums"]["project_issue_severity"]
           sla_due_at?: string
           status?: Database["public"]["Enums"]["project_issue_status"]
+          tags?: string[]
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -3510,6 +5474,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_issues_assignee_employee_id_fkey"
+            columns: ["assignee_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_issues_closed_by_fkey"
             columns: ["closed_by"]
             isOneToOne: false
@@ -3521,6 +5492,20 @@ export type Database = {
             columns: ["closed_by"]
             isOneToOne: false
             referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_issues_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "project_issues_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
             referencedColumns: ["id"]
           },
           {
@@ -3545,6 +5530,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_issues_reopened_by_fkey"
+            columns: ["reopened_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_issues_reporter_employee_id_fkey"
             columns: ["reporter_employee_id"]
             isOneToOne: false
@@ -3559,6 +5551,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_issues_reporter_employee_id_fkey"
+            columns: ["reporter_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_issues_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
@@ -3571,6 +5570,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_issues_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_issues_tenant_id_fkey"
@@ -3652,6 +5658,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_milestones_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_milestones_owner_employee_id_fkey"
             columns: ["owner_employee_id"]
             isOneToOne: false
@@ -3664,6 +5677,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_milestones_owner_employee_id_fkey"
+            columns: ["owner_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_milestones_project_id_fkey"
@@ -3681,6 +5701,32 @@ export type Database = {
           },
         ]
       }
+      project_numbering_sequence: {
+        Row: {
+          last_seq: number
+          tenant_id: string
+          year: number
+        }
+        Insert: {
+          last_seq?: number
+          tenant_id: string
+          year: number
+        }
+        Update: {
+          last_seq?: number
+          tenant_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_numbering_sequence_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_pm_assignments: {
         Row: {
           assignment_role: Database["public"]["Enums"]["pm_assignment_role"]
@@ -3688,6 +5734,7 @@ export type Database = {
           created_by: string | null
           ended_at: string | null
           id: string
+          notes: string | null
           pm_employee_id: string
           project_id: string
           started_at: string
@@ -3700,6 +5747,7 @@ export type Database = {
           created_by?: string | null
           ended_at?: string | null
           id?: string
+          notes?: string | null
           pm_employee_id: string
           project_id: string
           started_at?: string
@@ -3712,6 +5760,7 @@ export type Database = {
           created_by?: string | null
           ended_at?: string | null
           id?: string
+          notes?: string | null
           pm_employee_id?: string
           project_id?: string
           started_at?: string
@@ -3734,6 +5783,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_pm_assignments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "project_pm_assignments_pm_employee_id_fkey"
             columns: ["pm_employee_id"]
             isOneToOne: false
@@ -3746,6 +5802,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_pm_assignments_pm_employee_id_fkey"
+            columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "project_pm_assignments_project_id_fkey"
@@ -3765,60 +5828,135 @@ export type Database = {
       }
       projects: {
         Row: {
+          bc_approved_at: string | null
+          bc_approved_by: string | null
+          bc_executive_summary: string | null
+          bc_sponsor_id: string | null
+          bc_target_gm_pct: number | null
           client_id: string
           code: string
           contract_id: string | null
+          contract_value: number | null
           created_at: string
           created_by: string | null
+          currency: string
           description: string | null
           end_date: string | null
           id: string
+          location: string | null
           name: string
+          notes: string | null
+          priority: Database["public"]["Enums"]["project_priority"]
           progress: number
           project_number: string | null
           project_type: Database["public"]["Enums"]["project_type"]
           start_date: string | null
           status: Database["public"]["Enums"]["project_status"]
+          sync_calendar: boolean
           tenant_id: string
           updated_at: string
         }
         Insert: {
+          bc_approved_at?: string | null
+          bc_approved_by?: string | null
+          bc_executive_summary?: string | null
+          bc_sponsor_id?: string | null
+          bc_target_gm_pct?: number | null
           client_id: string
           code: string
           contract_id?: string | null
+          contract_value?: number | null
           created_at?: string
           created_by?: string | null
+          currency?: string
           description?: string | null
           end_date?: string | null
           id?: string
+          location?: string | null
           name: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["project_priority"]
           progress?: number
           project_number?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          sync_calendar?: boolean
           tenant_id: string
           updated_at?: string
         }
         Update: {
+          bc_approved_at?: string | null
+          bc_approved_by?: string | null
+          bc_executive_summary?: string | null
+          bc_sponsor_id?: string | null
+          bc_target_gm_pct?: number | null
           client_id?: string
           code?: string
           contract_id?: string | null
+          contract_value?: number | null
           created_at?: string
           created_by?: string | null
+          currency?: string
           description?: string | null
           end_date?: string | null
           id?: string
+          location?: string | null
           name?: string
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["project_priority"]
           progress?: number
           project_number?: string | null
           project_type?: Database["public"]["Enums"]["project_type"]
           start_date?: string | null
           status?: Database["public"]["Enums"]["project_status"]
+          sync_calendar?: boolean
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_bc_approved_by_fkey"
+            columns: ["bc_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_bc_approved_by_fkey"
+            columns: ["bc_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_bc_approved_by_fkey"
+            columns: ["bc_approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "projects_bc_sponsor_id_fkey"
+            columns: ["bc_sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_bc_sponsor_id_fkey"
+            columns: ["bc_sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_bc_sponsor_id_fkey"
+            columns: ["bc_sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
           {
             foreignKeyName: "projects_client_id_fkey"
             columns: ["client_id"]
@@ -3846,6 +5984,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "projects_tenant_id_fkey"
@@ -3957,9 +6102,195 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "security_audit_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "security_audit_logs_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlement_sla_reminders: {
+        Row: {
+          business_days_offset: number
+          id: string
+          metadata: Json | null
+          reminder_kind: string
+          resource_id: string
+          resource_type: string
+          sent_at: string
+          sent_to_employee_id: string | null
+          tenant_id: string
+        }
+        Insert: {
+          business_days_offset: number
+          id?: string
+          metadata?: Json | null
+          reminder_kind: string
+          resource_id: string
+          resource_type: string
+          sent_at?: string
+          sent_to_employee_id?: string | null
+          tenant_id: string
+        }
+        Update: {
+          business_days_offset?: number
+          id?: string
+          metadata?: Json | null
+          reminder_kind?: string
+          resource_id?: string
+          resource_type?: string
+          sent_at?: string
+          sent_to_employee_id?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlement_sla_reminders_sent_to_employee_id_fkey"
+            columns: ["sent_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_sla_reminders_sent_to_employee_id_fkey"
+            columns: ["sent_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlement_sla_reminders_sent_to_employee_id_fkey"
+            columns: ["sent_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "settlement_sla_reminders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_ba_counters: {
+        Row: {
+          last_seq: number
+          tenant_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          last_seq?: number
+          tenant_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          last_seq?: number
+          tenant_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ba_counters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_telegram_bots: {
+        Row: {
+          bot_username: string
+          created_at: string
+          encrypted_bot_token: string
+          is_active: boolean
+          last_error: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          bot_username: string
+          created_at?: string
+          encrypted_bot_token: string
+          is_active?: boolean
+          last_error?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          bot_username?: string
+          created_at?: string
+          encrypted_bot_token?: string
+          is_active?: boolean
+          last_error?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_telegram_bots_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_whatsapp_configs: {
+        Row: {
+          created_at: string
+          encrypted_account_sid: string | null
+          encrypted_api_token: string
+          is_active: boolean
+          last_error: string | null
+          phone_number_id: string
+          provider: string
+          tenant_id: string
+          updated_at: string
+          webhook_verify_token: string | null
+        }
+        Insert: {
+          created_at?: string
+          encrypted_account_sid?: string | null
+          encrypted_api_token: string
+          is_active?: boolean
+          last_error?: string | null
+          phone_number_id: string
+          provider: string
+          tenant_id: string
+          updated_at?: string
+          webhook_verify_token?: string | null
+        }
+        Update: {
+          created_at?: string
+          encrypted_account_sid?: string | null
+          encrypted_api_token?: string
+          is_active?: boolean
+          last_error?: string | null
+          phone_number_id?: string
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+          webhook_verify_token?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_whatsapp_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
@@ -3970,6 +6301,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          retirement_age: number
           slug: string
           timezone: string
         }
@@ -3977,6 +6309,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          retirement_age?: number
           slug: string
           timezone?: string
         }
@@ -3984,6 +6317,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          retirement_age?: number
           slug?: string
           timezone?: string
         }
@@ -4040,6 +6374,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_week_approval_logs_actor_employee_id_fkey"
+            columns: ["actor_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "timesheet_week_approval_logs_tenant_id_fkey"
@@ -4131,6 +6472,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheet_weeks_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "timesheet_weeks_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -4143,6 +6491,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_weeks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "timesheet_weeks_employee_id_fkey"
@@ -4159,6 +6514,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheet_weeks_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "timesheet_weeks_rejected_by_fkey"
             columns: ["rejected_by"]
             isOneToOne: false
@@ -4171,6 +6533,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheet_weeks_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "timesheet_weeks_tenant_id_fkey"
@@ -4264,6 +6633,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheets_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "timesheets_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -4278,6 +6654,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "timesheets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "timesheets_employee_id_fkey"
             columns: ["employee_id"]
             isOneToOne: false
@@ -4290,6 +6673,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employees_canonical"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timesheets_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
           },
           {
             foreignKeyName: "timesheets_project_id_fkey"
@@ -4321,6 +6711,324 @@ export type Database = {
           },
         ]
       }
+      upk_notes: {
+        Row: {
+          base_salary: number
+          computed_upk: number
+          contract_end_date: string
+          created_at: string
+          director_approved_at: string | null
+          director_approved_by: string | null
+          drafted_by: string | null
+          employee_id: string
+          evaluation_id: string | null
+          finance_approved_at: string | null
+          finance_approved_by: string | null
+          id: string
+          justification: string | null
+          multiplier: number
+          paid_at: string | null
+          paid_by: string | null
+          paid_reference: string | null
+          service_months: number
+          status: Database["public"]["Enums"]["upk_status"]
+          submitted_at: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_salary?: number
+          computed_upk?: number
+          contract_end_date: string
+          created_at?: string
+          director_approved_at?: string | null
+          director_approved_by?: string | null
+          drafted_by?: string | null
+          employee_id: string
+          evaluation_id?: string | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
+          id?: string
+          justification?: string | null
+          multiplier?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_reference?: string | null
+          service_months?: number
+          status?: Database["public"]["Enums"]["upk_status"]
+          submitted_at?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_salary?: number
+          computed_upk?: number
+          contract_end_date?: string
+          created_at?: string
+          director_approved_at?: string | null
+          director_approved_by?: string | null
+          drafted_by?: string | null
+          employee_id?: string
+          evaluation_id?: string | null
+          finance_approved_at?: string | null
+          finance_approved_by?: string | null
+          id?: string
+          justification?: string | null
+          multiplier?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          paid_reference?: string | null
+          service_months?: number
+          status?: Database["public"]["Enums"]["upk_status"]
+          submitted_at?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upk_notes_director_approved_by_fkey"
+            columns: ["director_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_director_approved_by_fkey"
+            columns: ["director_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_director_approved_by_fkey"
+            columns: ["director_approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "upk_notes_drafted_by_fkey"
+            columns: ["drafted_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_drafted_by_fkey"
+            columns: ["drafted_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_drafted_by_fkey"
+            columns: ["drafted_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "upk_notes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "upk_notes_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "performance_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_finance_approved_by_fkey"
+            columns: ["finance_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_finance_approved_by_fkey"
+            columns: ["finance_approved_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_finance_approved_by_fkey"
+            columns: ["finance_approved_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "upk_notes_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "upk_notes_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "upk_notes_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_notification_preferences: {
+        Row: {
+          category: Database["public"]["Enums"]["notification_category"]
+          channel: Database["public"]["Enums"]["notification_channel"]
+          enabled: boolean
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["notification_category"]
+          channel: Database["public"]["Enums"]["notification_channel"]
+          enabled?: boolean
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["notification_category"]
+          channel?: Database["public"]["Enums"]["notification_channel"]
+          enabled?: boolean
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_notification_preferences_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_telegram_links: {
+        Row: {
+          display_name: string | null
+          encrypted_chat_id: string
+          last_error: string | null
+          last_used_at: string | null
+          linked_at: string
+          telegram_username: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          display_name?: string | null
+          encrypted_chat_id: string
+          last_error?: string | null
+          last_used_at?: string | null
+          linked_at?: string
+          telegram_username?: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string | null
+          encrypted_chat_id?: string
+          last_error?: string | null
+          last_used_at?: string | null
+          linked_at?: string
+          telegram_username?: string | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_telegram_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_whatsapp_links: {
+        Row: {
+          display_name: string | null
+          encrypted_wa_id: string
+          last_error: string | null
+          last_inbound_at: string | null
+          last_used_at: string | null
+          linked_at: string
+          opted_in_at: string
+          profile_name: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          display_name?: string | null
+          encrypted_wa_id: string
+          last_error?: string | null
+          last_inbound_at?: string | null
+          last_used_at?: string | null
+          linked_at?: string
+          opted_in_at?: string
+          profile_name?: string | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string | null
+          encrypted_wa_id?: string
+          last_error?: string | null
+          last_inbound_at?: string | null
+          last_used_at?: string | null
+          linked_at?: string
+          opted_in_at?: string
+          profile_name?: string | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_whatsapp_links_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_shifts: {
         Row: {
           code: string
@@ -4331,6 +7039,7 @@ export type Database = {
           is_active: boolean
           is_night: boolean
           name: string
+          project_id: string | null
           shift_allowance: number
           start_time: string
           tenant_id: string
@@ -4345,6 +7054,7 @@ export type Database = {
           is_active?: boolean
           is_night?: boolean
           name: string
+          project_id?: string | null
           shift_allowance?: number
           start_time: string
           tenant_id: string
@@ -4359,12 +7069,20 @@ export type Database = {
           is_active?: boolean
           is_night?: boolean
           name?: string
+          project_id?: string | null
           shift_allowance?: number
           start_time?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "work_shifts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "work_shifts_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -4432,6 +7150,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employees_reports_to_employee_id_fkey"
+            columns: ["reports_to_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
             foreignKeyName: "employees_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -4440,12 +7165,95 @@ export type Database = {
           },
         ]
       }
+      v_employee_workload: {
+        Row: {
+          active_assignments: number | null
+          employee_id: string | null
+          employee_role: Database["public"]["Enums"]["employee_role"] | null
+          full_name: string | null
+          remaining_pct: number | null
+          tenant_id: string | null
+          total_alloc_pct: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employees_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_project_budget_lines: {
+        Row: {
+          budget_detail_id: string | null
+          budget_id: string | null
+          budget_status: Database["public"]["Enums"]["budget_status"] | null
+          category: string | null
+          code: string | null
+          created_at: string | null
+          description: string | null
+          fiscal_year: number | null
+          outstanding_amount: number | null
+          planned_amount: number | null
+          project_id: string | null
+          realized_amount: number | null
+          remaining_amount: number | null
+          seq: number | null
+          tenant_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_details_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_details_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      add_business_days: {
+        Args: { p_n: number; p_start: string; p_tz?: string }
+        Returns: string
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          auth_created_at: string
+          banned_until: string
+          email: string
+          email_confirmed_at: string
+          employee_id: string
+          employee_is_active: boolean
+          employee_name: string
+          employee_role: Database["public"]["Enums"]["employee_role"]
+          last_sign_in_at: string
+          tenant_id: string
+          user_id: string
+        }[]
+      }
       anonymize_terminated_employee: {
         Args: { p_employee_id: string }
         Returns: undefined
       }
+      can_admin_target_user: { Args: { p_target: string }; Returns: boolean }
       canonical_employee_role: { Args: never; Returns: string }
       compute_project_direct_labour: {
         Args: { p_from_date: string; p_project_id: string; p_to_date: string }
@@ -4484,9 +7292,26 @@ export type Database = {
         Args: { p_handover_id: string }
         Returns: undefined
       }
+      get_google_credential_refresh_token: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          calendar_id: string
+          client_email: string
+          refresh_token: string
+        }[]
+      }
+      has_active_field_tech_assignment: {
+        Args: { p_emp_id: string }
+        Returns: boolean
+      }
       is_assigned_to_project: {
         Args: { p_project_id: string }
         Returns: boolean
+      }
+      is_hr_or_management: { Args: never; Returns: boolean }
+      next_ba_number: {
+        Args: { v_tenant_id: string; v_year: number }
+        Returns: string
       }
       next_cash_advance_status: {
         Args: {
@@ -4537,7 +7362,12 @@ export type Database = {
         }
         Returns: number
       }
+      resolve_field_ops_l2_approver: {
+        Args: { p_project_id: string }
+        Returns: string
+      }
       resolve_tenant_id_by_slug: { Args: { p_slug: string }; Returns: string }
+      revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
       secret_rotation_status: {
         Args: never
         Returns: {
@@ -4550,6 +7380,24 @@ export type Database = {
           rotation_interval_days: number
           severity: string
         }[]
+      }
+      seed_default_coa: { Args: { p_tenant: string }; Returns: undefined }
+      seed_default_master_data: {
+        Args: { p_tenant: string }
+        Returns: undefined
+      }
+      set_google_credential_refresh_token: {
+        Args: {
+          p_calendar_id?: string
+          p_client_email?: string
+          p_refresh_token: string
+          p_tenant_id: string
+        }
+        Returns: undefined
+      }
+      set_user_ban: {
+        Args: { p_banned_until: string; p_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {
@@ -4589,6 +7437,7 @@ export type Database = {
         | "IMPERSONATE"
         | "EXPORT"
         | "ROLE_CHANGE"
+        | "BULK_IMPORT"
       budget_request_kind: "INCREASE" | "DECREASE" | "TRANSFER"
       budget_request_line_direction: "FROM" | "TO"
       budget_request_status:
@@ -4607,6 +7456,14 @@ export type Database = {
         | "APPROVED"
         | "REVISED"
         | "CANCELLED"
+      calendar_event_kind:
+        | "PROJECT_CREATED"
+        | "PROJECT_UPDATED"
+        | "PROJECT_DELETED"
+        | "MILESTONE_CREATED"
+        | "MILESTONE_UPDATED"
+        | "MILESTONE_DELETED"
+      calendar_event_status: "PENDING" | "SENT" | "FAILED" | "SKIPPED"
       cash_advance_settlement_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -4637,6 +7494,14 @@ export type Database = {
         | "ACTIVE"
         | "DISABLED"
         | "LOCKED"
+      coa_account_type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"
+      coa_normal_side: "DEBIT" | "CREDIT"
+      contract_recommendation:
+        | "EXTEND"
+        | "NOT_EXTEND"
+        | "EXTEND_WITH_COACHING"
+        | "EXTEND_PERMANENT"
+        | "EXTEND_PKWT_3M"
       contract_status: "DRAFT" | "ACTIVE" | "ENDED" | "RENEWED" | "TERMINATED"
       data_archive_source:
         | "security_audit_logs"
@@ -4650,6 +7515,7 @@ export type Database = {
         | "PURGED"
         | "RESTORED"
         | "FAILED"
+      employee_availability: "AVAILABLE" | "ASSIGNED" | "ON_LEAVE" | "INACTIVE"
       employee_role:
         | "EMPLOYEE"
         | "SUPERVISOR"
@@ -4666,6 +7532,27 @@ export type Database = {
         | "FINANCE"
         | "PM"
         | "OM"
+      employment_type:
+        | "PERMANENT"
+        | "CONTRACT"
+        | "PROBATION"
+        | "INTERN"
+        | "OUTSOURCE"
+        | "OUTTASK"
+      evaluation_question_type: "SCORE_1_5" | "TEXT"
+      evaluation_status:
+        | "DRAFT"
+        | "SUBMITTED_BY_SPV"
+        | "REVIEWED_BY_PM"
+        | "RETURNED_TO_SPV"
+        | "APPROVED_BY_OM"
+        | "REJECTED_BY_OM"
+        | "FINALIZED"
+      expense_payment_method:
+        | "BANK_TRANSFER"
+        | "CASH"
+        | "REIMBURSEMENT"
+        | "CORPORATE_CARD"
       expense_status:
         | "DRAFT"
         | "PENDING_L1_SUPERVISOR"
@@ -4695,12 +7582,47 @@ export type Database = {
         | "APPROVED"
         | "REJECTED"
         | "CANCELLED"
+      import_job_resource:
+        | "EMPLOYEE"
+        | "CLIENT"
+        | "PROJECT"
+        | "BUDGET_LINE"
+        | "EXPENSE"
+        | "PETTY_CASH"
+      import_job_status: "DRY_RUN" | "COMMITTED" | "FAILED"
       milestone_status:
         | "PLANNED"
         | "IN_PROGRESS"
         | "AT_RISK"
         | "DONE"
         | "CANCELLED"
+      monthly_report_section_kind:
+        | "EXECUTIVE_SUMMARY"
+        | "MILESTONE_PROGRESS"
+        | "HOURS_LOGGED"
+        | "COSTS_INCURRED"
+        | "BLOCKERS"
+        | "NEXT_MONTH_PLAN"
+      monthly_report_status:
+        | "DRAFT_BY_SPV"
+        | "SUBMITTED_TO_PM"
+        | "APPROVED_BY_PM"
+        | "RETURNED_TO_SPV"
+        | "REJECTED_BY_PM"
+        | "SENT_TO_CLIENT"
+        | "APPROVED_BY_CLIENT"
+        | "BA_GENERATED"
+        | "HANDED_OFF_TO_COLLECTION"
+        | "CANCELLED"
+      notification_category:
+        | "APPROVALS"
+        | "BUDGETS"
+        | "MILESTONES"
+        | "ASSIGNMENTS"
+        | "TIMESHEETS"
+        | "EMPLOYEES"
+        | "SYSTEM"
+      notification_channel: "IN_APP" | "EMAIL" | "TELEGRAM" | "WHATSAPP"
       notification_kind:
         | "APPROVAL_REQUESTED"
         | "APPROVAL_APPROVED"
@@ -4712,6 +7634,37 @@ export type Database = {
         | "PROJECT_HANDOVER"
         | "SLA_BREACH_WARNING"
         | "SYSTEM"
+        | "EMPLOYEE_CONTRACT_EXPIRING"
+        | "PROJECT_CONTRACT_EXPIRING"
+        | "SETTLEMENT_DUE_SOON"
+        | "SETTLEMENT_OVERDUE"
+        | "EXPENSE_DRAFT_STALE"
+        | "EXPENSE_INCURRED_STALE"
+        | "EVALUATION_DUE"
+        | "EVALUATION_SUBMITTED"
+        | "EVALUATION_REVIEWED"
+        | "EVALUATION_RETURNED"
+        | "EVALUATION_APPROVED"
+        | "EVALUATION_REJECTED"
+        | "EVALUATION_FINALIZED"
+        | "UPK_DRAFT_CREATED"
+        | "UPK_SUBMITTED"
+        | "UPK_APPROVED"
+        | "UPK_REJECTED"
+        | "UPK_PAID"
+        | "PAYROLL_STOP_REQUEST"
+        | "MONTHLY_REPORT_SUBMITTED"
+        | "MONTHLY_REPORT_APPROVED"
+        | "MONTHLY_REPORT_RETURNED"
+        | "MONTHLY_REPORT_REJECTED"
+        | "MONTHLY_REPORT_SENT_TO_CLIENT"
+        | "MONTHLY_REPORT_APPROVED_BY_CLIENT"
+        | "MONTHLY_REPORT_REJECTED_BY_CLIENT"
+        | "MONTHLY_REPORT_BA_GENERATED"
+        | "TIMESHEET_SUBMITTED"
+        | "TIMESHEET_APPROVED"
+        | "TIMESHEET_REJECTED"
+        | "BULK_IMPORT_COMPLETED"
       payroll_period_status: "DRAFT" | "FINALIZED"
       petty_cash_replenishment_status:
         | "PENDING_FINANCE"
@@ -4745,6 +7698,14 @@ export type Database = {
         | "DEVOPS"
         | "CONSULTANT"
         | "SUPPORT"
+      project_issue_category:
+        | "BUG"
+        | "FEATURE"
+        | "TASK"
+        | "INCIDENT"
+        | "RISK"
+        | "IMPROVEMENT"
+        | "QUESTION"
       project_issue_event_kind:
         | "CREATED"
         | "UPDATED"
@@ -4762,7 +7723,21 @@ export type Database = {
         | "RESOLVED"
         | "CLOSED"
         | "REOPENED"
+      project_member_role:
+        | "MEMBER"
+        | "TECH_LEAD"
+        | "DEVELOPER"
+        | "ENGINEER"
+        | "QA"
+        | "DESIGNER"
+        | "DEVOPS"
+        | "CONSULTANT"
+        | "SUPPORT"
+        | "SITE_SUPERVISOR"
+        | "FIELD_TECHNICIAN"
+      project_priority: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW"
       project_status:
+        | "DRAFT"
         | "PLANNING"
         | "ACTIVE"
         | "ON_HOLD"
@@ -4771,6 +7746,15 @@ export type Database = {
       project_type: "FIXED_PRICE" | "TIME_MATERIAL" | "RETAINER" | "INTERNAL"
       secret_priority: "P0" | "P1" | "P2"
       timesheet_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
+      upk_status:
+        | "DRAFT"
+        | "PENDING_FINANCE"
+        | "PENDING_DIRECTOR"
+        | "APPROVED"
+        | "REJECTED_BY_FINANCE"
+        | "REJECTED_BY_DIRECTOR"
+        | "PAID"
+        | "CANCELLED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -4940,6 +7924,7 @@ export const Constants = {
         "IMPERSONATE",
         "EXPORT",
         "ROLE_CHANGE",
+        "BULK_IMPORT",
       ],
       budget_request_kind: ["INCREASE", "DECREASE", "TRANSFER"],
       budget_request_line_direction: ["FROM", "TO"],
@@ -4961,6 +7946,15 @@ export const Constants = {
         "REVISED",
         "CANCELLED",
       ],
+      calendar_event_kind: [
+        "PROJECT_CREATED",
+        "PROJECT_UPDATED",
+        "PROJECT_DELETED",
+        "MILESTONE_CREATED",
+        "MILESTONE_UPDATED",
+        "MILESTONE_DELETED",
+      ],
+      calendar_event_status: ["PENDING", "SENT", "FAILED", "SKIPPED"],
       cash_advance_settlement_status: [
         "DRAFT",
         "SUBMITTED",
@@ -4994,6 +7988,15 @@ export const Constants = {
         "DISABLED",
         "LOCKED",
       ],
+      coa_account_type: ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"],
+      coa_normal_side: ["DEBIT", "CREDIT"],
+      contract_recommendation: [
+        "EXTEND",
+        "NOT_EXTEND",
+        "EXTEND_WITH_COACHING",
+        "EXTEND_PERMANENT",
+        "EXTEND_PKWT_3M",
+      ],
       contract_status: ["DRAFT", "ACTIVE", "ENDED", "RENEWED", "TERMINATED"],
       data_archive_source: [
         "security_audit_logs",
@@ -5009,6 +8012,7 @@ export const Constants = {
         "RESTORED",
         "FAILED",
       ],
+      employee_availability: ["AVAILABLE", "ASSIGNED", "ON_LEAVE", "INACTIVE"],
       employee_role: [
         "EMPLOYEE",
         "SUPERVISOR",
@@ -5025,6 +8029,30 @@ export const Constants = {
         "FINANCE",
         "PM",
         "OM",
+      ],
+      employment_type: [
+        "PERMANENT",
+        "CONTRACT",
+        "PROBATION",
+        "INTERN",
+        "OUTSOURCE",
+        "OUTTASK",
+      ],
+      evaluation_question_type: ["SCORE_1_5", "TEXT"],
+      evaluation_status: [
+        "DRAFT",
+        "SUBMITTED_BY_SPV",
+        "REVIEWED_BY_PM",
+        "RETURNED_TO_SPV",
+        "APPROVED_BY_OM",
+        "REJECTED_BY_OM",
+        "FINALIZED",
+      ],
+      expense_payment_method: [
+        "BANK_TRANSFER",
+        "CASH",
+        "REIMBURSEMENT",
+        "CORPORATE_CARD",
       ],
       expense_status: [
         "DRAFT",
@@ -5058,6 +8086,15 @@ export const Constants = {
         "REJECTED",
         "CANCELLED",
       ],
+      import_job_resource: [
+        "EMPLOYEE",
+        "CLIENT",
+        "PROJECT",
+        "BUDGET_LINE",
+        "EXPENSE",
+        "PETTY_CASH",
+      ],
+      import_job_status: ["DRY_RUN", "COMMITTED", "FAILED"],
       milestone_status: [
         "PLANNED",
         "IN_PROGRESS",
@@ -5065,6 +8102,36 @@ export const Constants = {
         "DONE",
         "CANCELLED",
       ],
+      monthly_report_section_kind: [
+        "EXECUTIVE_SUMMARY",
+        "MILESTONE_PROGRESS",
+        "HOURS_LOGGED",
+        "COSTS_INCURRED",
+        "BLOCKERS",
+        "NEXT_MONTH_PLAN",
+      ],
+      monthly_report_status: [
+        "DRAFT_BY_SPV",
+        "SUBMITTED_TO_PM",
+        "APPROVED_BY_PM",
+        "RETURNED_TO_SPV",
+        "REJECTED_BY_PM",
+        "SENT_TO_CLIENT",
+        "APPROVED_BY_CLIENT",
+        "BA_GENERATED",
+        "HANDED_OFF_TO_COLLECTION",
+        "CANCELLED",
+      ],
+      notification_category: [
+        "APPROVALS",
+        "BUDGETS",
+        "MILESTONES",
+        "ASSIGNMENTS",
+        "TIMESHEETS",
+        "EMPLOYEES",
+        "SYSTEM",
+      ],
+      notification_channel: ["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP"],
       notification_kind: [
         "APPROVAL_REQUESTED",
         "APPROVAL_APPROVED",
@@ -5076,6 +8143,37 @@ export const Constants = {
         "PROJECT_HANDOVER",
         "SLA_BREACH_WARNING",
         "SYSTEM",
+        "EMPLOYEE_CONTRACT_EXPIRING",
+        "PROJECT_CONTRACT_EXPIRING",
+        "SETTLEMENT_DUE_SOON",
+        "SETTLEMENT_OVERDUE",
+        "EXPENSE_DRAFT_STALE",
+        "EXPENSE_INCURRED_STALE",
+        "EVALUATION_DUE",
+        "EVALUATION_SUBMITTED",
+        "EVALUATION_REVIEWED",
+        "EVALUATION_RETURNED",
+        "EVALUATION_APPROVED",
+        "EVALUATION_REJECTED",
+        "EVALUATION_FINALIZED",
+        "UPK_DRAFT_CREATED",
+        "UPK_SUBMITTED",
+        "UPK_APPROVED",
+        "UPK_REJECTED",
+        "UPK_PAID",
+        "PAYROLL_STOP_REQUEST",
+        "MONTHLY_REPORT_SUBMITTED",
+        "MONTHLY_REPORT_APPROVED",
+        "MONTHLY_REPORT_RETURNED",
+        "MONTHLY_REPORT_REJECTED",
+        "MONTHLY_REPORT_SENT_TO_CLIENT",
+        "MONTHLY_REPORT_APPROVED_BY_CLIENT",
+        "MONTHLY_REPORT_REJECTED_BY_CLIENT",
+        "MONTHLY_REPORT_BA_GENERATED",
+        "TIMESHEET_SUBMITTED",
+        "TIMESHEET_APPROVED",
+        "TIMESHEET_REJECTED",
+        "BULK_IMPORT_COMPLETED",
       ],
       payroll_period_status: ["DRAFT", "FINALIZED"],
       petty_cash_replenishment_status: [
@@ -5114,6 +8212,15 @@ export const Constants = {
         "CONSULTANT",
         "SUPPORT",
       ],
+      project_issue_category: [
+        "BUG",
+        "FEATURE",
+        "TASK",
+        "INCIDENT",
+        "RISK",
+        "IMPROVEMENT",
+        "QUESTION",
+      ],
       project_issue_event_kind: [
         "CREATED",
         "UPDATED",
@@ -5133,7 +8240,22 @@ export const Constants = {
         "CLOSED",
         "REOPENED",
       ],
+      project_member_role: [
+        "MEMBER",
+        "TECH_LEAD",
+        "DEVELOPER",
+        "ENGINEER",
+        "QA",
+        "DESIGNER",
+        "DEVOPS",
+        "CONSULTANT",
+        "SUPPORT",
+        "SITE_SUPERVISOR",
+        "FIELD_TECHNICIAN",
+      ],
+      project_priority: ["CRITICAL", "HIGH", "MEDIUM", "LOW"],
       project_status: [
+        "DRAFT",
         "PLANNING",
         "ACTIVE",
         "ON_HOLD",
@@ -5143,6 +8265,16 @@ export const Constants = {
       project_type: ["FIXED_PRICE", "TIME_MATERIAL", "RETAINER", "INTERNAL"],
       secret_priority: ["P0", "P1", "P2"],
       timesheet_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+      upk_status: [
+        "DRAFT",
+        "PENDING_FINANCE",
+        "PENDING_DIRECTOR",
+        "APPROVED",
+        "REJECTED_BY_FINANCE",
+        "REJECTED_BY_DIRECTOR",
+        "PAID",
+        "CANCELLED",
+      ],
     },
   },
 } as const

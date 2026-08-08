@@ -55,16 +55,29 @@ export default async function Home() {
         <div className="flex items-center gap-2">
           <LanguageToggle />
           <ThemeToggle />
-          <Button size="sm" variant="ghost" render={<Link href="/login" />}>
+          <Button
+            size="sm"
+            variant="ghost"
+            nativeButton={false}
+            render={<Link href="/login" />}
+          >
             {t("signIn")}
           </Button>
           {isApex ? (
-            <Button size="sm" render={<Link href="/register" />}>
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/register" />}
+            >
               {t("ctaCreateWorkspace")}
               <ArrowUpRight className="size-3.5" />
             </Button>
           ) : (
-            <Button size="sm" render={<Link href="/dashboard" />}>
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/dashboard" />}
+            >
               {t("ctaOpenDashboard")}
               <ArrowUpRight className="size-3.5" />
             </Button>
@@ -90,11 +103,20 @@ export default async function Home() {
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <Button size="lg" render={<Link href="/register" />}>
+          <Button
+            size="lg"
+            nativeButton={false}
+            render={<Link href="/register" />}
+          >
             {t("ctaPrimary")}
             <ArrowUpRight className="size-4" />
           </Button>
-          <Button size="lg" variant="outline" render={<Link href="/login" />}>
+          <Button
+            size="lg"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href="/login" />}
+          >
             {t("ctaSecondary")}
           </Button>
         </div>

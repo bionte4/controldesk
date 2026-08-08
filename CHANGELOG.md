@@ -11,6 +11,275 @@ MUST include the `.cursorrules` section it maps to.
 
 ### Added
 
+- **AI Insights — Google Gemini live provider + locale-aware output**
+  (rules §15, §18). Default provider AI Analytics Engine sekarang bisa
+  di-switch dari `mock` ke `google` untuk output naratif live per tenant:
+  - `src/lib/ai/generators.ts` — bump `PROMPT_VERSION` ke `"v2-locale"`.
+    Semua 4 generator (`predictExpenseImpact`, `analyzeResourceUtilization`,
+    `analyzeClientHealth`, `analyzeSlaBreach`) sekarang menerima parameter
+    `locale: Locale = DEFAULT_LOCALE`. Helper `languageDirective(locale)`
+    inject directive bilingual di awal system prompt (Bahasa Indonesia
+    formal untuk `id`, professional English untuk `en`). Nama proyek /
+    klien / karyawan tetap dipertahankan apa adanya. Helper `pick()`
+    memastikan fallback (mock) output juga bilingual.
+  - `src/app/(app)/insights/actions.ts` — `resolveInsightLocale()` baca
+    cookie `NEXT_LOCALE` via `next/headers` cookies() dan pass ke
+    `runInsight()`. Insight yang di-generate cocok dengan UI locale user
+    tanpa manual toggle.
+  - Provider slot Gemini di `resolveModel()` — dynamic import
+    `@ai-sdk/google` (Vercel AI SDK ≥ 1.0). Support `AI_MODEL_ID`
+    `gemini-flash-latest` (recommended), `gemini-3.6-flash`,
+    `gemini-3.5-flash-lite`, dll. Format API key `AQ.Ab...` (per
+    migrasi Google Juni 2026, sunset `AIza...` September 2026).
+  - `scripts/test-ai-insight.ts` — CLI smoke test dengan flag
+    `--locale=id|en`. Dynamic-import package provider, panggil
+    `generateObject()` dengan Zod schema 3-field, print latency +
+    token usage. Support prompt override via positional arg.
+  - `package.json` — script `pnpm test:ai`. `tsx` runtime + custom
+    `scripts/tsconfig.json` dengan path alias `server-only` →
+    stub kosong (supaya import `src/lib/*` yang gate `server-only`
+    tidak throw di luar Next.js runtime).
+- **Telegram Bot — per-tenant integration with self-serve admin UI**
+  (rules §5, §17, §20). Setiap tenant admin bisa create bot via
+  @BotFather + wire ke ControlDesk tanpa engineering handoff:
+  - Migration `0069_telegram_integration.sql` — tabel
+    `tenant_telegram_bots` (per-tenant bot token, encrypted AES-256-GCM
+    via `token-crypto.ts`) + `user_telegram_links` (per-user chat_id +
+    display info). Kedua tabel RLS `no_direct` policy — hanya
+    service-role client yang boleh access.
+  - `src/lib/integrations/telegram/` — client (sendMessage +
+    verifyTelegramBotToken via `getMe`), repository (encryption I/O),
+    link-token (HMAC-SHA256 signed deep link untuk `/start` pairing,
+    10-menit expiry).
+  - Admin form `/settings/integrations/telegram-bot` — RSC page +
+    client form (RHF + Zod). Server Action `saveTelegramBotAction`
+    verify token via `getMe` sebelum save; kalau Telegram tolak,
+    tidak persist. `deactivateTelegramBotAction` soft-disable (row tetap
+    ada untuk audit).
+  - Webhook `POST /api/telegram/webhook` — parse inbound update
+    (`/start <hmac_token>`), verify HMAC signature, upsert row di
+    `user_telegram_links`, reply konfirmasi "Terhubung ✅".
+  - PDP additions — `decideTelegramBotConfig()` di
+    `src/lib/security/pdp.ts` restrict read/create/update/delete ke
+    `TENANT_ADMIN` + `GENERAL_MANAGER`. `ResourceType` extended dengan
+    `"telegram_bot_config"`. Audit action `AuditActionType` mapping
+    baru untuk `configure`.
+  - `scripts/test-telegram.ts` + `pnpm test:tg` — CLI smoke test:
+    verify config, panggil `/getMe`, list pending chats via
+    `/getUpdates` kalau tidak ada `chat_id` arg, atau kirim message
+    via `sendTelegramMessage()`. Bahasa error-message Indonesia.
+  - i18n keys baru di `messages/{id,en}.json` (`telegramAdmin.*`) +
+    runbook 5-step di halaman admin. `LANG_CACHE_BUST_TAG` di
+    `src/lib/i18n/request.ts` bumped ke `v11` untuk force pickup.
+- **WhatsApp — Fonnte integration (unofficial gateway)** (rules §5, §17,
+  §20). Notifikasi WA per-user via provider Fonnte (asal Indonesia).
+  Compliance caveat: Fonnte unofficial, ada ToS risk WhatsApp; slot
+  provider resmi (Meta Cloud, Twilio) sudah reserved untuk migrasi
+  masa depan:
+  - Migration `0070_whatsapp_integration.sql` — tabel
+    `tenant_whatsapp_configs` + `user_whatsapp_links`. Kolom
+    `provider text` dengan CHECK constraint `('TWILIO', 'META_CLOUD')`
+    initially.
+  - Migration `0071_fonnte_whatsapp_provider.sql` — expand CHECK
+    constraint untuk include `'FONNTE'`. Migration ini idempotent —
+    drop-if-exists sebelum add.
+  - `src/lib/integrations/whatsapp/client.ts` — adapter pattern
+    `sendWhatsAppMessage()` internal switch berdasarkan provider.
+    `sendViaFonnte()` handle Fonnte quirks: header `Authorization: <token>`
+    (tanpa `Bearer`), body `application/x-www-form-urlencoded`,
+    `countryCode: "62"` eksplisit, `target` tanpa `+`. `verifyWhatsAppCredentials()`
+    branch FONNTE call `GET /device` untuk cek device pairing +
+    quota + expiry. 5-detik timeout via `AbortSignal.timeout(5000)`.
+  - `src/lib/validation/whatsapp-admin.ts` — Zod schema simplified
+    ke FONNTE-only literal (dropped Twilio + Meta form fields untuk
+    menghindari confusion). 10 unit test cases di
+    `whatsapp-admin.test.ts` cover valid + invalid input.
+  - Admin form `/settings/integrations/whatsapp-business` — RSC +
+    client form (RHF). Server Action `saveWhatsAppConfigAction` verify
+    device dulu via `/device` sebelum persist encrypted token.
+  - `scripts/test-whatsapp-fonnte.ts` + `pnpm test:wa` — CLI smoke test
+    load config, decrypt token, cek device via `/device`, kirim message
+    via helper produksi. Auto-normalize nomor (`0881…` → `62881…`).
+  - `scripts/fonnte-device-status.ts` + `pnpm fonnte:device` — raw
+    dump `/device` response untuk debugging kalau pesan accept tapi
+    tidak delivered (paling sering: self-messaging, HP airplane mode,
+    quota habis).
+  - PDP additions — `decideWhatsAppConfig()` mirror pattern
+    Telegram. `ResourceType` extended dengan `"whatsapp_config"`.
+- **Developer CLI toolkit** — `tsx` runtime dengan custom
+  `scripts/tsconfig.json`:
+  - Path alias `@/*` → `src/*` (mirror Next.js).
+  - Path alias `server-only` → `scripts/server-only-stub.ts` (stub
+    kosong) supaya modul di `src/lib/integrations/**/repository.ts`
+    yang import `server-only` tidak throw ketika di-run via `tsx`
+    (`server-only` hanya bisa di-import di Server Component context;
+    di runtime `tsx` package aslinya throw eksplisit).
+  - Semua 4 CLI script di-wire di `package.json`:
+    - `pnpm test:ai [--locale=id|en] [prompt]`
+    - `pnpm test:tg [chat_id] [message] [--tenant=<uuid>]`
+    - `pnpm test:wa "<nomor>" [message] [--tenant=<uuid>]`
+    - `pnpm fonnte:device [--tenant=<uuid>]`
+  - Menggunakan `node --env-file=.env.local` (Node 20 native) —
+    tidak butuh `dotenv` package.
+- **Docs — Integrations playbook + CLI reference** (rules §17, §21).
+  Struktur folder baru `docs/integrations/` + `docs/dev-tools.md`
+  dengan pattern Diátaxis (Tutorial + How-To + Reference + Explanation).
+  Bilingual (Bahasa Indonesia sebagai lead, istilah teknis English).
+  Setiap doc: prasyarat → setup langkah-demi-langkah → verifikasi via
+  CLI + UI → arsitektur (Mermaid sequence diagram) → security → env
+  var → troubleshooting → FAQ.
+  - `docs/integrations/README.md` — hub katalog + kapan pakai apa +
+    security summary + roadmap slot.
+  - `docs/integrations/ai-insights-gemini.md` — Gemini setup end-to-end,
+    model selection guide (per Aug 2026 API), PII redaction, cost
+    estimate, provider alternatif (OpenAI/Anthropic/Ollama).
+  - `docs/integrations/telegram-bot.md` — BotFather flow, admin config,
+    HMAC deep-link user pairing, HTML injection escape guidance.
+  - `docs/integrations/whatsapp-fonnte.md` — Fonnte device setup,
+    compliance caveat (ToS risk), self-messaging pitfall, provider
+    adapter pattern.
+  - `docs/dev-tools.md` — CLI reference lengkap untuk 4 script +
+    guide "cara nambah tool baru".
+  - Updates ke `docs/README.md` (Integrations section + doc map),
+    `docs/env-reference.md` (Gemini format modern + messaging env
+    vars), `docs/modules/ai-and-notifications.md` (locale-aware Part 1
+    + Messaging channels Part 3 cross-link).
+
+- **Projects — Google Calendar publisher (outbox pattern)** (rules §7, §18,
+  §22). The `sync_calendar` toggle on the wizard now actually feeds a
+  publisher pipeline:
+  - Migration `0039_google_calendar_integration.sql` adds
+    `google_calendar_credentials` (per-tenant OAuth refresh token) and the
+    `project_calendar_events` outbox table with `calendar_event_kind`
+    (`PROJECT_CREATED|UPDATED|DELETED`, `MILESTONE_*`) and
+    `calendar_event_status` (`PENDING|SENT|FAILED|SKIPPED`). Follow-ups
+    `0040..0042` fixed the pgcrypto schema path and then pivoted to
+    Node-side AES-256-GCM (`src/lib/security/token-crypto.ts`, 6 unit
+    tests) because Supabase's pooled connections cannot reliably set the
+    `app.enc_key` GUC.
+  - Publisher interface `CalendarPublisher` at
+    `src/lib/integrations/google-calendar/` with two implementations:
+    `NoopCalendarPublisher` (dev / CI default — logs + synthetic
+    `noop-<id>` event id) and `GoogleCalendarPublisher` (real
+    `googleapis` client behind a dynamic import; activated when
+    `GOOGLE_CALENDAR_CLIENT_ID/_SECRET` are set). Factory in
+    `index.ts` picks between them with a `__setCalendarPublisherForTests`
+    hook mirroring `mailer.ts`.
+  - Server action `createProjectAction` now enqueues one `PROJECT_CREATED`
+    + one `MILESTONE_CREATED` per milestone into the outbox when
+    `sync_calendar=true`. Enqueue failures are logged but non-fatal:
+    the project and milestones stay durable because calendar sync is
+    eventually-consistent.
+  - Drain endpoint `POST /api/cron/google-calendar-drain` (registered in
+    `vercel.json` at `*/10 * * * *`) hydrates project + milestone state,
+    resolves and decrypts tenant credentials Node-side, dispatches to
+    the active publisher, and marks each row `SENT / FAILED / SKIPPED`
+    with exponential-backoff (`2^attempts` minutes, capped at 6 hours).
+    12 Vitest cases covering empty batches, missing credentials,
+    `sync_calendar=false` guard, dry-run, retryable vs non-retryable
+    failure classification, milestone hydration, multi-tenant fan-out,
+    and full end-to-end with `NoopCalendarPublisher`. Additional 15
+    Vitest cases exercise the Google event builder (all-day event span,
+    endDate fallback, milestone one-day event, HTTP code extraction).
+- **Topbar Bell — per-`notification_kind` icons + tone map** (rules §20).
+  `NotificationsBell` (`src/components/shell/notifications-bell.tsx`)
+  now renders each row with a `lucide-react` icon and a tenant-branded
+  tone class instead of a plain dot: `CalendarClock` for
+  `PROJECT_CONTRACT_EXPIRING`, `UserRoundCog` for
+  `EMPLOYEE_CONTRACT_EXPIRING` + `HR_REQUEST_UPDATE`, `Wallet` for cash
+  advance / petty-cash kinds, etc. Unread items keep a small primary-
+  coloured dot in the top-right of the icon. Fully typed against
+  `notification_kind` so any future enum extension is a compile-time
+  todo.
+- **Projects — 3-step creation wizard + auto-numbering + priority-driven SLA**
+  (rules §7, §17, §29). The `/projects` "New project" CTA now opens a
+  guided sheet whose steps match the internal PM intake process:
+  1. *Info* — client, project name, priority, PM, project type, status,
+     location, description.
+  2. *Timeline & budget* — start / end dates (with computed duration),
+     contract value + currency (IDR-only per §14), free-form notes, and
+     a "Sync to Google Calendar" toggle whose flag is persisted for a
+     future publisher.
+  3. *Milestones* — optional inline add / remove with per-row weighting
+     (`weight_pct`). When left blank or all zero, the wizard falls back
+     to even weighting inside the server action.
+  - Migration `0036_projects_wizard_fields.sql` — new enum
+    `project_priority` (CRITICAL / HIGH / MEDIUM / LOW), extends
+    `project_status` with `DRAFT`, adds `priority`, `location`,
+    `contract_value` (`numeric(18,2)`, IDR-only), `currency`, `notes`,
+    `sync_calendar` columns on `public.projects`, and installs the
+    `project_numbering_sequence` table + BEFORE-INSERT trigger that
+    assigns `project_number = PRJ-{YYYY}-{seq:04}` per tenant per year.
+  - Migration `0037_projects_number_collision_safe.sql` — backfills the
+    sequence from any pre-existing `PRJ-YYYY-####` rows (seed data,
+    imports) and makes the trigger loop past already-taken numbers so
+    manual inserts never break autonumbering.
+  - `priority` on the parent project feeds the default severity for new
+    `project_issues`, wiring the business-hours SLA (CRITICAL=1h,
+    HIGH=4h, MEDIUM=8h, LOW=24h; see 0029). Set via
+    `NewIssueSheet.defaultSeverity` from `ProjectIssuesSection`.
+  - New Playwright suite `e2e/projects-wizard.spec.ts` covering the
+    happy path (auto-numbered `PRJ-YYYY-####` visible in the list row)
+    and the Step-1 validation gate. Vitest updates in
+    `src/lib/validation/project.test.ts` (13 cases) exercise the
+    milestone-weight refinements.
+- **Projects — contract-expiry reminders** (rules §7, §20). New
+  `POST /api/cron/project-contract-reminders` sweep enqueues in-app
+  notifications 30 / 14 / 7 / 3 days ahead of `end_date` for projects
+  whose status is DRAFT / PLANNING / ACTIVE / ON_HOLD. Notifications
+  fan out to the ACTIVE `PRIMARY_PM` and to Head Manager / GM / Tenant
+  Admin (dedupe on `(user_id, employee_id)`). Idempotency: skip when a
+  matching `(project_id, threshold_days)` notification was created in
+  the last 26 hours. Migration `0038_project_contract_expiring_notif.sql`
+  adds the `PROJECT_CONTRACT_EXPIRING` enum value; Vercel cron scheduled
+  at `15 1 * * *` (08:15 WIB) to stagger from the employee variant.
+- **HR — Employees directory + contract-expiry reminders** (rules §6, §12, §20).
+  New `/hr/employees` page + "New employee" sheet matching the reference
+  screenshot: First / Last name, Email, Phone, Department (dropdown),
+  Position (dropdown), Join date, Employment type, End date, Availability,
+  Date of birth (Permanent only).
+  - Migration `0034_employees_extended.sql` — new enums `employment_type`
+    (PERMANENT / CONTRACT / PROBATION / INTERN / OUTSOURCE / OUTTASK) and
+    `employee_availability` (AVAILABLE / ASSIGNED / ON_LEAVE / INACTIVE);
+    new columns on `employees` (`first_name`, `last_name`, `phone`,
+    `department`, `position_title`, `date_of_birth`, `join_date`,
+    `employment_type`, `contract_end_date`, `availability`); `tenants` gains
+    `retirement_age` (default 55, statutory pensiun); CHECK constraints
+    force non-PERMANENT rows to supply `contract_end_date` and forbid end
+    date preceding join date; BEFORE trigger auto-derives
+    `contract_end_date = date_of_birth + retirement_age` for PERMANENT
+    rows when the end date is blank; new notification kind
+    `EMPLOYEE_CONTRACT_EXPIRING`. `employees.user_id` becomes NULLABLE so
+    HR admins can register employees before they activate a system account.
+  - `src/lib/validation/employee.ts` — Zod schema with `superRefine` for
+    the "end date required for non-PERMANENT" rule + join-date coherence
+    check + DOB sanity guard (17 y ≤ age ≤ 90 y); 16 unit tests.
+  - `src/app/(app)/hr/employees/*` — RSC list page (contract expiry badge
+    turns amber ≤ 30 days, rose after expiry) + slide-over form with
+    conditional required-marker on End date; server actions
+    `createEmployeeAction` / `updateEmployeeAction` /
+    `setEmployeeAvailabilityAction` wrapped in `withSecureAction`
+    (PDP `employee/create` = HR_ADMIN + TENANT_ADMIN).
+  - `src/app/api/cron/employee-contract-reminders/route.ts` — daily cron
+    (08:00 WIB) sweeping non-PERMANENT contracts at 30 / 14 / 7 / 1 day
+    horizons, notifying every active HR_ADMIN + TENANT_ADMIN via the
+    in-app bell. Idempotent per (employee, threshold) within a 26-hour
+    window; dry-run mode supported. Vercel Cron entry added.
+  - Sidebar nav: new "Karyawan / Employees" item in the People section
+    (icon Users). Full i18n keys in `messages/{id,en}.json`.
+  - `src/lib/notifications/service.ts` + `src/lib/auth/session.ts`
+    narrowing updated to keep the rest of the codebase type-safe now that
+    `employees.user_id` can be `null` (employees without an auth account
+    are silently skipped by the notification fan-out).
+
+- **Fix — `<DropdownMenuLabel>` outside `<Menu.Group>` caused Base UI
+  error #31 crashing every page that mounted the app topbar or language
+  toggle**. Refactored `DropdownMenuLabel` in `src/components/ui/dropdown-menu.tsx`
+  to render a plain `<div role="presentation">` instead of
+  `MenuPrimitive.GroupLabel`, which required a `MenuGroupContext` parent.
+  Existing call sites (topbar user menu, language toggle, project issue
+  row menu) continue to work with no changes.
+
 - **Documentation — QA / QC / Tester playbooks** (rules §21 testing,
   §23 accessibility). Adds nine new docs under `docs/qa/` yang
   complement engineer-facing `docs/testing.md` dengan perspektif

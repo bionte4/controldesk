@@ -54,10 +54,19 @@ export default async function WeeklyTimesheetsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/hr/timesheets" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/hr/timesheets" />}
+          >
             {t("weekly.dailyView")}
           </Button>
-          <Button size="sm" render={<Link href={`/hr/timesheets/weekly/${todayWeek}`} />}>
+          <Button
+            size="sm"
+            nativeButton={false}
+            render={<Link href={`/hr/timesheets/weekly/${todayWeek}`} />}
+          >
             {t("weekly.newForCurrentWeek", { week: todayWeek })}
           </Button>
         </div>

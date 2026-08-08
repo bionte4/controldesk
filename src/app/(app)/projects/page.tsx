@@ -17,9 +17,18 @@ import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import type { EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
-import type { ProjectStatus } from "@/types/database";
+import type {
+  ProjectPriority,
+  ProjectStatus,
+  ProjectType,
+} from "@/types/database";
 
-import { NewProjectSheet, type ClientOption } from "./new-project-sheet";
+import {
+  NewProjectSheet,
+  type ClientOption,
+  type PmOption,
+  type SponsorOption,
+} from "./new-project-sheet";
 
 export const metadata: Metadata = {
   title: "Projects",
@@ -28,10 +37,16 @@ export const metadata: Metadata = {
 type ProjectRow = {
   id: string;
   code: string;
+  project_number: string | null;
   name: string;
   status: ProjectStatus;
+  priority: ProjectPriority;
+  project_type: ProjectType;
   start_date: string | null;
+  end_date: string | null;
+  client_id: string;
   client_name: string;
+  client_code: string | null;
   budget_amount_db: string | null;
 };
 
@@ -46,33 +61,96 @@ async function loadClientOptions(): Promise<ClientOption[]> {
   return data.map((c) => ({ id: c.id, name: c.name }));
 }
 
+async function loadPmOptions(): Promise<PmOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, first_name, last_name, full_name, role")
+    .in("role", ["PROJECT_MANAGER", "OPERATIONS_MANAGER", "HEAD_MANAGER"])
+    .limit(200);
+  if (error || !data) return [];
+  return data.map((e) => {
+    const emp = e as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      full_name: string | null;
+    };
+    const displayName =
+      [emp.first_name, emp.last_name].filter(Boolean).join(" ") ||
+      emp.full_name ||
+      "—";
+    return { id: emp.id, name: displayName };
+  });
+}
+
+/**
+ * BC sponsors are OM / HM / TENANT_ADMIN — the roles who typically
+ * own the intake pitch before the project is promoted to PLANNING.
+ * We surface the DB role as-is so the picker can show it as a tag.
+ */
+async function loadSponsorOptions(): Promise<SponsorOption[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, first_name, last_name, full_name, role")
+    .in("role", ["OPERATIONS_MANAGER", "HEAD_MANAGER", "TENANT_ADMIN"])
+    .limit(200);
+  if (error || !data) return [];
+  return data.map((e) => {
+    const emp = e as {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+      full_name: string | null;
+      role: string;
+    };
+    const displayName =
+      [emp.first_name, emp.last_name].filter(Boolean).join(" ") ||
+      emp.full_name ||
+      "—";
+    return { id: emp.id, name: displayName, role: emp.role };
+  });
+}
+
 async function loadProjects(): Promise<ProjectRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("projects")
     .select(
-      "id, code, name, status, start_date, clients(name), project_budgets(budget_amount)",
+      "id, code, project_number, name, status, priority, project_type, start_date, end_date, client_id, clients(id, name, project_code), project_budgets(budget_amount)",
     )
     .order("start_date", { ascending: false, nullsFirst: false })
     .limit(200);
 
   if (error) return [];
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    code: row.code,
-    name: row.name,
-    status: row.status as ProjectStatus,
-    start_date: row.start_date,
-    client_name:
-      (row.clients as unknown as { name: string } | null)?.name ?? "—",
-    budget_amount_db:
-      (row.project_budgets as unknown as { budget_amount: string }[] | null)?.[0]
-        ?.budget_amount ?? null,
-  }));
+  return (data ?? []).map((row) => {
+    const cli = row.clients as unknown as
+      | { id: string; name: string; project_code: string | null }
+      | null;
+    return {
+      id: row.id,
+      code: row.code,
+      project_number: row.project_number,
+      name: row.name,
+      status: row.status as ProjectStatus,
+      priority: (row.priority ?? "MEDIUM") as ProjectPriority,
+      project_type: (row.project_type ?? "INTERNAL") as ProjectType,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      client_id: row.client_id,
+      client_name: cli?.name ?? "—",
+      client_code: cli?.project_code ?? null,
+      budget_amount_db:
+        (row.project_budgets as unknown as { budget_amount: string }[] | null)?.[0]
+          ?.budget_amount ?? null,
+    };
+  });
 }
 
 const STATUS_TONE: Record<ProjectStatus, string> = {
+  DRAFT: "bg-muted text-muted-foreground border-border",
   PLANNING: "bg-chart-2/15 text-chart-2 border-chart-2/30",
   ACTIVE: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
   ON_HOLD: "bg-amber-500/15 text-amber-500 border-amber-500/30",
@@ -80,13 +158,35 @@ const STATUS_TONE: Record<ProjectStatus, string> = {
   ARCHIVED: "bg-muted text-muted-foreground border-border",
 };
 
+const PRIORITY_TONE: Record<ProjectPriority, string> = {
+  CRITICAL: "bg-rose-500/15 text-rose-500 border-rose-500/30",
+  HIGH: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  MEDIUM: "bg-chart-2/15 text-chart-2 border-chart-2/30",
+  LOW: "bg-muted text-muted-foreground border-border",
+};
+
 export default async function ProjectsPage() {
-  const [employee, projects, clientOptions, t, tStatus, tCols] = await Promise.all([
+  const [
+    employee,
+    projects,
+    clientOptions,
+    pmOptions,
+    sponsorOptions,
+    t,
+    tStatus,
+    tPriority,
+    tType,
+    tCols,
+  ] = await Promise.all([
     requireCurrentEmployee(),
     loadProjects(),
     loadClientOptions(),
+    loadPmOptions(),
+    loadSponsorOptions(),
     getTranslations("projects"),
     getTranslations("projects.status"),
+    getTranslations("projects.priority"),
+    getTranslations("projects.type"),
     getTranslations("projects.columns"),
   ]);
 
@@ -115,7 +215,13 @@ export default async function ProjectsPage() {
             {t("subtitle")}
           </p>
         </div>
-        {canCreate ? <NewProjectSheet clients={clientOptions} /> : null}
+        {canCreate ? (
+          <NewProjectSheet
+            clients={clientOptions}
+            pms={pmOptions}
+            sponsors={sponsorOptions}
+          />
+        ) : null}
       </header>
 
       {projects.length === 0 ? (
@@ -140,9 +246,11 @@ export default async function ProjectsPage() {
                     <ColHead>{tCols("code")}</ColHead>
                     <ColHead>{tCols("name")}</ColHead>
                     <ColHead>{tCols("client")}</ColHead>
+                    <ColHead>{tCols("type")}</ColHead>
                     <ColHead>{tCols("status")}</ColHead>
+                    <ColHead>{tCols("priority")}</ColHead>
                     <ColHead className="text-right">{tCols("budget")}</ColHead>
-                    <ColHead>{tCols("startDate")}</ColHead>
+                    <ColHead>{tCols("period")}</ColHead>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,7 +264,7 @@ export default async function ProjectsPage() {
                           href={`/projects/${p.id}`}
                           className="hover:text-primary transition-colors"
                         >
-                          {p.code}
+                          {p.project_number ?? p.code}
                         </Link>
                       </td>
                       <td className="px-4 py-3 font-medium">
@@ -168,7 +276,20 @@ export default async function ProjectsPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {p.client_name}
+                        <Link
+                          href={`/clients/${p.client_id}`}
+                          className="hover:text-primary transition-colors"
+                        >
+                          {p.client_name}
+                        </Link>
+                        {p.client_code ? (
+                          <span className="ml-1 font-mono text-xs text-muted-foreground/70">
+                            ({p.client_code})
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">
+                        {tType(p.project_type)}
                       </td>
                       <td className="px-4 py-3">
                         <Badge
@@ -176,6 +297,14 @@ export default async function ProjectsPage() {
                           className={STATUS_TONE[p.status]}
                         >
                           {tStatus(p.status)}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant="outline"
+                          className={PRIORITY_TONE[p.priority]}
+                        >
+                          {tPriority(p.priority)}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
@@ -189,6 +318,12 @@ export default async function ProjectsPage() {
                         {p.start_date
                           ? formatInTz(p.start_date, "dd MMM yyyy")
                           : "—"}
+                        {p.end_date ? (
+                          <>
+                            <span className="mx-1 text-muted-foreground/50">→</span>
+                            {formatInTz(p.end_date, "dd MMM yyyy")}
+                          </>
+                        ) : null}
                       </td>
                     </tr>
                   ))}

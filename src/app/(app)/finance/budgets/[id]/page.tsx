@@ -17,6 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { loadPostableAccounts } from "@/lib/data/coa";
+import { loadLookupOptions } from "@/lib/data/lookups";
 import { toCanonicalRole, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -25,10 +27,7 @@ import {
   budgetSlotForStatus,
   canBudgetAdvance,
 } from "@/lib/budgets/state";
-import {
-  BUDGET_CATEGORIES,
-  type BudgetCategory,
-} from "@/lib/validation/budget";
+import { BUDGET_CATEGORIES } from "@/lib/validation/budget";
 import type { BudgetStatus } from "@/types/database";
 
 import {
@@ -67,6 +66,7 @@ type BudgetLine = {
   id: string;
   seq: number;
   category: string;
+  coa_id: string | null;
   description: string | null;
   planned_amount_db: string | number;
   realized_amount_db: string | number;
@@ -118,7 +118,7 @@ async function loadLines(budgetId: string): Promise<BudgetLine[]> {
   const { data, error } = await supabase
     .from("budget_details")
     .select(
-      "id, seq, category, description, planned_amount, realized_amount, outstanding_amount, remaining_amount",
+      "id, seq, category, coa_id, description, planned_amount, realized_amount, outstanding_amount, remaining_amount",
     )
     .eq("budget_id", budgetId)
     .order("seq", { ascending: true });
@@ -127,6 +127,7 @@ async function loadLines(budgetId: string): Promise<BudgetLine[]> {
     id: row.id,
     seq: row.seq,
     category: row.category,
+    coa_id: row.coa_id,
     description: row.description,
     planned_amount_db: row.planned_amount,
     realized_amount_db: row.realized_amount,
@@ -159,19 +160,68 @@ function resolveAction(
   return "none";
 }
 
+/**
+ * Best-effort label resolution for legacy budget categories persisted with
+ * enum-shaped codes (`DIRECT_LABOUR`, `OPERATIONS`, …). If the code is one
+ * of the seeded defaults we route through the strict-typed i18n bundle;
+ * otherwise we render the raw code so admin-defined codes (added post-0054)
+ * still display when the lookup map doesn't hit.
+ */
+function resolveLegacyCategoryLabel(
+  code: string,
+  // next-intl's translator has a strict keyof namespace parameter; typing
+  // it here as an untyped callable keeps our runtime fallback compile-clean
+  // without polluting the caller with cast noise.
+  tCat: (key: never) => string,
+): string {
+  if ((BUDGET_CATEGORIES as readonly string[]).includes(code)) {
+    try {
+      return tCat(code as never);
+    } catch {
+      return code;
+    }
+  }
+  return code;
+}
+
 export default async function BudgetDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
 
-  const [employee, budget, lines, t, tCat] = await Promise.all([
-    requireCurrentEmployee(),
-    loadBudget(id),
-    loadLines(id),
-    getTranslations("budgets.detail"),
-    getTranslations("budgets.categories"),
-  ]);
+  const [employee, budget, lines, t, tCat, budgetCategoryLookup, coaAccounts] =
+    await Promise.all([
+      requireCurrentEmployee(),
+      loadBudget(id),
+      loadLines(id),
+      getTranslations("budgets.detail"),
+      getTranslations("budgets.categories"),
+      loadLookupOptions("budget_category"),
+      loadPostableAccounts(),
+    ]);
   if (!budget) notFound();
+
+  // Build a label lookup keyed by code so both the read-only cell and the
+  // "Add line item" form can prefer the admin-curated label over the fixed
+  // i18n bundle. New admin-added codes (e.g. SOFTWARE_LICENSE) resolve via
+  // this map; legacy seeded codes still fall back to `tCat` if the lookup
+  // was never touched.
+  const categoryLabelByCode = new Map<string, string>(
+    budgetCategoryLookup.map((row) => [row.code, row.label]),
+  );
+  const categoryOptions = budgetCategoryLookup.map((row) => ({
+    code: row.code,
+    label: row.label,
+  }));
+
+  // CoA render helpers — dropdown feeds the form, label map feeds the
+  // read-only table. Kept side by side so both stay in sync.
+  const coaOptions = coaAccounts.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+  }));
+  const coaById = new Map(coaAccounts.map((r) => [r.id, r]));
 
   const totalPlanned = parseMoneyFromDb(budget.total_planned_amount_db);
   const totalRealized = lines.reduce(
@@ -314,6 +364,7 @@ export default async function BudgetDetailPage(props: {
                   <tr className="text-left">
                     <Th>#</Th>
                     <Th>{t("columns.category")}</Th>
+                    <Th>{t("columns.coa")}</Th>
                     <Th>{t("columns.description")}</Th>
                     <Th className="text-right">{t("columns.planned")}</Th>
                     <Th className="text-right">{t("columns.realized")}</Th>
@@ -334,11 +385,22 @@ export default async function BudgetDetailPage(props: {
                         {l.seq}
                       </td>
                       <td className="px-4 py-3">
-                        {(BUDGET_CATEGORIES as readonly string[]).includes(
-                          l.category,
-                        )
-                          ? tCat(l.category as BudgetCategory)
-                          : l.category}
+                        {categoryLabelByCode.get(l.category) ??
+                          resolveLegacyCategoryLabel(l.category, tCat)}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        {l.coa_id && coaById.has(l.coa_id) ? (
+                          <span>
+                            <code className="rounded bg-muted/40 px-1.5 py-0.5 font-mono text-[10px]">
+                              {coaById.get(l.coa_id)!.code}
+                            </code>{" "}
+                            <span className="text-muted-foreground">
+                              {coaById.get(l.coa_id)!.name}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {l.description ?? "—"}
@@ -382,6 +444,8 @@ export default async function BudgetDetailPage(props: {
                 budgetId={budget.id}
                 nextSeq={nextSeq}
                 readOnly={readOnly}
+                categoryOptions={categoryOptions}
+                coaOptions={coaOptions}
               />
             </div>
           ) : null}

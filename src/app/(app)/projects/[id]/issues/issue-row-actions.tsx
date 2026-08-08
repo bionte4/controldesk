@@ -81,10 +81,7 @@ export function IssueRowActions({
         {nextStatuses.map((to) => (
           <DropdownMenuItem
             key={to}
-            onSelect={(e) => {
-              e.preventDefault();
-              onTransition(to);
-            }}
+            onClick={() => onTransition(to)}
             disabled={isPending}
           >
             {ICON[to]}

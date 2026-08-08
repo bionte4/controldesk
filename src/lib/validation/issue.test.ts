@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ISSUE_CATEGORY_VALUES,
   assignIssueSchema,
   closeIssueSchema,
   commentIssueSchema,
   createIssueSchema,
+  issueCategorySchema,
   issueSeveritySchema,
   issueStatusSchema,
   transitionIssueSchema,
@@ -29,13 +31,57 @@ describe("issue Zod schemas", () => {
     expect(() => issueStatusSchema.parse("DEFERRED")).toThrow();
   });
 
-  it("createIssueSchema defaults severity=MEDIUM and description=''", () => {
+  it("createIssueSchema defaults severity=MEDIUM, description='', category=BUG, tags=[]", () => {
     const parsed = createIssueSchema.parse({
       project_id: UUID_A,
       title: "Login broken",
     });
     expect(parsed.severity).toBe("MEDIUM");
     expect(parsed.description).toBe("");
+    expect(parsed.category).toBe("BUG");
+    expect(parsed.tags).toEqual([]);
+    expect(parsed.milestone_id).toBeUndefined();
+    expect(parsed.due_date).toBeUndefined();
+    expect(parsed.notes).toBeUndefined();
+  });
+
+  it("category schema accepts all seven ORM-style categories", () => {
+    for (const c of ISSUE_CATEGORY_VALUES) {
+      expect(() => issueCategorySchema.parse(c)).not.toThrow();
+    }
+    expect(() => issueCategorySchema.parse("BLOCKER")).toThrow();
+  });
+
+  it("createIssueSchema normalises + de-duplicates tags to lowercase", () => {
+    const parsed = createIssueSchema.parse({
+      project_id: UUID_A,
+      title: "Slow query",
+      tags: [" Checkout ", "checkout", "BACKEND", "backend"],
+    });
+    expect(parsed.tags).toEqual(["checkout", "backend"]);
+  });
+
+  it("createIssueSchema rejects > 20 tags", () => {
+    expect(() =>
+      createIssueSchema.parse({
+        project_id: UUID_A,
+        title: "Load test spike",
+        tags: Array.from({ length: 21 }, (_, i) => `t${i}`),
+      }),
+    ).toThrow();
+  });
+
+  it("createIssueSchema accepts optional milestone_id + due_date + notes", () => {
+    const parsed = createIssueSchema.parse({
+      project_id: UUID_A,
+      title: "Milestone risk",
+      milestone_id: UUID_B,
+      due_date: "2026-12-01",
+      notes: "Escalate at next standup",
+    });
+    expect(parsed.milestone_id).toBe(UUID_B);
+    expect(parsed.due_date).toBe("2026-12-01");
+    expect(parsed.notes).toBe("Escalate at next standup");
   });
 
   it("createIssueSchema rejects blank title", () => {
@@ -79,6 +125,33 @@ describe("issue Zod schemas", () => {
       assignee_employee_id: null,
     });
     expect(parsed.assignee_employee_id).toBeNull();
+  });
+
+  it("updateIssueSchema accepts patching category/milestone/due_date/tags/notes independently", () => {
+    expect(() =>
+      updateIssueSchema.parse({
+        issue_id: UUID_A,
+        category: "INCIDENT",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      updateIssueSchema.parse({ issue_id: UUID_A, milestone_id: null }),
+    ).not.toThrow();
+    expect(() =>
+      updateIssueSchema.parse({ issue_id: UUID_A, due_date: null }),
+    ).not.toThrow();
+    expect(() =>
+      updateIssueSchema.parse({
+        issue_id: UUID_A,
+        tags: ["deploy", "ops"],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      updateIssueSchema.parse({
+        issue_id: UUID_A,
+        notes: "reassigned to L2",
+      }),
+    ).not.toThrow();
   });
 
   it("transitionIssueSchema accepts every terminal + intermediate status", () => {

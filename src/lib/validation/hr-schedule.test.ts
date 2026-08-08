@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   approveTimesheetSchema,
   createWorkShiftSchema,
+  deleteWorkShiftSchema,
   generatePayrollPeriodSchema,
   rejectTimesheetSchema,
   submitTimesheetSchema,
+  updateWorkShiftSchema,
   upsertRosterEntrySchema,
 } from "./hr-schedule";
 
@@ -46,6 +48,93 @@ describe("hr-schedule validation", () => {
         duration_hours: 30,
       });
       expect(bad.success).toBe(false);
+    });
+
+    it("uppercases lower-case codes so DB uniqueness is stable", () => {
+      const res = createWorkShiftSchema.safeParse({
+        code: "day",
+        name: "Day",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+      });
+      expect(res.success).toBe(true);
+      if (res.success) expect(res.data.code).toBe("DAY");
+    });
+
+    it("defaults allowance to 0 when omitted", () => {
+      const res = createWorkShiftSchema.safeParse({
+        code: "DAY",
+        name: "Day",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+      });
+      expect(res.success).toBe(true);
+      if (res.success) expect(res.data.shift_allowance_idr).toBe(0);
+    });
+
+    it("accepts optional project_id for scope tagging", () => {
+      const res = createWorkShiftSchema.safeParse({
+        code: "DAY_SITE_A",
+        name: "Day at site A",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+        project_id: UUID,
+      });
+      expect(res.success).toBe(true);
+      if (res.success) expect(res.data.project_id).toBe(UUID);
+    });
+
+    it("rejects invalid project_id (not a UUID)", () => {
+      const res = createWorkShiftSchema.safeParse({
+        code: "DAY",
+        name: "Day",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+        project_id: "not-a-uuid",
+      });
+      expect(res.success).toBe(false);
+    });
+  });
+
+  describe("updateWorkShiftSchema", () => {
+    it("requires id", () => {
+      const res = updateWorkShiftSchema.safeParse({
+        code: "DAY",
+        name: "Day",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+      });
+      expect(res.success).toBe(false);
+    });
+
+    it("accepts id + rest of the shape", () => {
+      const res = updateWorkShiftSchema.safeParse({
+        id: UUID,
+        code: "DAY",
+        name: "Day",
+        start_time: "08:00",
+        end_time: "17:00",
+        duration_hours: 8,
+        shift_allowance_idr: 25000,
+        is_night: false,
+      });
+      expect(res.success).toBe(true);
+    });
+  });
+
+  describe("deleteWorkShiftSchema", () => {
+    it("requires id", () => {
+      expect(deleteWorkShiftSchema.safeParse({}).success).toBe(false);
+    });
+    it("accepts id", () => {
+      expect(
+        deleteWorkShiftSchema.safeParse({ id: UUID }).success,
+      ).toBe(true);
     });
   });
 

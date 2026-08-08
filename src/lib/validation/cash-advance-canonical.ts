@@ -72,6 +72,13 @@ export const submitCanonicalCashAdvanceSchema = z.object({
     .min(4, "Purpose is too short.")
     .max(2000, "Purpose is too long."),
   needed_by: isoDateSchema.optional(),
+  /**
+   * Optional GL classification. Server action verifies the row is
+   * active + postable in the caller's tenant; nullable-safe.
+   */
+  coa_id: uuidSchema
+    .nullish()
+    .transform((v) => (v === null || v === undefined ? undefined : v)),
 });
 export type SubmitCanonicalCashAdvanceInput = z.infer<
   typeof submitCanonicalCashAdvanceSchema

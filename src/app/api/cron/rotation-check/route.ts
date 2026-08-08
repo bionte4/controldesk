@@ -112,6 +112,7 @@ export async function POST(request: Request) {
       // `notifications` still verifies tenant scoping.
       const notificationKind: NotificationKind = "SYSTEM";
       for (const admin of adminRows ?? []) {
+        if (!admin.user_id) continue;
         const { error: insertErr } = await supabase
           .from("notifications")
           .insert({

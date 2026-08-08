@@ -5,58 +5,14 @@ import { revalidatePath } from "next/cache";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import {
-  createWorkShiftSchema,
   deleteRosterEntrySchema,
   upsertRosterEntrySchema,
 } from "@/lib/validation/hr-schedule";
 
-// ---------------------------------------------------------------------------
-// Shifts — HR / management create / edit shift definitions.
-// ---------------------------------------------------------------------------
-export const createWorkShiftAction = withSecureAction({
-  schema: createWorkShiftSchema,
-  resource: "work_shift",
-  action: "create",
-  auditAction: "CREATE",
-  auditResourceName: "work_shifts",
-  resolveAttributes: async (_input, ctx) => ({
-    tenantId: ctx.actor.tenantId,
-  }),
-  handler: async (input, ctx) => {
-    const supabase = await createClient();
-    const durationInterval = `${input.duration_hours} hours`;
-
-    const { data: inserted, error } = await supabase
-      .from("work_shifts")
-      .insert({
-        tenant_id: ctx.actor.tenantId,
-        code: input.code.trim().toUpperCase(),
-        name: input.name.trim(),
-        start_time: `${input.start_time}:00`,
-        end_time: `${input.end_time}:00`,
-        duration: durationInterval,
-        shift_allowance: input.shift_allowance_idr,
-        is_night: input.is_night,
-      })
-      .select("id, code")
-      .single();
-    if (error || !inserted) {
-      throw new Error(error?.message ?? "Failed to create shift.");
-    }
-
-    revalidatePath("/hr/roster");
-    return {
-      result: { id: inserted.id, code: inserted.code },
-      auditResourceId: inserted.id,
-      auditNewValues: {
-        code: inserted.code,
-        duration_hours: input.duration_hours,
-        shift_allowance_idr: input.shift_allowance_idr,
-        is_night: input.is_night,
-      },
-    };
-  },
-});
+// NOTE: Work shift CRUD moved to `src/app/(app)/hr/shifts/actions.ts`
+// as of migration 0066 (project-scoped shift catalog). See that
+// file for `createWorkShiftAction`, `updateWorkShiftAction`, and
+// `deleteWorkShiftAction`.
 
 // ---------------------------------------------------------------------------
 // Rosters — upsert a single (employee, date) entry.

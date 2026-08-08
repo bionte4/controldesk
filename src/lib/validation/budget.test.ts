@@ -140,11 +140,24 @@ describe("addBudgetLineItemSchema", () => {
     expect(r.success).toBe(false);
   });
 
-  it("rejects unknown category", () => {
+  it("accepts admin-defined categories that pass the format check (migration 0054)", () => {
+    // Categories are now curated at runtime via `lookup_options` (domain
+    // `budget_category`). Schema-level validation is format only — the
+    // server action enforces the whitelist via SELECT against lookups.
     const r = addBudgetLineItemSchema.safeParse({
       budget_id: UUID_A,
       seq: 1,
-      category: "MYSTERY",
+      category: "SOFTWARE_LICENSE",
+      planned_amount: 1000,
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects category codes that don't match UPPER_SNAKE_CASE", () => {
+    const r = addBudgetLineItemSchema.safeParse({
+      budget_id: UUID_A,
+      seq: 1,
+      category: "software-license",
       planned_amount: 1000,
     });
     expect(r.success).toBe(false);

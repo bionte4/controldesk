@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, Mail, Phone, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Building2,
+  FileText,
+  FolderKanban,
+  Mail,
+  Phone,
+  Users,
+} from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +23,12 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import type { EmployeeRole } from "@/lib/rbac/roles";
+import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus, ContractStatus, ProjectStatus } from "@/types/database";
+
+import { EditClientSheet } from "./edit-client-sheet";
 
 export const metadata: Metadata = { title: "Client detail" };
 
@@ -28,6 +40,7 @@ const CLIENT_STATUS_TONE: Record<ClientStatus, string> = {
 };
 
 const PROJECT_STATUS_TONE: Record<ProjectStatus, string> = {
+  DRAFT: "bg-muted text-muted-foreground border-border",
   PLANNING: "bg-chart-2/15 text-chart-2 border-chart-2/30",
   ACTIVE: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
   ON_HOLD: "bg-amber-500/15 text-amber-500 border-amber-500/30",
@@ -84,6 +97,45 @@ export default async function ClientDetailPage(props: {
     ]);
 
   if (!client) notFound();
+
+  const canEditClient =
+    authorize({
+      actor: {
+        userId: employee.user_id,
+        employeeId: employee.id,
+        role: employee.role as EmployeeRole,
+        tenantId: employee.tenant_id,
+      },
+      action: "update",
+      resource: "client",
+      attributes: { tenantId: employee.tenant_id },
+    }).effect === "ALLOW";
+
+  // Soft-link resolution: both references are free-text nullable fields
+  // (see migration 0035). We only query when the value is set and gracefully
+  // fall back to a read-only chip if there's no match. The Kontrak chip
+  // routes to /finance/contracts/[id] (opens dedicated detail); the PID chip
+  // routes to /projects/[id].
+  const [linkedContract, linkedProject] = await Promise.all([
+    client.contract_number
+      ? supabase
+          .from("bpo_contracts")
+          .select("id")
+          .eq("tenant_id", employee.tenant_id)
+          .eq("contract_number", client.contract_number)
+          .maybeSingle()
+          .then((r) => r.data?.id ?? null)
+      : Promise.resolve(null),
+    client.project_code
+      ? supabase
+          .from("projects")
+          .select("id")
+          .eq("tenant_id", employee.tenant_id)
+          .eq("code", client.project_code)
+          .maybeSingle()
+          .then((r) => r.data?.id ?? null)
+      : Promise.resolve(null),
+  ]);
 
   const activeProjects = (projects ?? []).filter((p) => p.status === "ACTIVE");
   const totalBudget = (projects ?? []).reduce((acc, p) => {
@@ -148,6 +200,35 @@ export default async function ClientDetailPage(props: {
                 </span>
               ) : null}
             </div>
+
+            {(client.contract_number || client.project_code) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {client.contract_number ? (
+                  <ReferenceChip
+                    icon={<FileText className="size-3.5" />}
+                    label={t("refContract")}
+                    value={client.contract_number}
+                    href={
+                      linkedContract
+                        ? `/finance/contracts/${linkedContract}`
+                        : undefined
+                    }
+                  />
+                ) : null}
+                {client.project_code ? (
+                  <ReferenceChip
+                    icon={<FolderKanban className="size-3.5" />}
+                    label={t("refProject")}
+                    value={client.project_code}
+                    href={
+                      linkedProject
+                        ? `/projects/${linkedProject}`
+                        : undefined
+                    }
+                  />
+                ) : null}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
@@ -162,6 +243,22 @@ export default async function ClientDetailPage(props: {
               <Phone className="size-4" />
               {client.contact_phone}
             </span>
+          ) : null}
+          {canEditClient ? (
+            <EditClientSheet
+              client={{
+                id: client.id,
+                name: client.name,
+                industry: client.industry,
+                contact_name: client.contact_name,
+                contact_email: client.contact_email,
+                contact_phone: client.contact_phone,
+                status: client.status as ClientStatus,
+                contract_number: client.contract_number,
+                project_code: client.project_code,
+                notes: client.notes,
+              }}
+            />
           ) : null}
           <Button
             size="sm"
@@ -343,6 +440,36 @@ export default async function ClientDetailPage(props: {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+function ReferenceChip({
+  icon,
+  label,
+  value,
+  href,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  href?: string;
+}) {
+  const body = (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-mono font-medium">{value}</span>
+    </span>
+  );
+  if (!href) return body;
+  return (
+    <Link
+      href={href}
+      className="transition-colors hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
+      aria-label={`${label}: ${value}`}
+    >
+      {body}
+    </Link>
   );
 }
 

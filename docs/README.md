@@ -46,6 +46,20 @@ rules, dan tautan ke Server Actions.
 | [`modules/hris-and-payroll.md`](modules/hris-and-payroll.md)                     | Employee master (encrypted PII), shifts/roster, HR requests, timesheets, payroll. |
 | [`modules/ai-and-notifications.md`](modules/ai-and-notifications.md)             | AI insights (4 generators + safety), notifications (in-app + email + realtime). |
 
+## External integrations
+
+Konfigurasi + setup + troubleshooting untuk semua integrasi pihak ketiga
+(AI provider, messaging channels, calendar). Struktur konsisten — Setup
+step-by-step, arsitektur, security, troubleshooting, FAQ. Bilingual.
+
+| Doc                                                                              | Isi                                                                                    |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`integrations/README.md`](integrations/README.md)                               | Hub — katalog integrasi, kapan pakai apa, security summary.                            |
+| [`integrations/ai-insights-gemini.md`](integrations/ai-insights-gemini.md)       | Google Gemini setup, locale-aware prompt, PII redaction, model selection, cost.        |
+| [`integrations/telegram-bot.md`](integrations/telegram-bot.md)                   | Per-tenant BotFather flow, admin config, user pairing via HMAC deep link.              |
+| [`integrations/whatsapp-fonnte.md`](integrations/whatsapp-fonnte.md)             | Fonnte device pairing, ToS caveat, provider-adapter pattern, self-messaging pitfall.   |
+| [`dev-tools.md`](dev-tools.md)                                                   | CLI reference: `pnpm test:ai / test:tg / test:wa / fonnte:device` — smoke test tools.  |
+
 ## Reference
 
 Data structure + state machines dalam satu tempat.
@@ -134,6 +148,12 @@ docs/
 │   ├── hris-and-payroll.md
 │   └── ai-and-notifications.md
 │
+├── integrations/                        ← External integration playbooks
+│   ├── README.md
+│   ├── ai-insights-gemini.md
+│   ├── telegram-bot.md
+│   └── whatsapp-fonnte.md
+│
 ├── reference/                           ← Structured references
 │   ├── database-schema.md
 │   └── state-machines.md
@@ -165,7 +185,8 @@ docs/
 ├── deployment.md
 ├── getting-started.md
 ├── env-reference.md
-└── api-reference.md
+├── api-reference.md
+└── dev-tools.md                         ← CLI smoke test tooling
 ```
 
 ## Contributing to docs

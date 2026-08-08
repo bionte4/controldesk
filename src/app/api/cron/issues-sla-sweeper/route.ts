@@ -373,25 +373,28 @@ async function sendEscalationNotifications(args: {
     .in("id", Array.from(recipientEmployeeIds));
   if (!employees) return;
 
-  const rows = employees
-    .filter((e) => e.user_id)
-    .map((e) => ({
-      tenant_id: row.tenant_id,
-      user_id: e.user_id,
-      employee_id: e.id,
-      kind: "SLA_BREACH_WARNING" as const,
-      title: firstBreach
-        ? `SLA breached: ${row.title}`
-        : `Issue escalated to ${nextRole}`,
-      body: `Severity ${row.severity}. Escalation now at ${nextRole}.`,
-      action_url: `/projects/${row.project_id}#issue-${row.id}`,
-      payload: {
-        issue_id: row.id,
-        project_id: row.project_id,
-        severity: row.severity,
-        escalation_role: nextRole,
-      } as unknown as Json,
-    }));
+  const rows = employees.flatMap((e) => {
+    if (!e.user_id) return [];
+    return [
+      {
+        tenant_id: row.tenant_id,
+        user_id: e.user_id,
+        employee_id: e.id,
+        kind: "SLA_BREACH_WARNING" as const,
+        title: firstBreach
+          ? `SLA breached: ${row.title}`
+          : `Issue escalated to ${nextRole}`,
+        body: `Severity ${row.severity}. Escalation now at ${nextRole}.`,
+        action_url: `/projects/${row.project_id}#issue-${row.id}`,
+        payload: {
+          issue_id: row.id,
+          project_id: row.project_id,
+          severity: row.severity,
+          escalation_role: nextRole,
+        } as unknown as Json,
+      },
+    ];
+  });
 
   if (rows.length > 0) {
     const { error } = await supabase.from("notifications").insert(rows);

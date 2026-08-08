@@ -4,7 +4,25 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Bell } from "lucide-react";
+import {
+  Bell,
+  BadgeCheck,
+  BanknoteArrowDown,
+  CalendarClock,
+  CheckCircle2,
+  ClipboardCheck,
+  ClipboardList,
+  Clock,
+  FileWarning,
+  Handshake,
+  Info,
+  Upload,
+  UserRoundCog,
+  Undo2,
+  Wallet,
+  XCircle,
+  type LucideIcon,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { enUS } from "date-fns/locale/en-US";
 import { id as idLocale } from "date-fns/locale/id";
@@ -36,6 +54,103 @@ export type NotificationItem = {
 };
 
 const MAX_ITEMS = 20;
+
+/**
+ * Icon + tone per `notification_kind`. Kept in sync with
+ * `supabase/migrations/0006_notifications_and_attachments.sql` and every
+ * enum-extending migration below (0034 adds EMPLOYEE_CONTRACT_EXPIRING,
+ * 0038 adds PROJECT_CONTRACT_EXPIRING).
+ *
+ * `tone` is a Tailwind foreground colour class applied to the icon; it
+ * doubles as the accent used by the item's leading dot in unread state.
+ */
+const KIND_ICON: Record<NotificationKind, LucideIcon> = {
+  APPROVAL_REQUESTED: ClipboardCheck,
+  APPROVAL_APPROVED: CheckCircle2,
+  APPROVAL_REJECTED: XCircle,
+  CASH_ADVANCE_DISBURSED: Wallet,
+  CASH_ADVANCE_SETTLED: Wallet,
+  PETTY_CASH_LOW_BALANCE: Wallet,
+  HR_REQUEST_UPDATE: UserRoundCog,
+  PROJECT_HANDOVER: Handshake,
+  SLA_BREACH_WARNING: FileWarning,
+  SYSTEM: Info,
+  EMPLOYEE_CONTRACT_EXPIRING: UserRoundCog,
+  PROJECT_CONTRACT_EXPIRING: CalendarClock,
+  SETTLEMENT_DUE_SOON: CalendarClock,
+  SETTLEMENT_OVERDUE: FileWarning,
+  EXPENSE_DRAFT_STALE: CalendarClock,
+  EXPENSE_INCURRED_STALE: FileWarning,
+  EVALUATION_DUE: CalendarClock,
+  EVALUATION_SUBMITTED: ClipboardList,
+  EVALUATION_REVIEWED: ClipboardCheck,
+  EVALUATION_RETURNED: Undo2,
+  EVALUATION_APPROVED: CheckCircle2,
+  EVALUATION_REJECTED: XCircle,
+  EVALUATION_FINALIZED: BadgeCheck,
+  UPK_DRAFT_CREATED: BanknoteArrowDown,
+  UPK_SUBMITTED: BanknoteArrowDown,
+  UPK_APPROVED: CheckCircle2,
+  UPK_REJECTED: XCircle,
+  UPK_PAID: BanknoteArrowDown,
+  PAYROLL_STOP_REQUEST: FileWarning,
+  MONTHLY_REPORT_SUBMITTED: ClipboardList,
+  MONTHLY_REPORT_APPROVED: CheckCircle2,
+  MONTHLY_REPORT_RETURNED: Undo2,
+  MONTHLY_REPORT_REJECTED: XCircle,
+  MONTHLY_REPORT_SENT_TO_CLIENT: ClipboardList,
+  MONTHLY_REPORT_APPROVED_BY_CLIENT: CheckCircle2,
+  MONTHLY_REPORT_REJECTED_BY_CLIENT: Undo2,
+  MONTHLY_REPORT_BA_GENERATED: BadgeCheck,
+  TIMESHEET_SUBMITTED: Clock,
+  TIMESHEET_APPROVED: CheckCircle2,
+  TIMESHEET_REJECTED: XCircle,
+  BULK_IMPORT_COMPLETED: Upload,
+};
+
+const KIND_TONE: Record<NotificationKind, string> = {
+  APPROVAL_REQUESTED: "text-indigo-500 dark:text-indigo-300",
+  APPROVAL_APPROVED: "text-emerald-500 dark:text-emerald-300",
+  APPROVAL_REJECTED: "text-rose-500 dark:text-rose-300",
+  CASH_ADVANCE_DISBURSED: "text-amber-500 dark:text-amber-300",
+  CASH_ADVANCE_SETTLED: "text-emerald-500 dark:text-emerald-300",
+  PETTY_CASH_LOW_BALANCE: "text-rose-500 dark:text-rose-300",
+  HR_REQUEST_UPDATE: "text-sky-500 dark:text-sky-300",
+  PROJECT_HANDOVER: "text-indigo-500 dark:text-indigo-300",
+  SLA_BREACH_WARNING: "text-rose-500 dark:text-rose-300",
+  SYSTEM: "text-muted-foreground",
+  EMPLOYEE_CONTRACT_EXPIRING: "text-amber-500 dark:text-amber-300",
+  PROJECT_CONTRACT_EXPIRING: "text-amber-500 dark:text-amber-300",
+  SETTLEMENT_DUE_SOON: "text-amber-500 dark:text-amber-300",
+  SETTLEMENT_OVERDUE: "text-rose-500 dark:text-rose-300",
+  EXPENSE_DRAFT_STALE: "text-amber-500 dark:text-amber-300",
+  EXPENSE_INCURRED_STALE: "text-amber-500 dark:text-amber-300",
+  EVALUATION_DUE: "text-amber-500 dark:text-amber-300",
+  EVALUATION_SUBMITTED: "text-indigo-500 dark:text-indigo-300",
+  EVALUATION_REVIEWED: "text-indigo-500 dark:text-indigo-300",
+  EVALUATION_RETURNED: "text-amber-500 dark:text-amber-300",
+  EVALUATION_APPROVED: "text-emerald-500 dark:text-emerald-300",
+  EVALUATION_REJECTED: "text-rose-500 dark:text-rose-300",
+  EVALUATION_FINALIZED: "text-emerald-500 dark:text-emerald-300",
+  UPK_DRAFT_CREATED: "text-sky-500 dark:text-sky-300",
+  UPK_SUBMITTED: "text-indigo-500 dark:text-indigo-300",
+  UPK_APPROVED: "text-emerald-500 dark:text-emerald-300",
+  UPK_REJECTED: "text-rose-500 dark:text-rose-300",
+  UPK_PAID: "text-emerald-500 dark:text-emerald-300",
+  PAYROLL_STOP_REQUEST: "text-rose-500 dark:text-rose-300",
+  MONTHLY_REPORT_SUBMITTED: "text-indigo-500 dark:text-indigo-300",
+  MONTHLY_REPORT_APPROVED: "text-emerald-500 dark:text-emerald-300",
+  MONTHLY_REPORT_RETURNED: "text-amber-500 dark:text-amber-300",
+  MONTHLY_REPORT_REJECTED: "text-rose-500 dark:text-rose-300",
+  MONTHLY_REPORT_SENT_TO_CLIENT: "text-sky-500 dark:text-sky-300",
+  MONTHLY_REPORT_APPROVED_BY_CLIENT: "text-emerald-500 dark:text-emerald-300",
+  MONTHLY_REPORT_REJECTED_BY_CLIENT: "text-amber-500 dark:text-amber-300",
+  MONTHLY_REPORT_BA_GENERATED: "text-emerald-500 dark:text-emerald-300",
+  TIMESHEET_SUBMITTED: "text-indigo-500 dark:text-indigo-300",
+  TIMESHEET_APPROVED: "text-emerald-500 dark:text-emerald-300",
+  TIMESHEET_REJECTED: "text-rose-500 dark:text-rose-300",
+  BULK_IMPORT_COMPLETED: "text-sky-500 dark:text-sky-300",
+};
 
 export function NotificationsBell({
   userId,
@@ -181,7 +296,10 @@ export function NotificationsBell({
         ) : (
           <ScrollArea className="h-96">
             <ul className="divide-y divide-border/40">
-              {items.map((n) => (
+              {items.map((n) => {
+                const Icon = KIND_ICON[n.kind] ?? Bell;
+                const tone = KIND_TONE[n.kind] ?? "text-muted-foreground";
+                return (
                 <li key={n.id}>
                   <button
                     type="button"
@@ -191,11 +309,17 @@ export function NotificationsBell({
                     }`}
                   >
                     <span
+                      className="relative mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-muted/40"
                       aria-hidden
-                      className={`mt-1.5 size-1.5 shrink-0 rounded-full ${
-                        n.read_at ? "bg-transparent" : "bg-primary"
-                      }`}
-                    />
+                    >
+                      <Icon className={`size-3.5 ${tone}`} />
+                      {!n.read_at ? (
+                        <span
+                          aria-hidden
+                          className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary ring-2 ring-background"
+                        />
+                      ) : null}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-tight line-clamp-1">
                         {n.title}
@@ -214,7 +338,8 @@ export function NotificationsBell({
                     </div>
                   </button>
                 </li>
-              ))}
+                );
+              })}
             </ul>
           </ScrollArea>
         )}

@@ -12,12 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
+import { businessDaysUntil } from "@/lib/format/business-days";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/expenses/state";
 import { EXPENSE_CATEGORIES } from "@/lib/validation/expense";
-import type { ExpenseStatus } from "@/types/database";
+import type { ExpensePaymentMethod, ExpenseStatus } from "@/types/database";
 
 import { NewExpenseSheet, type ProjectOption } from "./new-expense-sheet";
 
@@ -33,19 +34,72 @@ type ExpenseRow = {
   status: ExpenseStatus;
   incurred_on: string;
   created_at: string;
+  updated_at: string;
   project_code: string;
   project_name: string;
+  submitter_employee_id: string;
+  payment_method: ExpensePaymentMethod | null;
+  late_submission_reason: string | null;
 };
 
-async function loadExpenses(): Promise<ExpenseRow[]> {
+type StatusFilter =
+  | "ALL"
+  | "MY_DRAFTS"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED";
+
+const PENDING_STATUSES: ExpenseStatus[] = [
+  "PENDING_L1_SUPERVISOR",
+  "PENDING_L2_PROJECT_MANAGER",
+  "PENDING_L2_5_FINANCE",
+  "PENDING_L3_OPERATIONS_MANAGER",
+  "PENDING_L4_HEAD_MANAGER",
+  "PENDING_L5_GENERAL_MANAGER",
+];
+
+async function loadExpenses(input: {
+  currentEmployeeId: string;
+  filter: StatusFilter;
+}): Promise<ExpenseRow[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("project_expenses")
     .select(
-      "id, amount, category, description, status, incurred_on, created_at, projects(code, name)",
+      "id, amount, category, description, status, incurred_on, created_at, updated_at, submitter_employee_id, payment_method, late_submission_reason, projects(code, name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
+
+  // Filter logic. NOTE: DRAFT rows are hidden from non-submitters at the
+  // UI layer here. RLS still lets them read, but that's fine — the list
+  // view just doesn't clutter with drafts owned by other people.
+  switch (input.filter) {
+    case "MY_DRAFTS":
+      query = query
+        .eq("status", "DRAFT")
+        .eq("submitter_employee_id", input.currentEmployeeId);
+      break;
+    case "PENDING":
+      query = query.in("status", PENDING_STATUSES);
+      break;
+    case "APPROVED":
+      query = query.eq("status", "APPROVED");
+      break;
+    case "REJECTED":
+      query = query.in("status", ["REJECTED", "CANCELLED"]);
+      break;
+    case "ALL":
+    default:
+      // Show everything except drafts owned by other people.
+      // Supabase's `.or()` filter is used for the OR-condition.
+      query = query.or(
+        `status.neq.DRAFT,submitter_employee_id.eq.${input.currentEmployeeId}`,
+      );
+      break;
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
 
   return data.map((row) => {
@@ -61,10 +115,44 @@ async function loadExpenses(): Promise<ExpenseRow[]> {
       status: row.status as ExpenseStatus,
       incurred_on: row.incurred_on,
       created_at: row.created_at,
+      updated_at: row.updated_at ?? row.created_at,
       project_code: proj?.code ?? "—",
       project_name: proj?.name ?? "—",
+      submitter_employee_id: row.submitter_employee_id,
+      payment_method: row.payment_method,
+      late_submission_reason: row.late_submission_reason,
     };
   });
+}
+
+/**
+ * Return a `{tone,label}` hint for stale DRAFT rows (>= 7 wd since last
+ * update) and late-submitted rows (`late_submission_reason` populated).
+ * Returns `null` when the row is healthy — the caller skips rendering.
+ */
+function computeExpenseSlaHint(
+  row: Pick<
+    ExpenseRow,
+    "status" | "updated_at" | "late_submission_reason"
+  >,
+): { tone: string; label: string } | null {
+  if (row.status === "DRAFT") {
+    const wdOld = -businessDaysUntil(row.updated_at, new Date());
+    if (wdOld >= 7) {
+      return {
+        tone: "border-amber-500/50 bg-amber-500/15 text-amber-200",
+        label: `Stale ${wdOld} wd`,
+      };
+    }
+    return null;
+  }
+  if (row.late_submission_reason && row.late_submission_reason.length > 0) {
+    return {
+      tone: "border-amber-400/40 bg-amber-500/10 text-amber-300",
+      label: "Nota telat",
+    };
+  }
+  return null;
 }
 
 async function loadProjectOptions(): Promise<ProjectOption[]> {
@@ -79,15 +167,55 @@ async function loadProjectOptions(): Promise<ProjectOption[]> {
   return data.map((p) => ({ id: p.id, label: `${p.code} · ${p.name}` }));
 }
 
-export default async function ExpensesPage() {
-  const [employee, expenses, projectOptions, t, tCat] = await Promise.all([
+const FILTERS: readonly { id: StatusFilter; labelKey: string }[] = [
+  { id: "ALL", labelKey: "filters.all" },
+  { id: "MY_DRAFTS", labelKey: "filters.myDrafts" },
+  { id: "PENDING", labelKey: "filters.pending" },
+  { id: "APPROVED", labelKey: "filters.approved" },
+  { id: "REJECTED", labelKey: "filters.rejected" },
+] as const;
+
+function parseFilter(raw: string | undefined): StatusFilter {
+  const found = FILTERS.find((f) => f.id === raw);
+  return found?.id ?? "ALL";
+}
+
+export default async function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const sp = await searchParams;
+  const filter = parseFilter(sp.status);
+
+  const [employee, t, tCat] = await Promise.all([
     requireCurrentEmployee(),
-    loadExpenses(),
-    loadProjectOptions(),
     getTranslations("expenses"),
     getTranslations("expenses.categories"),
   ]);
-  void employee;
+  const [expenses, projectOptions] = await Promise.all([
+    loadExpenses({ currentEmployeeId: employee.id, filter }),
+    loadProjectOptions(),
+  ]);
+
+  // Field-level submitters (EMPLOYEE / SUPERVISOR / HR / PettyCash) don't see
+  // the MA (budget line) selector — PM / Finance / OM+ / TENANT_ADMIN classify
+  // during their review. Keeps sensitive budget breakdown out of low-privilege
+  // sightlines and matches the mockup's approver-driven coding flow.
+  const MA_PICKERS: readonly string[] = [
+    "PROJECT_MANAGER",
+    "LEAD_FINANCE",
+    "OPERATIONS_MANAGER",
+    "HEAD_MANAGER",
+    "GENERAL_MANAGER",
+    "TENANT_ADMIN",
+  ];
+  const canPickBudgetLine = MA_PICKERS.includes(employee.role as string);
+
+  // CoA picker is gated on the same set of roles. Options are fetched
+  // dynamically inside the sheet as the project changes, so no
+  // pre-loading here.
+  const canPickCoa = canPickBudgetLine;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,8 +229,39 @@ export default async function ExpensesPage() {
             {t("subtitle")}
           </p>
         </div>
-        <NewExpenseSheet projects={projectOptions} />
+        <NewExpenseSheet
+          projects={projectOptions}
+          canPickBudgetLine={canPickBudgetLine}
+          canPickCoa={canPickCoa}
+        />
       </header>
+
+      {/* Status tabs */}
+      <nav
+        aria-label="Filter by status"
+        className="flex flex-wrap items-center gap-1 border-b border-border/60"
+      >
+        {FILTERS.map((f) => {
+          const isActive = f.id === filter;
+          const href =
+            f.id === "ALL"
+              ? "/finance/expenses"
+              : `/finance/expenses?status=${f.id}`;
+          return (
+            <Link
+              key={f.id}
+              href={href}
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm transition-colors ${
+                isActive
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t(f.labelKey as "filters.all")}
+            </Link>
+          );
+        })}
+      </nav>
 
       {expenses.length === 0 ? (
         <Card className="glass">
@@ -127,6 +286,7 @@ export default async function ExpensesPage() {
                     <Th>{t("columns.project")}</Th>
                     <Th>{t("columns.description")}</Th>
                     <Th>{t("columns.category")}</Th>
+                    <Th>{t("columns.paymentMethod")}</Th>
                     <Th className="text-right">{t("columns.amount")}</Th>
                     <Th>{t("columns.status")}</Th>
                   </tr>
@@ -160,18 +320,39 @@ export default async function ExpensesPage() {
                             )
                           : e.category}
                       </td>
+                      <td className="px-4 py-3 text-muted-foreground text-xs">
+                        {e.payment_method
+                          ? t(
+                              `paymentMethods.${e.payment_method}` as "paymentMethods.CASH",
+                            )
+                          : "—"}
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatIDR(parseMoneyFromDb(e.amount_db), {
                           compact: true,
                         })}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={STATUS_TONE[e.status]}
-                        >
-                          {STATUS_LABEL[e.status]}
-                        </Badge>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge
+                            variant="outline"
+                            className={STATUS_TONE[e.status]}
+                          >
+                            {STATUS_LABEL[e.status]}
+                          </Badge>
+                          {(() => {
+                            const hint = computeExpenseSlaHint(e);
+                            return hint ? (
+                              <Badge
+                                variant="outline"
+                                className={hint.tone}
+                                aria-label={`Expense SLA — ${hint.label}`}
+                              >
+                                {hint.label}
+                              </Badge>
+                            ) : null;
+                          })()}
+                        </div>
                       </td>
                     </tr>
                   ))}

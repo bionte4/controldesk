@@ -5,21 +5,46 @@ import { isoDateSchema, uuidSchema } from "./common";
 // ---------------------------------------------------------------------------
 // Shifts (rules §12)
 // ---------------------------------------------------------------------------
+// `project_id` is optional:
+//   - NULL / undefined ⇒ tenant-wide base catalog (HR/OM only, per PDP).
+//   - UUID             ⇒ project-scoped override (PM/SPV assigned to
+//                        that project may write; allowance is force-
+//                        inherited from base by DB trigger — see
+//                        migration 0066).
+// `shift_allowance_idr` is optional; PDP + DB trigger strip / override
+// it for PM/SPV, so a form omitting it is valid.
 export const createWorkShiftSchema = z.object({
   code: z
     .string()
     .trim()
     .min(2, "Shift code must be at least 2 characters.")
     .max(20)
-    .regex(/^[A-Z0-9_-]+$/i, "Use letters, digits, underscore or hyphen."),
+    .regex(/^[A-Z0-9_-]+$/i, "Use letters, digits, underscore or hyphen.")
+    .transform((v) => v.toUpperCase()),
   name: z.string().trim().min(2).max(80),
   start_time: z.string().regex(/^\d{2}:\d{2}$/u, "Use HH:mm."),
   end_time: z.string().regex(/^\d{2}:\d{2}$/u, "Use HH:mm."),
   duration_hours: z.coerce.number().min(0.5).max(24),
-  shift_allowance_idr: z.coerce.number().min(0).max(500_000_000).default(0),
+  shift_allowance_idr: z.coerce
+    .number()
+    .min(0)
+    .max(500_000_000)
+    .optional()
+    .default(0),
   is_night: z.boolean().default(false),
+  project_id: uuidSchema.optional().nullable(),
 });
 export type CreateWorkShiftInput = z.infer<typeof createWorkShiftSchema>;
+
+export const updateWorkShiftSchema = createWorkShiftSchema.extend({
+  id: uuidSchema,
+});
+export type UpdateWorkShiftInput = z.infer<typeof updateWorkShiftSchema>;
+
+export const deleteWorkShiftSchema = z.object({
+  id: uuidSchema,
+});
+export type DeleteWorkShiftInput = z.infer<typeof deleteWorkShiftSchema>;
 
 // ---------------------------------------------------------------------------
 // Rosters (rules §12)

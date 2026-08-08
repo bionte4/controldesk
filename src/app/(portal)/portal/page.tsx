@@ -26,6 +26,7 @@ export const metadata: Metadata = { title: "Portal" };
 type ProjectStatus = Tables<"projects">["status"];
 
 const STATUS_TONE: Record<ProjectStatus, string> = {
+  DRAFT: "border-white/10 bg-white/5 text-white/60",
   PLANNING: "border-white/10 bg-white/5 text-white/70",
   ACTIVE: "border-emerald-400/30 bg-emerald-500/10 text-emerald-300",
   ON_HOLD: "border-amber-400/30 bg-amber-500/10 text-amber-300",

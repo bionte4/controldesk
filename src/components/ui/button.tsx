@@ -44,12 +44,25 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  nativeButton,
+  render,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // When a `render` prop is provided (typically <Link/> or another
+  // non-<button> element), BaseUI's Button defaults to `nativeButton: true`
+  // and warns about lost button semantics. Callers who need real <button>
+  // semantics can opt back in with `nativeButton={true}`; for the common
+  // "link-styled-as-button" pattern we default to `false` so semantics of
+  // the rendered element (usually <a>) are preserved.
+  const resolvedNative =
+    nativeButton ?? (render == null ? undefined : false);
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      nativeButton={resolvedNative}
+      render={render}
       {...props}
     />
   )

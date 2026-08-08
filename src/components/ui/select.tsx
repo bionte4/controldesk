@@ -6,7 +6,73 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+/**
+ * Base UI's `Select.Value` renders the raw `value` prop when it can't
+ * resolve a label — which shows raw UUIDs to the user in every form
+ * where we bind options to database IDs. We work around this by
+ * building a shared items registry: each `SelectItem` announces its
+ * `value → children` mapping when it mounts, and `SelectValue` looks
+ * up the current selection in that registry when the caller didn't
+ * override `children`.
+ *
+ * Design notes:
+ *   * Registry is keyed by stringified value; matches Base UI's own
+ *     `serializeValue` behaviour so numeric / boolean values line up.
+ *   * We stash the raw React children (not a string) so trigger cells
+ *     preserve any inline JSX (badges, avatars) the caller placed
+ *     inside `<SelectItem>{...}</SelectItem>`.
+ *   * Explicit `children` on `<SelectValue>` still wins — needed when
+ *     the trigger should render a summary that differs from the
+ *     dropdown row (e.g. "3 selected" for multi-select).
+ */
+const SelectItemsContext = React.createContext<
+  | {
+      map: Map<string, React.ReactNode>
+      register: (value: string, label: React.ReactNode) => void
+      unregister: (value: string) => void
+    }
+  | null
+>(null)
+
+function keyOf(value: unknown): string {
+  if (value == null) return ""
+  if (typeof value === "string") return value
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function Select<Value = string>(props: SelectPrimitive.Root.Props<Value>) {
+  const [tick, setTick] = React.useState(0)
+  const mapRef = React.useRef(new Map<string, React.ReactNode>())
+  const ctx = React.useMemo(
+    () => ({
+      map: mapRef.current,
+      register: (value: string, label: React.ReactNode) => {
+        mapRef.current.set(value, label)
+        // Nudge consumers so `SelectValue` re-renders once new items
+        // register mid-lifecycle (e.g. async-loaded option lists).
+        setTick((t) => t + 1)
+      },
+      unregister: (value: string) => {
+        mapRef.current.delete(value)
+        setTick((t) => t + 1)
+      },
+    }),
+    [],
+  )
+  // `tick` isn't read here — it exists purely to invalidate memo
+  // consumers when the map mutates. Reference it to appease
+  // exhaustive-deps if we ever add a dep array.
+  void tick
+  return (
+    <SelectItemsContext.Provider value={ctx}>
+      <SelectPrimitive.Root<Value> {...props} />
+    </SelectItemsContext.Provider>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -18,13 +84,32 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({
+  className,
+  children,
+  ...props
+}: SelectPrimitive.Value.Props) {
+  const ctx = React.useContext(SelectItemsContext)
+  // Only auto-resolve when the caller didn't override `children` —
+  // preserves the "custom summary" escape hatch above.
+  const autoChildren = React.useCallback(
+    (value: unknown) => {
+      if (!ctx) return undefined
+      const k = keyOf(value)
+      if (!k) return undefined
+      return ctx.map.get(k)
+    },
+    [ctx],
+  )
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
       {...props}
-    />
+    >
+      {children ??
+        ((value: unknown) => autoChildren(value) as React.ReactNode)}
+    </SelectPrimitive.Value>
   )
 }
 
@@ -41,7 +126,12 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        // Default width is `w-full min-w-0` so form fields inside sheets /
+        // dialogs / grid cells fill the container — matches the Field
+        // Ops CA pattern and prevents the "tiny trigger" bug when the
+        // selected value is short (e.g. "__none"). Toolbars / filters
+        // that want fit-to-content can opt-in via `className="w-fit"`.
+        "flex w-full min-w-0 items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -111,11 +201,26 @@ function SelectLabel({
 function SelectItem({
   className,
   children,
+  value,
   ...props
 }: SelectPrimitive.Item.Props) {
+  const ctx = React.useContext(SelectItemsContext)
+  // Register the value → label mapping so `SelectValue` can look it
+  // up when the trigger renders. Unregister on unmount so a stale
+  // label from a torn-down conditional item doesn't leak into
+  // subsequent renders.
+  React.useEffect(() => {
+    if (!ctx) return
+    const k = keyOf(value)
+    if (!k) return
+    ctx.register(k, children)
+    return () => ctx.unregister(k)
+  }, [ctx, value, children])
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      value={value}
       className={cn(
         "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className

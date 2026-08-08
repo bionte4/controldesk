@@ -95,6 +95,14 @@ export type CanonicalAttributes = {
    */
   caType?: "GENERAL" | "FIELD_OPS";
   /**
+   * Whether the actor is currently assigned as a FIELD_TECHNICIAN on any
+   * project. Non-Supervisor employees may initiate a Field-Ops cash
+   * advance only when this is true (mockup: "Pengajuan Operasional"
+   * button is enabled for on-site technicians). Populated by the caller
+   * via `has_active_field_tech_assignment(...)` RPC.
+   */
+  isFieldTech?: boolean;
+  /**
    * Which canonical slot is currently pending. Approve/reject actions gate
    * on this via `canonicalCanApprove()`.
    */
@@ -537,13 +545,31 @@ function decideFieldOpsCa(
   attrs: CanonicalAttributes,
 ): Decision {
   if (action === "create" || action === "submit") {
-    // Field-ops CA is Supervisor-initiated by design (rules §9.4).
     if (!attrs.projectId) return DENY("project_id required");
-    if (actor.role !== "SUPERVISOR" && actor.role !== "PM" &&
-        actor.role !== "OM") {
-      return DENY("only Supervisor+ may initiate field-ops CA");
+
+    // (a) Supervisor / PM / OM / higher-rank actors always allowed —
+    // matches the original "Supervisor-initiated" contract from rules
+    // §9.4 and preserves escalation paths (Manager creating on behalf).
+    if (
+      actor.role === "SUPERVISOR" ||
+      actor.role === "PM" ||
+      actor.role === "OM" ||
+      actor.role === "FINANCE" ||
+      actor.role === "DIRECTOR" ||
+      actor.role === "ADMIN"
+    ) {
+      return ALLOW("field-ops CA initiator (supervisor+)");
     }
-    return ALLOW("field-ops CA initiator");
+
+    // (b) Base EMPLOYEE may initiate only when actively assigned as a
+    // FIELD_TECHNICIAN on some project (mockup: "Pengajuan Operasional"
+    // gated on-site staff). The caller populates `isFieldTech` from the
+    // `has_active_field_tech_assignment()` RPC.
+    if (actor.role === "EMPLOYEE" && attrs.isFieldTech === true) {
+      return ALLOW("field-tech initiator");
+    }
+
+    return DENY("only supervisor+ or a field technician may initiate");
   }
   if (action === "update" || action === "cancel") {
     if (attrs.ownerEmployeeId !== actor.employeeId) {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { moneyToDbString, parseMoneyFromDb } from "@/lib/format/money";
 import { createClient } from "@/lib/supabase/server";
+import { assertPostableCoa } from "@/lib/data/coa";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import {
   canApproveNextCa,
@@ -71,6 +72,7 @@ export const submitCashAdvanceAction = withSecureAction({
   handler: async (input, ctx) => {
     const supabase = await createClient();
     const amountDb = moneyToDbString(BigInt(input.amount_idr));
+    const validCoaId = await assertPostableCoa(input.coa_id);
 
     const { data: inserted, error: insertErr } = await supabase
       .from("cash_advances")
@@ -81,6 +83,7 @@ export const submitCashAdvanceAction = withSecureAction({
         amount: amountDb as unknown as number,
         purpose: input.purpose,
         needed_by: input.needed_by ?? null,
+        coa_id: validCoaId,
         status: "PENDING_L1_SUPERVISOR",
       })
       .select("id, status")
@@ -617,6 +620,25 @@ export const acceptSettlementAction = withSecureAction({
     if (readErr || !settlement) throw new Error("Settlement not found.");
     if (settlement.status !== "SUBMITTED") {
       throw new Error("Only SUBMITTED settlements can be accepted.");
+    }
+
+    // Hard rule (rules §22, UU KUP audit trail): if the settlement claims
+    // any spend, at least one receipt attachment MUST exist so Finance is
+    // reviewing against evidence and the row survives a future audit.
+    const totalSpentMoney = parseMoneyFromDb(settlement.total_spent);
+    if (totalSpentMoney > 0) {
+      const { count: attachmentCount, error: countErr } = await supabase
+        .from("attachments")
+        .select("id", { count: "exact", head: true })
+        .eq("resource_type", "cash_advance_settlement")
+        .eq("resource_id", settlement.id)
+        .eq("tenant_id", ctx.actor.tenantId);
+      if (countErr) throw new Error(countErr.message);
+      if (!attachmentCount || attachmentCount === 0) {
+        throw new Error(
+          "Cannot accept settlement without receipts. Return to the submitter to attach nota/struk first.",
+        );
+      }
     }
 
     const nowIso = new Date().toISOString();

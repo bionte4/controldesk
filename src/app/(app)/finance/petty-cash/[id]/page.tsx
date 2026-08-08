@@ -23,9 +23,16 @@ import type {
   PettyCashVoucherStatus,
 } from "@/types/database";
 
-import { NewVoucherSheet } from "../new-voucher-sheet";
+import { listAttachmentsSigned } from "@/lib/attachments";
+import { loadPostableAccounts } from "@/lib/data/coa";
+
+import { NewVoucherSheet, type CoaOption } from "../new-voucher-sheet";
 import { RequestReplenishmentDialog } from "../request-replenishment-sheet";
 import { ReplenishmentActions } from "../replenishment-actions";
+import {
+  ReplenishmentAttachmentList,
+  type ReplenishmentAttachmentEntry,
+} from "../replenishment-attachments";
 
 export const metadata: Metadata = { title: "Petty Cash Fund" };
 
@@ -69,6 +76,7 @@ export default async function PettyCashFundDetailPage(props: {
     status: PettyCashVoucherStatus;
     incurred_on: string;
     creator: { full_name: string } | null;
+    coa: { code: string; name: string } | null;
   };
   type ReplView = {
     id: string;
@@ -93,7 +101,7 @@ export default async function PettyCashFundDetailPage(props: {
       supabase
         .from("petty_cash_vouchers")
         .select(
-          "id, amount, category, description, status, incurred_on, creator:created_by(full_name)",
+          "id, amount, category, description, status, incurred_on, creator:created_by(full_name), coa:coa_id(code, name)",
         )
         .eq("fund_id", id)
         .eq("tenant_id", employee.tenant_id)
@@ -116,6 +124,31 @@ export default async function PettyCashFundDetailPage(props: {
   const vouchers = (vouchersRaw ?? []) as unknown as VoucherView[];
   const replenishments = (replRaw ?? []) as unknown as ReplView[];
 
+  // Load supporting attachments (memo pendukung + transfer proof) for each
+  // replenishment in parallel — surfaces Finance / audit context inline.
+  const attachmentBundles = await Promise.all(
+    replenishments.map(async (r) => {
+      const rows = await listAttachmentsSigned(
+        "petty_cash_replenishment",
+        r.id,
+      );
+      return {
+        replenishmentId: r.id,
+        files: rows.map((a) => ({
+          id: a.id,
+          filename: a.filename,
+          mime_type: a.mime_type,
+          size_bytes: a.size_bytes,
+          signed_url: a.signed_url,
+          uploaded_by: a.uploaded_by ?? null,
+        })) satisfies ReplenishmentAttachmentEntry[],
+      };
+    }),
+  );
+  const attachmentMap = new Map(
+    attachmentBundles.map((b) => [b.replenishmentId, b.files]),
+  );
+
   const balance = parseMoneyFromDb(fund.balance);
   const imprest = parseMoneyFromDb(fund.imprest_amount);
   const minBalance = parseMoneyFromDb(fund.min_balance);
@@ -127,6 +160,14 @@ export default async function PettyCashFundDetailPage(props: {
     employee.role === "LEAD_FINANCE" || employee.role === "TENANT_ADMIN";
   const canVoucher = isCustodian || isFinance;
   const canRequestRepl = isCustodian;
+
+  const coaOptions: readonly CoaOption[] = canVoucher
+    ? (await loadPostableAccounts()).map((a) => ({
+        id: a.id,
+        code: a.code,
+        name: a.name,
+      }))
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -140,7 +181,9 @@ export default async function PettyCashFundDetailPage(props: {
           {t("back")}
         </Button>
         <div className="flex flex-wrap items-center gap-2">
-          {canVoucher ? <NewVoucherSheet fundId={fund.id} /> : null}
+          {canVoucher ? (
+            <NewVoucherSheet fundId={fund.id} coaOptions={coaOptions} />
+          ) : null}
           {canRequestRepl ? (
             <RequestReplenishmentDialog fundId={fund.id} />
           ) : null}
@@ -205,6 +248,7 @@ export default async function PettyCashFundDetailPage(props: {
                 <tr className="text-left">
                   <Th>{t("cols.date")}</Th>
                   <Th>{t("cols.category")}</Th>
+                  <Th>{t("cols.coa")}</Th>
                   <Th>{t("cols.description")}</Th>
                   <Th className="text-right">{t("cols.amount")}</Th>
                   <Th>{t("cols.status")}</Th>
@@ -218,6 +262,15 @@ export default async function PettyCashFundDetailPage(props: {
                     </td>
                     <td className="px-4 py-3 uppercase tracking-wide text-xs">
                       {v.category}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">
+                      {v.coa ? (
+                        <span title={v.coa.name}>
+                          {v.coa.code} · {v.coa.name}
+                        </span>
+                      ) : (
+                        <span className="opacity-50">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 max-w-md truncate">
                       {v.description}
@@ -249,41 +302,60 @@ export default async function PettyCashFundDetailPage(props: {
             </p>
           ) : (
             <ol className="divide-y divide-border/50">
-              {replenishments.map((r) => (
-                <li
-                  key={r.id}
-                  className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3 px-4 py-3"
-                >
-                  <Badge variant="outline" className={REPL_TONE[r.status]}>
-                    {r.status.replace(/_/g, " ")}
-                  </Badge>
-                  <div>
-                    <p className="text-sm">
-                      {r.requester?.full_name ?? "—"}{" "}
-                      <span className="text-xs text-muted-foreground">
-                        · {formatInTz(r.created_at, "dd MMM, HH:mm")}
-                      </span>
-                    </p>
-                    {r.reason ? (
-                      <p className="text-xs text-muted-foreground">{r.reason}</p>
-                    ) : null}
-                    {r.disbursement_ref ? (
-                      <p className="text-[10px] text-muted-foreground">
-                        Ref: {r.disbursement_ref}
+              {replenishments.map((r) => {
+                const files = attachmentMap.get(r.id) ?? [];
+                // Custodian can detach memo files while PENDING_FINANCE.
+                // Finance can detach transfer proof while APPROVED.
+                const canDetachOwn =
+                  (isCustodian && r.status === "PENDING_FINANCE") ||
+                  (isFinance && r.status === "APPROVED");
+                return (
+                  <li
+                    key={r.id}
+                    className="flex flex-col gap-2 px-4 py-3"
+                  >
+                    <div className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-3">
+                      <Badge variant="outline" className={REPL_TONE[r.status]}>
+                        {r.status.replace(/_/g, " ")}
+                      </Badge>
+                      <div>
+                        <p className="text-sm">
+                          {r.requester?.full_name ?? "—"}{" "}
+                          <span className="text-xs text-muted-foreground">
+                            · {formatInTz(r.created_at, "dd MMM, HH:mm")}
+                          </span>
+                        </p>
+                        {r.reason ? (
+                          <p className="text-xs text-muted-foreground">
+                            {r.reason}
+                          </p>
+                        ) : null}
+                        {r.disbursement_ref ? (
+                          <p className="text-[10px] text-muted-foreground">
+                            Ref: {r.disbursement_ref}
+                          </p>
+                        ) : null}
+                      </div>
+                      <p className="tabular-nums text-sm">
+                        {formatIDR(parseMoneyFromDb(r.requested_amount))}
                       </p>
-                    ) : null}
-                  </div>
-                  <p className="tabular-nums text-sm">
-                    {formatIDR(parseMoneyFromDb(r.requested_amount))}
-                  </p>
-                  {isFinance &&
-                  (r.status === "PENDING_FINANCE" || r.status === "APPROVED") ? (
-                    <ReplenishmentActions id={r.id} status={r.status} />
-                  ) : (
-                    <span />
-                  )}
-                </li>
-              ))}
+                      {isFinance &&
+                      (r.status === "PENDING_FINANCE" ||
+                        r.status === "APPROVED") ? (
+                        <ReplenishmentActions id={r.id} status={r.status} />
+                      ) : (
+                        <span />
+                      )}
+                    </div>
+                    <ReplenishmentAttachmentList
+                      replenishmentId={r.id}
+                      files={files}
+                      canDetachOwn={canDetachOwn}
+                      currentEmployeeId={employee.id}
+                    />
+                  </li>
+                );
+              })}
             </ol>
           )}
         </CardContent>

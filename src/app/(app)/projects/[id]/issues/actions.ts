@@ -35,6 +35,7 @@ import {
 } from "@/lib/validation/issue";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 import type {
+  ProjectIssueCategory,
   ProjectIssueEventKind,
   ProjectIssueSeverity,
   ProjectIssueStatus,
@@ -83,15 +84,20 @@ async function loadIssue(
   assignee_employee_id: string | null;
   status: ProjectIssueStatus;
   severity: ProjectIssueSeverity;
+  category: ProjectIssueCategory;
   title: string;
   sla_due_at: string;
   escalation_level: number;
+  milestone_id: string | null;
+  due_date: string | null;
+  tags: string[];
+  notes: string | null;
 } | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("project_issues")
     .select(
-      "id, tenant_id, project_id, reporter_employee_id, assignee_employee_id, status, severity, title, sla_due_at, escalation_level",
+      "id, tenant_id, project_id, reporter_employee_id, assignee_employee_id, status, severity, category, title, sla_due_at, escalation_level, milestone_id, due_date, tags, notes",
     )
     .eq("id", issueId)
     .eq("tenant_id", tenantId)
@@ -172,11 +178,16 @@ export const createIssueAction = withCanonicalSecureAction({
         title: input.title,
         description: input.description,
         severity: input.severity,
+        category: input.category,
+        milestone_id: input.milestone_id ?? null,
+        due_date: input.due_date ?? null,
+        tags: input.tags ?? [],
+        notes: input.notes ?? null,
         status: "OPEN",
         sla_due_at: slaDueAt.toISOString(),
         escalation_level: 0,
       })
-      .select("id, project_id, severity, sla_due_at")
+      .select("id, project_id, severity, category, sla_due_at")
       .single();
     if (insertErr || !inserted) {
       throw new Error(insertErr?.message ?? "Failed to create issue.");
@@ -191,6 +202,10 @@ export const createIssueAction = withCanonicalSecureAction({
       toAssignee: input.assignee_employee_id ?? null,
       metadata: {
         severity: input.severity,
+        category: input.category,
+        milestone_id: input.milestone_id ?? null,
+        due_date: input.due_date ?? null,
+        tags: input.tags ?? [],
         sla_due_at: inserted.sla_due_at,
       },
     });
@@ -231,6 +246,7 @@ export const createIssueAction = withCanonicalSecureAction({
         id: inserted.id,
         project_id: inserted.project_id,
         severity: inserted.severity as ProjectIssueSeverity,
+        category: inserted.category as ProjectIssueCategory,
         sla_due_at: inserted.sla_due_at,
       },
       auditResourceId: inserted.id,
@@ -238,6 +254,10 @@ export const createIssueAction = withCanonicalSecureAction({
         project_id: input.project_id,
         title: input.title,
         severity: input.severity,
+        category: input.category,
+        milestone_id: input.milestone_id ?? null,
+        due_date: input.due_date ?? null,
+        tags: input.tags ?? [],
         sla_due_at: inserted.sla_due_at,
       },
     };
@@ -275,9 +295,16 @@ export const updateIssueAction = withCanonicalSecureAction({
       // Re-stamp SLA when severity changes.
       patch.sla_due_at = computeIssueSlaDueAt(new Date(), input.severity).toISOString();
     }
+    if (input.category !== undefined) patch.category = input.category;
     if (input.assignee_employee_id !== undefined) {
       patch.assignee_employee_id = input.assignee_employee_id;
     }
+    if (input.milestone_id !== undefined) {
+      patch.milestone_id = input.milestone_id;
+    }
+    if (input.due_date !== undefined) patch.due_date = input.due_date;
+    if (input.tags !== undefined) patch.tags = input.tags;
+    if (input.notes !== undefined) patch.notes = input.notes ?? null;
 
     const supabase = await createClient();
     const { error: updateErr } = await supabase
@@ -295,7 +322,12 @@ export const updateIssueAction = withCanonicalSecureAction({
         input.assignee_employee_id !== undefined &&
         input.title === undefined &&
         input.description === undefined &&
-        input.severity === undefined
+        input.severity === undefined &&
+        input.category === undefined &&
+        input.milestone_id === undefined &&
+        input.due_date === undefined &&
+        input.tags === undefined &&
+        input.notes === undefined
           ? "ASSIGNED"
           : "UPDATED",
       fromAssignee: row.assignee_employee_id,
@@ -308,7 +340,11 @@ export const updateIssueAction = withCanonicalSecureAction({
         previous: {
           title: row.title,
           severity: row.severity,
+          category: row.category,
           assignee_employee_id: row.assignee_employee_id,
+          milestone_id: row.milestone_id,
+          due_date: row.due_date,
+          tags: row.tags,
           sla_due_at: row.sla_due_at,
         },
       },
@@ -322,7 +358,11 @@ export const updateIssueAction = withCanonicalSecureAction({
       auditOldValues: {
         title: row.title,
         severity: row.severity,
+        category: row.category,
         assignee_employee_id: row.assignee_employee_id,
+        milestone_id: row.milestone_id,
+        due_date: row.due_date,
+        tags: row.tags,
       },
       auditNewValues: patch as Record<string, unknown>,
     };

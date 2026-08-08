@@ -6,7 +6,19 @@ import { decodeJwtPayload } from "@/lib/auth/jwt-claims";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 import type { Tables } from "@/types/database";
 
-export type CurrentEmployee = Tables<"employees"> & {
+/**
+ * The currently authenticated employee row.
+ *
+ * Note on `user_id`:
+ *   Since migration 0034 the DB column is nullable so HR admins can add
+ *   employees without an auth account. However this helper only ever returns
+ *   the row belonging to the currently authenticated Supabase user — so at
+ *   this specific call site we KNOW `user_id` is non-null. We narrow the type
+ *   here to keep every downstream consumer (`authorize()`, `withSecureAction`,
+ *   audit logging) free of null-checks.
+ */
+export type CurrentEmployee = Omit<Tables<"employees">, "user_id"> & {
+  user_id: string;
   tenant_slug: string;
 };
 
@@ -49,8 +61,15 @@ export const getCurrentEmployee = cache(
       .maybeSingle();
 
     if (error || !employee || !tenantSlug) return null;
+    // The row was fetched via `.eq("user_id", user.id)` where `user.id` is
+    // Supabase's non-null auth user id — narrow safely.
+    if (!employee.user_id) return null;
 
-    return { ...employee, tenant_slug: tenantSlug } satisfies CurrentEmployee;
+    return {
+      ...employee,
+      user_id: employee.user_id,
+      tenant_slug: tenantSlug,
+    } satisfies CurrentEmployee;
   },
 );
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "next-intl";
@@ -42,6 +43,7 @@ import { approveExpenseAction, rejectExpenseAction } from "./actions";
  */
 export function ExpenseActionButtons({ id }: { id: string }) {
   const t = useTranslations("expenses.actions");
+  const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
 
   const [approveOpen, setApproveOpen] = React.useState(false);
@@ -64,6 +66,10 @@ export function ExpenseActionButtons({ id }: { id: string }) {
         toast.success(t("approvedToast"));
         setApproveOpen(false);
         approveForm.reset({ id, comment: "" });
+        // Force the current RSC tree to re-fetch so the status badge,
+        // timeline entries, and terminal-state UI (hide action bar) update
+        // in-place instead of leaving the operator on a stale page.
+        router.refresh();
       } else {
         toast.error(result.reason);
       }
@@ -77,6 +83,7 @@ export function ExpenseActionButtons({ id }: { id: string }) {
         toast.success(t("rejectedToast"));
         setRejectOpen(false);
         rejectForm.reset({ id, reason: "" });
+        router.refresh();
       } else {
         toast.error(result.reason);
       }

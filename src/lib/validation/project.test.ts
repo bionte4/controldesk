@@ -16,11 +16,13 @@ describe("project schema", () => {
   it("accepts a minimal valid project", () => {
     const parsed = createProjectSchema.parse({
       client_id: UUID_A,
-      code: "ACME-01",
       name: "Onboarding Wave 1",
+      project_type: "FIXED_PRICE",
     });
-    expect(parsed.code).toBe("ACME-01");
-    expect(parsed.status).toBe("PLANNING");
+    expect(parsed.status).toBe("DRAFT");
+    expect(parsed.priority).toBe("MEDIUM");
+    expect(parsed.currency).toBe("IDR");
+    expect(parsed.milestones).toEqual([]);
   });
 
   it("rejects project codes with invalid characters", () => {
@@ -29,6 +31,7 @@ describe("project schema", () => {
         client_id: UUID_A,
         code: "acme 01",
         name: "Test",
+        project_type: "INTERNAL",
       }),
     ).toThrow();
   });
@@ -37,12 +40,52 @@ describe("project schema", () => {
     expect(() =>
       createProjectSchema.parse({
         client_id: UUID_A,
-        code: "ACME-02",
         name: "Test",
+        project_type: "FIXED_PRICE",
         start_date: "2026-06-01",
         end_date: "2026-05-01",
       }),
     ).toThrow(/End date/i);
+  });
+
+  it("rejects milestone weights that don't sum to 100 (unless all zero)", () => {
+    expect(() =>
+      createProjectSchema.parse({
+        client_id: UUID_A,
+        name: "Test",
+        project_type: "FIXED_PRICE",
+        milestones: [
+          { name: "M1", weight_pct: 40 },
+          { name: "M2", weight_pct: 30 },
+        ],
+      }),
+    ).toThrow(/sum to 100/i);
+  });
+
+  it("accepts milestones summing exactly to 100", () => {
+    const parsed = createProjectSchema.parse({
+      client_id: UUID_A,
+      name: "Test",
+      project_type: "FIXED_PRICE",
+      milestones: [
+        { name: "M1", weight_pct: 60 },
+        { name: "M2", weight_pct: 40 },
+      ],
+    });
+    expect(parsed.milestones).toHaveLength(2);
+  });
+
+  it("accepts milestones with all-zero weights (even distribution fallback)", () => {
+    const parsed = createProjectSchema.parse({
+      client_id: UUID_A,
+      name: "Test",
+      project_type: "FIXED_PRICE",
+      milestones: [
+        { name: "M1", weight_pct: 0 },
+        { name: "M2", weight_pct: 0 },
+      ],
+    });
+    expect(parsed.milestones).toHaveLength(2);
   });
 
   it("projectStatusSchema enumerates all statuses", () => {

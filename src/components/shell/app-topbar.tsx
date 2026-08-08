@@ -176,6 +176,7 @@ export function AppTopbar({
             <DropdownMenuSeparator />
             <form action={signOut}>
               <DropdownMenuItem
+                nativeButton
                 render={
                   <button type="submit" className="w-full text-left" />
                 }

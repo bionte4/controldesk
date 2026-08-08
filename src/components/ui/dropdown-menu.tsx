@@ -57,13 +57,21 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean
 }) {
+  // Base UI's `MenuPrimitive.GroupLabel` mensyaratkan parent `<Menu.Group>` /
+  // `<Menu.RadioGroup>` (kalau tidak, throw "Base UI error #31"). Untuk header
+  // standalone di dalam dropdown, kita render plain <div> dengan role
+  // "presentation" — accessibility connection dibiarkan implicit lewat visual
+  // ordering. Kalau butuh screen-reader "labeled group" behavior, wrap
+  // multiple item dalam `<DropdownMenuGroup>` + tempatkan label sebagai anak
+  // pertama Group tersebut.
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
+      role="presentation"
       className={cn(
         "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
         className

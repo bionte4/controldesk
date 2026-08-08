@@ -20,6 +20,62 @@ import type { ClientStatus } from "@/types/database";
 
 import { NewClientSheet } from "./new-client-sheet";
 
+/**
+ * Batch-resolve soft-links for the list.
+ *
+ * Rationale: rendering per-row lookups would be N+1 (one for each cell).
+ * Instead we collect the DISTINCT non-null references and issue ONE query
+ * against each target table, then hand the pages a Map<ref → id>. Miss →
+ * cell renders as plain text (see migration 0035 for the "free-text
+ * reference" contract).
+ */
+async function resolveSoftLinks(
+  clients: ClientRow[],
+  tenantId: string,
+): Promise<{
+  contractByNumber: Map<string, string>;
+  projectByCode: Map<string, string>;
+}> {
+  const supabase = await createClient();
+  const contractNumbers = Array.from(
+    new Set(
+      clients.map((c) => c.contract_number).filter((v): v is string => !!v),
+    ),
+  );
+  const projectCodes = Array.from(
+    new Set(
+      clients.map((c) => c.project_code).filter((v): v is string => !!v),
+    ),
+  );
+
+  const [contractsResult, projectsResult] = await Promise.all([
+    contractNumbers.length > 0
+      ? supabase
+          .from("bpo_contracts")
+          .select("id, contract_number")
+          .eq("tenant_id", tenantId)
+          .in("contract_number", contractNumbers)
+      : Promise.resolve({ data: [] as { id: string; contract_number: string }[] }),
+    projectCodes.length > 0
+      ? supabase
+          .from("projects")
+          .select("id, code")
+          .eq("tenant_id", tenantId)
+          .in("code", projectCodes)
+      : Promise.resolve({ data: [] as { id: string; code: string }[] }),
+  ]);
+
+  const contractByNumber = new Map<string, string>();
+  for (const c of contractsResult.data ?? []) {
+    contractByNumber.set(c.contract_number, c.id);
+  }
+  const projectByCode = new Map<string, string>();
+  for (const p of projectsResult.data ?? []) {
+    projectByCode.set(p.code, p.id);
+  }
+  return { contractByNumber, projectByCode };
+}
+
 export const metadata: Metadata = {
   title: "Clients",
 };
@@ -32,6 +88,8 @@ type ClientRow = {
   contact_name: string | null;
   contact_email: string | null;
   onboarded_at: string | null;
+  contract_number: string | null;
+  project_code: string | null;
   project_count: number;
 };
 
@@ -41,13 +99,12 @@ async function loadClients(): Promise<ClientRow[]> {
   const { data, error } = await supabase
     .from("clients")
     .select(
-      "id, name, industry, status, contact_name, contact_email, onboarded_at, projects(count)",
+      "id, name, industry, status, contact_name, contact_email, onboarded_at, contract_number, project_code, projects(count)",
     )
     .order("name", { ascending: true })
     .limit(200);
 
   if (error) {
-    // Migration 0008 may not have been applied yet — degrade to empty list.
     return [];
   }
 
@@ -59,7 +116,8 @@ async function loadClients(): Promise<ClientRow[]> {
     contact_name: row.contact_name,
     contact_email: row.contact_email,
     onboarded_at: row.onboarded_at,
-    // Supabase returns `projects: [{ count: N }]` for count aggregation.
+    contract_number: row.contract_number,
+    project_code: row.project_code,
     project_count:
       (row.projects as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
   }));
@@ -80,6 +138,11 @@ export default async function ClientsPage() {
     getTranslations("clients.status"),
     getTranslations("clients.columns"),
   ]);
+
+  const { contractByNumber, projectByCode } = await resolveSoftLinks(
+    clients,
+    employee.tenant_id,
+  );
 
   // PDP check for "may I add a new client here?" — used to gate the CTA.
   const canCreate =
@@ -132,6 +195,8 @@ export default async function ClientsPage() {
                     <ColHead>{tCols("name")}</ColHead>
                     <ColHead>{tCols("industry")}</ColHead>
                     <ColHead>{tCols("status")}</ColHead>
+                    <ColHead>{tCols("contractNumber")}</ColHead>
+                    <ColHead>{tCols("projectCode")}</ColHead>
                     <ColHead className="text-right tabular-nums">
                       {tCols("projects")}
                     </ColHead>
@@ -163,6 +228,30 @@ export default async function ClientsPage() {
                         >
                           {tStatus(c.status)}
                         </Badge>
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        <RefCell
+                          value={c.contract_number}
+                          href={
+                            c.contract_number
+                              ? contractByNumber.get(c.contract_number)
+                                ? `/finance/contracts/${contractByNumber.get(c.contract_number)}`
+                                : undefined
+                              : undefined
+                          }
+                        />
+                      </td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        <RefCell
+                          value={c.project_code}
+                          href={
+                            c.project_code
+                              ? projectByCode.get(c.project_code)
+                                ? `/projects/${projectByCode.get(c.project_code)}`
+                                : undefined
+                              : undefined
+                          }
+                        />
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {c.project_count}
@@ -201,5 +290,24 @@ function ColHead({
     >
       {children}
     </th>
+  );
+}
+
+function RefCell({
+  value,
+  href,
+}: {
+  value: string | null;
+  href: string | undefined;
+}) {
+  if (!value) return <span className="text-muted-foreground">—</span>;
+  if (!href) return <span className="text-muted-foreground">{value}</span>;
+  return (
+    <Link
+      href={href}
+      className="text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+    >
+      {value}
+    </Link>
   );
 }

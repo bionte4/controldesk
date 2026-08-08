@@ -124,7 +124,12 @@ export default async function TimesheetsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" render={<Link href="/hr/timesheets/weekly" />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/hr/timesheets/weekly" />}
+          >
             {t("weekly.viewLink")}
           </Button>
           <NewTimesheetSheet

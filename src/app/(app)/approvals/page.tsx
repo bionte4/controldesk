@@ -6,6 +6,7 @@ import {
   Coins,
   FileClock,
   Inbox,
+  Paperclip,
   PiggyBank,
   Receipt,
   Wallet,
@@ -321,6 +322,59 @@ export default async function ApprovalsPage() {
   const brItems = ((brRes.data ?? []) as unknown as BudgetRequestItem[]);
   const twItems = ((twRes.data ?? []) as unknown as WeeklyTimesheetItem[]);
 
+  // ------------------------------------------------------------------
+  // Batch attachment counts — surfaces "N nota" chips inline so
+  // approvers can triage without opening each item. RLS on
+  // `attachments` scopes rows to the current tenant already; the
+  // resource_id filter narrows to only the shown items.
+  // ------------------------------------------------------------------
+  const expenseIds = expenseItems.map((i) => i.id);
+  const caIds = caItems.map((i) => i.id);
+  const pcIds = pcItems.map((i) => i.id);
+
+  const [expenseAttRes, caAttRes, pcAttRes] = await Promise.all([
+    expenseIds.length > 0
+      ? supabase
+          .from("attachments")
+          .select("resource_id")
+          .eq("resource_type", "project_expense")
+          .in("resource_id", expenseIds)
+      : { data: [] as { resource_id: string }[] },
+    caIds.length > 0
+      ? supabase
+          .from("attachments")
+          .select("resource_id")
+          .eq("resource_type", "cash_advance")
+          .in("resource_id", caIds)
+      : { data: [] as { resource_id: string }[] },
+    pcIds.length > 0
+      ? supabase
+          .from("attachments")
+          .select("resource_id")
+          .eq("resource_type", "petty_cash_replenishment")
+          .in("resource_id", pcIds)
+      : { data: [] as { resource_id: string }[] },
+  ]);
+
+  function tallyBy(
+    rows: { resource_id: string }[] | null | undefined,
+  ): Map<string, number> {
+    const m = new Map<string, number>();
+    (rows ?? []).forEach((r) => {
+      m.set(r.resource_id, (m.get(r.resource_id) ?? 0) + 1);
+    });
+    return m;
+  }
+  const expenseAttachCount = tallyBy(
+    expenseAttRes.data as { resource_id: string }[] | null,
+  );
+  const caAttachCount = tallyBy(
+    caAttRes.data as { resource_id: string }[] | null,
+  );
+  const pcAttachCount = tallyBy(
+    pcAttRes.data as { resource_id: string }[] | null,
+  );
+
   const hasAnyRole =
     expenseStatuses.length > 0 ||
     caStatuses.length > 0 ||
@@ -392,6 +446,12 @@ export default async function ApprovalsPage() {
                           >
                             {STATUS_LABEL[item.status]}
                           </Badge>
+                          <AttachmentBadge
+                            count={expenseAttachCount.get(item.id) ?? 0}
+                            label={t("attachmentsLabel", {
+                              n: expenseAttachCount.get(item.id) ?? 0,
+                            })}
+                          />
                         </div>
                         <p className="mt-1 font-medium">{item.description}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -447,6 +507,12 @@ export default async function ApprovalsPage() {
                           >
                             {caStatusLabel(item.status)}
                           </Badge>
+                          <AttachmentBadge
+                            count={caAttachCount.get(item.id) ?? 0}
+                            label={t("attachmentsLabel", {
+                              n: caAttachCount.get(item.id) ?? 0,
+                            })}
+                          />
                         </div>
                         <p className="mt-1 font-medium">{item.purpose}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -780,6 +846,12 @@ export default async function ApprovalsPage() {
                           >
                             {item.status}
                           </Badge>
+                          <AttachmentBadge
+                            count={pcAttachCount.get(item.id) ?? 0}
+                            label={t("attachmentsLabel", {
+                              n: pcAttachCount.get(item.id) ?? 0,
+                            })}
+                          />
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {t("submittedBy", {
@@ -853,5 +925,30 @@ function SectionHeader({
         {count}
       </Badge>
     </div>
+  );
+}
+
+/**
+ * Compact chip showing how many supporting attachments the approver
+ * will find when opening a row. Hidden when count is 0 so it doesn't
+ * add noise for items without evidence.
+ */
+function AttachmentBadge({
+  count,
+  label,
+}: {
+  count: number;
+  label: string;
+}) {
+  if (count <= 0) return null;
+  return (
+    <Badge
+      variant="outline"
+      className="border-white/10 bg-white/5 text-xs tabular-nums"
+      title={label}
+    >
+      <Paperclip className="mr-1 size-3" aria-hidden />
+      <span aria-label={label}>{count}</span>
+    </Badge>
   );
 }

@@ -1,8 +1,14 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendTelegramMessage } from "@/lib/integrations/telegram/client";
+import { loadUserLink } from "@/lib/integrations/telegram/repository";
+import { log } from "@/lib/observability/log";
 import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import type { NotificationKind } from "@/types/database";
+
+import { categoryForKind } from "./categories";
+import { isChannelEnabled } from "./preferences";
 
 /**
  * ControlDesk in-app notification service (rules §20).
@@ -17,12 +23,23 @@ import type { NotificationKind } from "@/types/database";
  */
 
 export type NotifyRecipient = {
-  userId: string;
+  /**
+   * Auth user id. Can be `null` for employees added by HR before they have
+   * activated a system account (see migration 0034). In that case the
+   * notification is silently dropped — there is no inbox to deliver to.
+   */
+  userId: string | null;
   employeeId?: string | null;
 };
 
 /**
  * Fire a single in-app notification. Errors are logged, never thrown.
+ * No-op when the recipient has no `user_id` (HR-only employee record).
+ *
+ * Preference-gated (migration 0068): if the recipient has opted out
+ * of the IN_APP channel for the kind's category, we silently skip
+ * the insert. Missing preferences rows fail-open — legacy users
+ * without opt-outs keep seeing everything.
  */
 export async function notifyUser(input: {
   recipient: NotifyRecipient;
@@ -31,7 +48,35 @@ export async function notifyUser(input: {
   body?: string;
   actionUrl?: string;
   payload?: Record<string, unknown>;
-}): Promise<{ ok: boolean; error?: string }> {
+  /**
+   * Optional. When provided, we consult
+   * `user_notification_preferences` before enqueuing so users
+   * can silence a category. Callers who don't yet have the
+   * tenant handy pass `undefined` and we default to legacy
+   * always-deliver behaviour.
+   */
+  tenantId?: string;
+}): Promise<{ ok: boolean; error?: string; skipped?: "prefs" | "no_user" }> {
+  if (!input.recipient.userId) {
+    return { ok: true, skipped: "no_user" };
+  }
+
+  // Preference gate — only queried when the caller passed `tenantId`.
+  // This preserves compat with older call sites while giving the new
+  // Preferences page an immediate effect.
+  if (input.tenantId) {
+    const category = categoryForKind(input.kind);
+    const allowed = await isChannelEnabled({
+      tenantId: input.tenantId,
+      userId: input.recipient.userId,
+      category,
+      channel: "IN_APP",
+    });
+    if (!allowed) {
+      return { ok: true, skipped: "prefs" };
+    }
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("enqueue_notification", {
     p_recipient_user_id: input.recipient.userId,
@@ -44,7 +89,74 @@ export async function notifyUser(input: {
   if (error) {
     return { ok: false, error: error.message };
   }
+
+  // Best-effort Telegram fanout — only when the caller supplied
+  // tenantId (so we know which tenant's bot config to load) and
+  // the user opted into the TELEGRAM channel for this category.
+  // Failures never propagate — the in-app message is the source of
+  // truth; Telegram is just an out-of-band echo (rules §20).
+  if (input.tenantId) {
+    void dispatchTelegram({
+      tenantId: input.tenantId,
+      userId: input.recipient.userId,
+      kind: input.kind,
+      title: input.title,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    }).catch((err) => {
+      log.warn("telegram_dispatch_failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
+
   return { ok: true };
+}
+
+/**
+ * Fire-and-forget Telegram dispatcher. Called from `notifyUser` after
+ * an in-app enqueue succeeds. Not awaited so a slow Telegram API
+ * cannot block the mutating Server Action that scheduled it.
+ */
+async function dispatchTelegram(input: {
+  tenantId: string;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body?: string;
+  actionUrl?: string;
+}): Promise<void> {
+  const category = categoryForKind(input.kind);
+  const allowed = await isChannelEnabled({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    category,
+    channel: "TELEGRAM",
+  });
+  if (!allowed) return;
+
+  const link = await loadUserLink({
+    tenantId: input.tenantId,
+    userId: input.userId,
+  });
+  if (!link) return;
+
+  // Escape angle brackets so payload text can't smuggle HTML into
+  // the Telegram render surface (parse_mode=HTML).
+  const escape = (s: string) =>
+    s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+  const title = escape(input.title);
+  const bodyLine = input.body ? `\n${escape(input.body)}` : "";
+  const linkLine = input.actionUrl
+    ? `\n\n<a href="${escape(input.actionUrl)}">Open in ControlDesk</a>`
+    : "";
+
+  await sendTelegramMessage({
+    tenantId: input.tenantId,
+    chatId: link.chatId,
+    text: `<b>${title}</b>${bodyLine}${linkLine}`,
+  });
 }
 
 /**
@@ -84,18 +196,22 @@ export async function notifyRoles(input: {
   let delivered = 0;
   let failed = 0;
   await Promise.all(
-    recipients.map(async (r) => {
-      const res = await notifyUser({
-        recipient: { userId: r.user_id, employeeId: r.id },
-        kind: input.kind,
-        title: input.title,
-        body: input.body,
-        actionUrl: input.actionUrl,
-        payload: input.payload,
-      });
-      if (res.ok) delivered += 1;
-      else failed += 1;
-    }),
+    recipients
+      .filter((r) => r.user_id !== null)
+      .map(async (r) => {
+        const res = await notifyUser({
+          recipient: { userId: r.user_id, employeeId: r.id },
+          kind: input.kind,
+          title: input.title,
+          body: input.body,
+          actionUrl: input.actionUrl,
+          payload: input.payload,
+          // Thread tenant so per-recipient prefs are honoured.
+          tenantId: input.tenantId,
+        });
+        if (res.ok) delivered += 1;
+        else failed += 1;
+      }),
   );
   return { delivered, failed };
 }

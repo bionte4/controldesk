@@ -6,6 +6,7 @@ import { moneyToDbString, parseMoneyFromDb } from "@/lib/format/money";
 import { toLegacyDbRole } from "@/lib/rbac/roles";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
+import { assertProjectAcceptsBudget } from "@/lib/data/projects";
 import {
   budgetSlotForStatus,
   canBudgetAdvance,
@@ -38,6 +39,9 @@ export const createBudgetAction = withCanonicalSecureAction({
   }),
   handler: async (input, ctx) => {
     const supabase = await createClient();
+    // Fase 2 gate — refuse creating a budget under a DRAFT (BC-only)
+    // or terminated project. PLANNING / ACTIVE / ON_HOLD are OK.
+    await assertProjectAcceptsBudget(input.project_id);
 
     const { data: inserted, error } = await supabase
       .from("budgets")
@@ -99,6 +103,42 @@ export const addBudgetLineItemAction = withCanonicalSecureAction({
       throw new Error(`Budget is locked at status ${parent.status}.`);
     }
 
+    // Defense-in-depth against runtime budget_category lookup — reject any
+    // code not present as an active row in this tenant. Client already
+    // constrains via the seeded dropdown, but a malicious payload could
+    // bypass that. RLS ensures we only see this tenant's rows.
+    const { data: catRow, error: catErr } = await supabase
+      .from("lookup_options")
+      .select("id")
+      .eq("domain", "budget_category")
+      .eq("code", input.category)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (catErr) throw new Error(catErr.message);
+    if (!catRow) {
+      throw new Error(
+        `Category "${input.category}" is not an active budget_category. Ask your admin to add it in Settings › Master data.`,
+      );
+    }
+
+    // Same defense-in-depth for the Chart of Accounts reference. Nullable
+    // during Fase 2 rollout — but when provided it MUST be an active,
+    // postable account within this tenant.
+    if (input.coa_id) {
+      const { data: coaRow, error: coaErr } = await supabase
+        .from("chart_of_accounts")
+        .select("id, is_active, is_postable")
+        .eq("id", input.coa_id)
+        .eq("tenant_id", ctx.actor.tenantId)
+        .maybeSingle();
+      if (coaErr) throw new Error(coaErr.message);
+      if (!coaRow || !coaRow.is_active || !coaRow.is_postable) {
+        throw new Error(
+          "Selected CoA account is not active or not postable. Ask your admin to update Settings › Chart of Accounts.",
+        );
+      }
+    }
+
     const { data: inserted, error } = await supabase
       .from("budget_details")
       .insert({
@@ -106,6 +146,7 @@ export const addBudgetLineItemAction = withCanonicalSecureAction({
         budget_id: input.budget_id,
         seq: input.seq,
         category: input.category,
+        coa_id: input.coa_id ?? null,
         description: input.description ?? null,
         planned_amount: moneyToDbString(
           BigInt(input.planned_amount),
@@ -173,7 +214,43 @@ export const updateBudgetLineItemAction = withCanonicalSecureAction({
     const patch: TablesUpdate<"budget_details"> = {
       updated_by: ctx.actor.employeeId,
     };
-    if (input.category !== undefined) patch.category = input.category;
+    if (input.category !== undefined) {
+      // Same defense-in-depth as `addBudgetLineItemAction` — verify the code
+      // is an active row for this tenant before persisting.
+      const { data: catRow, error: catErr } = await supabase
+        .from("lookup_options")
+        .select("id")
+        .eq("domain", "budget_category")
+        .eq("code", input.category)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (catErr) throw new Error(catErr.message);
+      if (!catRow) {
+        throw new Error(
+          `Category "${input.category}" is not an active budget_category. Ask your admin to add it in Settings › Master data.`,
+        );
+      }
+      patch.category = input.category;
+    }
+    if (input.coa_id !== undefined) {
+      if (input.coa_id === null || input.coa_id === undefined) {
+        patch.coa_id = null;
+      } else {
+        const { data: coaRow, error: coaErr } = await supabase
+          .from("chart_of_accounts")
+          .select("id, is_active, is_postable")
+          .eq("id", input.coa_id)
+          .eq("tenant_id", ctx.actor.tenantId)
+          .maybeSingle();
+        if (coaErr) throw new Error(coaErr.message);
+        if (!coaRow || !coaRow.is_active || !coaRow.is_postable) {
+          throw new Error(
+            "Selected CoA account is not active or not postable. Ask your admin to update Settings › Chart of Accounts.",
+          );
+        }
+        patch.coa_id = input.coa_id;
+      }
+    }
     if (input.description !== undefined) patch.description = input.description ?? null;
     if (input.planned_amount !== undefined) {
       patch.planned_amount = moneyToDbString(
