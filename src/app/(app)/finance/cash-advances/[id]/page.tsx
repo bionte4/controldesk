@@ -375,7 +375,6 @@ export default async function CashAdvanceDetailPage(props: {
           const delta = businessDaysUntil(ca.settlement_due_at, new Date());
           const dueLabel = formatInTz(ca.settlement_due_at, "dd MMM yyyy");
           let tone = "";
-          let icon: React.ReactNode = null;
           let title = "";
           let body = "";
           if (delta > 3) {

@@ -84,16 +84,6 @@ export function NewTemplateSheet({
   const [uncontrolled, setUncontrolled] = React.useState(false);
   const isControlled = openProp !== undefined;
   const open = isControlled ? openProp : uncontrolled;
-  const setOpen = React.useCallback(
-    (next: boolean) => {
-      if (isControlled) {
-        onOpenChange?.(next);
-      } else {
-        setUncontrolled(next);
-      }
-    },
-    [isControlled, onOpenChange],
-  );
   const [name, setName] = React.useState(initial?.name ?? "");
   const [description, setDescription] = React.useState(
     initial?.description ?? "",
@@ -103,20 +93,31 @@ export function NewTemplateSheet({
   );
   const [pending, startTransition] = React.useTransition();
 
-  // Reset on open/close cycle so a fresh create starts empty even if
-  // the sheet was previously opened for an edit in the same session.
-  React.useEffect(() => {
-    if (!open) return;
-    if (initial) {
-      setName(initial.name);
-      setDescription(initial.description ?? "");
-      setItems(initial.items.length > 0 ? initial.items : DEFAULT_ITEMS);
-    } else {
-      setName("");
-      setDescription("");
-      setItems(DEFAULT_ITEMS);
-    }
-  }, [open, initial]);
+  // Reset in the open transition callback (not a useEffect) so a fresh
+  // create starts empty even if the sheet was previously opened for an
+  // edit in the same session. setState in event handlers is preferred
+  // over setState inside effects (see react-hooks/set-state-in-effect).
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (next) {
+        if (initial) {
+          setName(initial.name);
+          setDescription(initial.description ?? "");
+          setItems(initial.items.length > 0 ? initial.items : DEFAULT_ITEMS);
+        } else {
+          setName("");
+          setDescription("");
+          setItems(DEFAULT_ITEMS);
+        }
+      }
+      if (isControlled) {
+        onOpenChange?.(next);
+      } else {
+        setUncontrolled(next);
+      }
+    },
+    [initial, isControlled, onOpenChange],
+  );
 
   const totalWeight = items.reduce((s, it) => s + (Number(it.weight_pct) || 0), 0);
 

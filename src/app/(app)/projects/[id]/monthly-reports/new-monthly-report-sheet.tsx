@@ -44,9 +44,13 @@ export function NewMonthlyReportSheet({ projectId }: { projectId: string }) {
   const [period, setPeriod] = React.useState(defaultMonth);
   const [pending, startTransition] = React.useTransition();
 
-  React.useEffect(() => {
-    if (!open) setPeriod(defaultMonth);
-  }, [open, defaultMonth]);
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next) setPeriod(defaultMonth);
+    },
+    [defaultMonth],
+  );
 
   function onSubmit() {
     startTransition(async () => {
@@ -65,7 +69,7 @@ export function NewMonthlyReportSheet({ projectId }: { projectId: string }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetTrigger
         render={
           <Button>

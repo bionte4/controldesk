@@ -286,9 +286,10 @@ export function AssignBudgetLine({
   React.useEffect(() => {
     if (!editing) return;
     let cancelled = false;
-    setLoading(true);
-    fetchBudgetLinesForProject({ project_id: projectId })
-      .then((res) => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetchBudgetLinesForProject({ project_id: projectId });
         if (cancelled) return;
         setLines(
           res.ok
@@ -299,13 +300,13 @@ export function AssignBudgetLine({
               }))
             : [],
         );
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setLines([]);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
-      });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
