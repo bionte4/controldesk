@@ -74,8 +74,15 @@ begin
   -- HR/OM roles bypass the guard entirely — they own the base
   -- catalog and are trusted to set allowances directly. Everyone
   -- else has their allowance forced to inherit from base.
+  --
+  -- `actor_role IS NULL` covers superuser / migration / seed contexts
+  -- where no JWT claim is present (e.g. `supabase db reset` in CI
+  -- runs the seed file as the `postgres` superuser). Without this
+  -- branch, seeding base shifts fails with `Only HR/OM may create
+  -- base shifts. (SQLSTATE P0001)` during Playwright's local stack
+  -- boot.
   actor_role := public.current_employee_role();
-  if actor_role in (
+  if actor_role is null or actor_role in (
     'HR_ADMIN',
     'TENANT_ADMIN',
     'GENERAL_MANAGER',
