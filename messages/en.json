@@ -1894,13 +1894,77 @@
         "title": "Google Calendar",
         "description": "Push projects and milestones to a shared team calendar."
       },
+      "smtp": {
+        "title": "SMTP (Email)",
+        "description": "Send digests and reminders from your tenant's own domain (SPF/DKIM/DMARC aligned)."
+      },
       "telegram_bot": {
         "title": "Telegram bot",
         "description": "Configure the per-tenant bot that sends notifications to employees."
       },
       "whatsapp_business": {
-        "title": "WhatsApp (Fonnte)",
-        "description": "Send notifications via WhatsApp using Fonnte's device-token gateway. Pair a WhatsApp Web session and paste the device token."
+        "title": "WhatsApp Business",
+        "description": "Send notifications via WhatsApp. Pick a provider: Fonnte (local, affordable) or Twilio (official Meta partner)."
+      }
+    }
+  },
+  "smtpAdmin": {
+    "kicker": "Integrations · SMTP (Email)",
+    "title": "SMTP (Email)",
+    "subtitle": "Per-tenant outbound email relay. Daily digests, settlement reminders, and invitation emails will be sent from your own domain (not the ControlDesk default) so the sender identity, DKIM signature, and domain reputation align with your brand.",
+    "status": {
+      "connected": "SMTP relay is active",
+      "inactive": "Relay registered but inactive",
+      "noConfig": "No SMTP relay registered — emails use the global default",
+      "lastError": "Last error",
+      "hintConnected": "All outbound email for this tenant flows through the relay above with the sender address you configured. Delivery history is stored in the email_outbox table.",
+      "hintNotConfigured": "Without a custom relay, emails ship via the ControlDesk default relay with no-reply@controldesk.app as the sender. Add your relay so digests come from your own domain."
+    },
+    "runbook": {
+      "title": "1 · Prepare your SMTP relay",
+      "description": "You can use any relay that speaks SMTP submission (port 587 STARTTLS or 465 SMTPS): Gmail Workspace, Zoho Mail, Postmark SMTP, AWS SES SMTP endpoint, or a self-hosted mail server.",
+      "step1": "Create a mailbox or SMTP credential at your provider (e.g. no-reply@acme.com on Google Workspace, or an SMTP token on Postmark).",
+      "step2": "Verify your domain at the provider — configure SPF, DKIM, and DMARC records in DNS so emails don't land in spam.",
+      "step3": "Note the host, port, username, and password/token from the provider dashboard.",
+      "step4": "Fill in the form on the right. We test the connection to the relay before saving so misconfigurations surface immediately.",
+      "step5": "Once saved, all outbound email for your tenant automatically uses this relay. Come back here to rotate the password or switch relays.",
+      "warning": "Store the password carefully. Once saved it's never displayed again. To rotate, paste a fresh password into this form."
+    },
+    "form": {
+      "title": "Register or update the SMTP relay",
+      "description": "On save, we verify the connection to the relay (SMTP handshake + AUTH) before persisting. If verification fails, no credentials are stored.",
+      "fields": {
+        "host": "SMTP host",
+        "hostPlaceholder": "smtp.gmail.com",
+        "hostHint": "Hostname of the SMTP relay. Examples: smtp.gmail.com, smtp.zoho.com, smtp.postmarkapp.com.",
+        "port": "Port",
+        "portHint": "587 (submission/STARTTLS), 465 (SMTPS), 25 (legacy relay), 1025 (mailpit dev).",
+        "username": "SMTP username",
+        "usernamePlaceholder": "no-reply@acme.com or apikey",
+        "usernameHint": "Typically the sender email (Gmail/Zoho) or a provider-specific username (Postmark: 'apikey', SES: SMTP IAM username).",
+        "password": "Password / Token",
+        "passwordPlaceholder": "Password or API token",
+        "passwordHint": "Email account password or provider API token. Encrypted at rest; never displayed after save.",
+        "passwordHintUpdate": "Leave blank to keep the current password. Paste a fresh value to rotate.",
+        "fromAddress": "Sender address (From)",
+        "fromAddressPlaceholder": "no-reply@acme.com",
+        "fromAddressHint": "Email address that appears as the sender. Must match a domain that's verified at the relay (SPF/DKIM).",
+        "fromName": "Sender name",
+        "fromNamePlaceholder": "Acme HR",
+        "fromNameHint": "Display name that appears in the From column. Leave blank to show only the email address.",
+        "replyTo": "Reply-To (optional)",
+        "replyToPlaceholder": "hr@acme.com",
+        "replyToHint": "Address that receives replies. Leave blank to fall back to the sender (From) address."
+      },
+      "actions": {
+        "save": "Save & verify",
+        "update": "Update & re-verify",
+        "deactivate": "Deactivate"
+      },
+      "deactivateConfirm": "Deactivate the tenant SMTP relay? Outbound email will fall back to the ControlDesk global relay.",
+      "toast": {
+        "savedOk": "SMTP relay saved and verified.",
+        "deactivatedOk": "SMTP relay deactivated."
       }
     }
   },

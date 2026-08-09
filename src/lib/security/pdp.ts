@@ -81,6 +81,7 @@ export type ResourceType =
   | "calendar_sync"
   | "telegram_bot_config"
   | "whatsapp_config"
+  | "smtp_config"
   | "lookup_option"
   | "user_admin"
   | "coa"
@@ -227,6 +228,8 @@ export function authorize(input: {
       return decideTelegramBotConfig(actor, action);
     case "whatsapp_config":
       return decideWhatsAppConfig(actor, action);
+    case "smtp_config":
+      return decideSmtpConfig(actor, action);
     case "lookup_option":
       return decideLookupOption(actor, action);
     case "user_admin":
@@ -288,6 +291,11 @@ function allowReadWithinTenant(
   // Tenant WhatsApp Business config — same admin-only gate as Telegram.
   if (resource === "whatsapp_config") {
     return decideWhatsAppConfig(actor, "read");
+  }
+  // Tenant SMTP config — per-tenant outbound-email transport identity.
+  // Same admin-only gate as the other messaging integrations.
+  if (resource === "smtp_config") {
+    return decideSmtpConfig(actor, "read");
   }
   // Lookup options are tenant-scoped reference data — any tenant member
   // may read (dropdowns everywhere). Write restricted below.
@@ -1116,6 +1124,27 @@ function decideWhatsAppConfig(actor: Actor, action: ActionVerb): Decision {
         : DENY("whatsapp deactivation restricted to admins + GM");
     default:
       return DENY(`unsupported action on whatsapp_config: ${action}`);
+  }
+}
+
+function decideSmtpConfig(actor: Actor, action: ActionVerb): Decision {
+  const isAdmin = INTEGRATION_ADMIN_ROLES.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isAdmin
+        ? ALLOW("admin/GM reads tenant smtp config")
+        : DENY("smtp config restricted to admins + GM");
+    case "create":
+    case "update":
+      return isAdmin
+        ? ALLOW("admin/GM manages tenant smtp config")
+        : DENY("smtp config mutations restricted to admins + GM");
+    case "delete":
+      return isAdmin
+        ? ALLOW("admin/GM may deactivate tenant smtp config")
+        : DENY("smtp deactivation restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on smtp_config: ${action}`);
   }
 }
 

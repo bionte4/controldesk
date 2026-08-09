@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import {
   ArrowRight,
   CalendarClock,
+  Mail,
   MessageCircle,
   Plug,
   Send,
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { getCalendarConnectionStatus } from "@/lib/data/calendar-sync";
+import { loadTenantSmtpConfig } from "@/lib/integrations/smtp";
 import { loadTenantBotConfig } from "@/lib/integrations/telegram";
 import { loadTenantWhatsAppConfig } from "@/lib/integrations/whatsapp";
 import type { EmployeeRole } from "@/lib/rbac/roles";
@@ -42,7 +44,7 @@ const ACCESS_ROLES: readonly EmployeeRole[] = [
 type IntegrationStatus = "connected" | "disconnected" | "not_available";
 
 type IntegrationCard = {
-  key: "calendar" | "telegram_bot" | "whatsapp_business";
+  key: "calendar" | "telegram_bot" | "whatsapp_business" | "smtp";
   href: string | null;
   icon: LucideIcon;
   status: IntegrationStatus;
@@ -52,12 +54,14 @@ export default async function IntegrationsHubPage() {
   const employee = await requireCurrentEmployee();
   if (!ACCESS_ROLES.includes(employee.role as EmployeeRole)) notFound();
 
-  const [t, calendarStatus, telegramBot, whatsappCfg] = await Promise.all([
-    getTranslations("integrationsHub"),
-    getCalendarConnectionStatus(employee.tenant_id),
-    loadTenantBotConfig(employee.tenant_id),
-    loadTenantWhatsAppConfig(employee.tenant_id),
-  ]);
+  const [t, calendarStatus, telegramBot, whatsappCfg, smtpCfg] =
+    await Promise.all([
+      getTranslations("integrationsHub"),
+      getCalendarConnectionStatus(employee.tenant_id),
+      loadTenantBotConfig(employee.tenant_id),
+      loadTenantWhatsAppConfig(employee.tenant_id),
+      loadTenantSmtpConfig(employee.tenant_id),
+    ]);
 
   // Derive status per integration. Order of decision for the
   // Telegram + WhatsApp tiles:
@@ -76,6 +80,9 @@ export default async function IntegrationsHubPage() {
   const whatsappStatus: IntegrationStatus = whatsappCfg?.isActive
     ? "connected"
     : "disconnected";
+  const smtpStatus: IntegrationStatus = smtpCfg?.isActive
+    ? "connected"
+    : "disconnected";
 
   const cards: IntegrationCard[] = [
     {
@@ -83,6 +90,12 @@ export default async function IntegrationsHubPage() {
       href: "/settings/integrations/calendar",
       icon: CalendarClock,
       status: calendarStatus.connected ? "connected" : "disconnected",
+    },
+    {
+      key: "smtp",
+      href: "/settings/integrations/smtp",
+      icon: Mail,
+      status: smtpStatus,
     },
     {
       key: "telegram_bot",

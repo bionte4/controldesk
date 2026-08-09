@@ -55,6 +55,50 @@ describe("mailer", () => {
     expect(res.providerMessageId).toBe("<abc@stub>");
   });
 
+  it("SENT result exposes the actual sender used (env fallback)", async () => {
+    // env-global config path — no tenantId. `configSource` should be
+    // `env` and `from` should reflect the env `SMTP_FROM`.
+    process.env.SMTP_HOST = "127.0.0.1";
+    process.env.SMTP_PORT = "1025";
+    process.env.SMTP_FROM = "digest@controldesk.test";
+
+    __setTransporterForTests({
+      sendMail: async () => ({ messageId: "<from-check@stub>" }),
+    });
+
+    const res = await sendEmail({
+      to: "x@example.com",
+      subject: "hi",
+    });
+    expect(res.status).toBe("SENT");
+    expect(res.from).toBe("digest@controldesk.test");
+    expect(res.configSource).toBe("env");
+  });
+
+  it("degrades gracefully when the tenant SMTP loader throws", async () => {
+    // Even if the per-tenant loader implodes (bad DB session, etc.),
+    // the mailer must fall back to env — never crash a cron.
+    process.env.SMTP_HOST = "127.0.0.1";
+    process.env.SMTP_PORT = "1025";
+    process.env.SMTP_FROM = "fallback@controldesk.test";
+
+    __setTransporterForTests({
+      sendMail: async () => ({ messageId: "<fallback@stub>" }),
+    });
+
+    // A bogus tenantId that the repository will reject or return null
+    // for is enough — the loader either returns null (falls through)
+    // or throws (caught in resolveConfig, falls through). Either way
+    // the caller lands on env config.
+    const res = await sendEmail({
+      to: "x@example.com",
+      subject: "hi",
+      tenantId: "00000000-0000-0000-0000-000000000000",
+    });
+    expect(res.status).toBe("SENT");
+    expect(res.configSource).toBe("env");
+  });
+
   it("returns FAILED with error message when transporter throws", async () => {
     process.env.SMTP_HOST = "127.0.0.1";
     process.env.SMTP_PORT = "1025";

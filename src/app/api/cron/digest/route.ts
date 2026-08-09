@@ -126,13 +126,18 @@ export async function POST(request: Request) {
           subject,
           text,
           html,
+          tenantId: tenant.id,
           metadata: { tenant_id: tenant.id, audience: r.audience },
         });
 
         await supabase.from("email_outbox").insert({
           tenant_id: tenant.id,
           to_address: r.email,
+          // Prefer the actual sender the mailer used (per-tenant SMTP
+          // row wins over env fallback). Fall back to env default when
+          // the mailer skipped entirely (result.from is undefined).
           from_address:
+            result.from ??
             process.env.SMTP_FROM ??
             "ControlDesk <no-reply@controldesk.app>",
           subject,
@@ -142,7 +147,10 @@ export async function POST(request: Request) {
           provider: result.provider,
           provider_message_id: result.providerMessageId ?? null,
           error_message: result.error ?? null,
-          metadata: { audience: r.audience },
+          metadata: {
+            audience: r.audience,
+            config_source: result.configSource ?? null,
+          },
           sent_at: result.status === "SENT" ? new Date().toISOString() : null,
         });
 

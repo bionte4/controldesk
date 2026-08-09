@@ -252,12 +252,15 @@ async function sendReminderEmail(
     to: input.to,
     subject: input.subject,
     text: input.text + `\n\n${input.actionUrl}`,
+    tenantId: input.tenantId,
   });
   await supabase.from("email_outbox").insert({
     tenant_id: input.tenantId,
     to_address: input.to,
     from_address:
-      process.env.SMTP_FROM ?? "ControlDesk <no-reply@controldesk.app>",
+      result.from ??
+      process.env.SMTP_FROM ??
+      "ControlDesk <no-reply@controldesk.app>",
     subject: input.subject,
     body_text: input.text,
     body_html: null,
@@ -265,7 +268,10 @@ async function sendReminderEmail(
     provider: result.provider,
     provider_message_id: result.providerMessageId ?? null,
     error_message: result.error ?? null,
-    metadata: { source: "settlement-reminders" },
+    metadata: {
+      source: "settlement-reminders",
+      config_source: result.configSource ?? null,
+    },
     sent_at: result.status === "SENT" ? new Date().toISOString() : null,
   });
 }

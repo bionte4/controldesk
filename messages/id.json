@@ -1894,13 +1894,77 @@
         "title": "Google Calendar",
         "description": "Push proyek dan milestone ke kalender bersama tim."
       },
+      "smtp": {
+        "title": "SMTP (Email)",
+        "description": "Kirim email digest & reminder dari domain tenant Anda sendiri (SPF/DKIM/DMARC selaras)."
+      },
       "telegram_bot": {
         "title": "Bot Telegram",
         "description": "Konfigurasi bot per-tenant untuk kirim notifikasi ke karyawan."
       },
       "whatsapp_business": {
-        "title": "WhatsApp (Fonnte)",
-        "description": "Kirim notifikasi lewat WhatsApp via gateway device-token Fonnte. Pairing sesi WhatsApp Web dan tempel device token."
+        "title": "WhatsApp Business",
+        "description": "Kirim notifikasi lewat WhatsApp. Pilih provider Fonnte (lokal, murah) atau Twilio (partner resmi Meta)."
+      }
+    }
+  },
+  "smtpAdmin": {
+    "kicker": "Integrasi · SMTP (Email)",
+    "title": "SMTP (Email)",
+    "subtitle": "Konfigurasi relay email keluar per-tenant. Digest harian, reminder settlement, dan email undangan akan dikirim dari domain Anda sendiri (bukan default ControlDesk) supaya kop surat, DKIM, dan reputasi domain selaras dengan brand tenant.",
+    "status": {
+      "connected": "Relay SMTP aktif",
+      "inactive": "Relay terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada relay SMTP terdaftar — email akan pakai default global",
+      "lastError": "Error terakhir",
+      "hintConnected": "Semua email keluar tenant ini melewati relay di atas dengan alamat pengirim yang Anda tentukan. Cek riwayat pengiriman di tabel email_outbox.",
+      "hintNotConfigured": "Tanpa konfigurasi khusus, email dikirim dari relay default ControlDesk dengan alamat no-reply@controldesk.app. Tambahkan relay Anda supaya digest terkirim dari domain sendiri."
+    },
+    "runbook": {
+      "title": "1 · Siapkan relay SMTP",
+      "description": "Anda bisa pakai relay apa saja yang mendukung SMTP submission (port 587 STARTTLS atau 465 SMTPS): Gmail Workspace, Zoho Mail, Postmark SMTP, AWS SES SMTP endpoint, atau server mail sendiri.",
+      "step1": "Buat mailbox atau credential SMTP di provider Anda (misal: no-reply@acme.com di Google Workspace, atau SMTP token di Postmark).",
+      "step2": "Verifikasi domain Anda di provider — atur SPF, DKIM, dan DMARC record di DNS agar email tidak masuk spam.",
+      "step3": "Catat host, port, username, dan password/token dari dashboard provider.",
+      "step4": "Isi form di sebelah kanan. Kami test koneksi ke relay sebelum menyimpan supaya kesalahan konfigurasi ketahuan langsung.",
+      "step5": "Setelah tersimpan, semua email keluar tenant Anda otomatis pakai relay ini. Kembali ke sini kalau perlu ganti password atau relay.",
+      "warning": "Simpan password dengan hati-hati. Setelah tersimpan tidak akan ditampilkan ulang. Untuk rotasi, tempel password baru di form ini."
+    },
+    "form": {
+      "title": "Daftarkan atau update relay SMTP",
+      "description": "Setelah disimpan, kami verifikasi koneksi ke relay (SMTP handshake + AUTH) sebelum persist. Kalau gagal, kredensial tidak akan tersimpan.",
+      "fields": {
+        "host": "Host SMTP",
+        "hostPlaceholder": "smtp.gmail.com",
+        "hostHint": "Hostname relay SMTP. Contoh: smtp.gmail.com, smtp.zoho.com, smtp.postmarkapp.com.",
+        "port": "Port",
+        "portHint": "587 (submission/STARTTLS), 465 (SMTPS), 25 (relay lama), 1025 (mailpit dev).",
+        "username": "Username SMTP",
+        "usernamePlaceholder": "no-reply@acme.com atau apikey",
+        "usernameHint": "Biasanya alamat email pengirim (Gmail/Zoho) atau nama pengguna khusus (Postmark: 'apikey', SES: username IAM SMTP).",
+        "password": "Password / Token",
+        "passwordPlaceholder": "Password atau API token",
+        "passwordHint": "Password akun email atau API token dari provider. Terenkripsi di database; tidak pernah ditampilkan setelah tersimpan.",
+        "passwordHintUpdate": "Kosongkan untuk pertahankan password saat ini. Tempel nilai baru untuk rotasi.",
+        "fromAddress": "Alamat pengirim (From)",
+        "fromAddressPlaceholder": "no-reply@acme.com",
+        "fromAddressHint": "Alamat email yang muncul sebagai pengirim. Wajib match dengan domain yang sudah di-verify di relay (SPF/DKIM).",
+        "fromName": "Nama pengirim",
+        "fromNamePlaceholder": "Acme HR",
+        "fromNameHint": "Nama yang muncul di kolom From. Kosongkan untuk pakai alamat email saja.",
+        "replyTo": "Reply-To (opsional)",
+        "replyToPlaceholder": "hr@acme.com",
+        "replyToHint": "Alamat yang menerima balasan email. Kosongkan untuk pakai alamat pengirim (From)."
+      },
+      "actions": {
+        "save": "Simpan & verifikasi",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan relay SMTP tenant ini? Email keluar akan kembali menggunakan relay default global ControlDesk.",
+      "toast": {
+        "savedOk": "Relay SMTP tersimpan dan terverifikasi.",
+        "deactivatedOk": "Relay SMTP dinonaktifkan."
       }
     }
   },

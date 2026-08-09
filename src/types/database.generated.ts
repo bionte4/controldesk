@@ -6223,6 +6223,68 @@ export type Database = {
           },
         ]
       }
+      tenant_smtp_configs: {
+        Row: {
+          created_at: string
+          encrypted_password: string | null
+          encrypted_username: string | null
+          from_address: string
+          from_name: string | null
+          host: string
+          is_active: boolean
+          last_error: string | null
+          port: number
+          provider: string
+          reply_to: string | null
+          secure: boolean | null
+          tenant_id: string
+          updated_at: string
+          webhook_secret: string | null
+        }
+        Insert: {
+          created_at?: string
+          encrypted_password?: string | null
+          encrypted_username?: string | null
+          from_address: string
+          from_name?: string | null
+          host: string
+          is_active?: boolean
+          last_error?: string | null
+          port?: number
+          provider?: string
+          reply_to?: string | null
+          secure?: boolean | null
+          tenant_id: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Update: {
+          created_at?: string
+          encrypted_password?: string | null
+          encrypted_username?: string | null
+          from_address?: string
+          from_name?: string | null
+          host?: string
+          is_active?: boolean
+          last_error?: string | null
+          port?: number
+          provider?: string
+          reply_to?: string | null
+          secure?: boolean | null
+          tenant_id?: string
+          updated_at?: string
+          webhook_secret?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_smtp_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_telegram_bots: {
         Row: {
           bot_username: string
