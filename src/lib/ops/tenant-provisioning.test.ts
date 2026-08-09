@@ -72,6 +72,7 @@ describe("parseProvisioningArgs", () => {
       skipCoa: false,
       yes: false,
       source: "ops-cli",
+      sendEmail: false,
     });
   });
 
@@ -89,13 +90,20 @@ describe("parseProvisioningArgs", () => {
     expect(r.value.name).toBe("PT Acme");
   });
 
-  it("accepts --dry-run / --skip-coa / --yes flags", () => {
-    const r = parseProvisioningArgs([...base, "--dry-run", "--skip-coa", "--yes"]);
+  it("accepts --dry-run / --skip-coa / --yes / --send-email flags", () => {
+    const r = parseProvisioningArgs([
+      ...base,
+      "--dry-run",
+      "--skip-coa",
+      "--yes",
+      "--send-email",
+    ]);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     expect(r.value.dryRun).toBe(true);
     expect(r.value.skipCoa).toBe(true);
     expect(r.value.yes).toBe(true);
+    expect(r.value.sendEmail).toBe(true);
   });
 
   it("rejects missing --slug", () => {
@@ -261,7 +269,13 @@ describe("PROVISIONING_USAGE", () => {
   });
 
   it("documents optional flags", () => {
-    for (const flag of ["--dry-run", "--yes", "--skip-coa", "--admin-password="]) {
+    for (const flag of [
+      "--dry-run",
+      "--yes",
+      "--skip-coa",
+      "--send-email",
+      "--admin-password=",
+    ]) {
       expect(PROVISIONING_USAGE).toContain(flag);
     }
   });

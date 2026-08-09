@@ -38,6 +38,13 @@ export type AppJwtClaims = {
    */
   role?: EmployeeRole | "authenticated" | string;
   employee_id?: string;
+  /**
+   * Platform admin claim injected by migration 0077's updated
+   * custom_access_token_hook. Present + `true` when the auth user
+   * has an active row in `public.platform_admins`. Grants access to
+   * cross-tenant super-admin surfaces at `/super-admin/*` on apex.
+   */
+  is_platform_admin?: boolean;
   [key: string]: unknown;
 };
 

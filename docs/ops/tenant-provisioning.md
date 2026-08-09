@@ -58,7 +58,30 @@ ulang**, **tidak butuh migrasi baru**, **tidak butuh restart container**.
 Cukup 6 langkah SQL + DNS di bawah, atau **1 command CLI** untuk
 langkah 1–4.
 
-## Cara cepat — `pnpm tenant:create` CLI (Fase 1, sejak migration 0076)
+## Cara cepat — 3 pintu masuk (CLI · Super-Admin UI · SQL manual)
+
+Sejak Fase 2 landed (migration 0077), Anda punya **3 cara** provision
+tenant baru — pilih sesuai konteks:
+
+| Metode                            | Kapan pakai                                                                         |
+| --------------------------------- | ----------------------------------------------------------------------------------- |
+| **A. `pnpm tenant:create` CLI**   | Batch onboarding, scripting, offline / disaster recovery, environment tanpa browser |
+| **B. Super-Admin UI di `/super-admin/tenants/new`** | Onboarding satu-satu dari komputer operator, ada form + copy-paste helper           |
+| **C. Raw SQL templates**          | Debug, edge cases, ketika CLI + UI tidak available (misal Node.js belum di-install) |
+
+**Yang terbaik untuk mayoritas kasus**: **B (UI)** — karena welcome
+email + password langsung dirender di layar dengan tombol copy, dan
+form validation langsung visual. **A (CLI)** untuk automation. **C
+(SQL)** hanya sebagai fallback.
+
+Ketiga cara menggunakan **RPC yang sama** (`public.provision_tenant()`
+di migration 0076), jadi hasilnya identik:
+- Row `tenants`
+- ~45 akun CoA default
+- Row `employees` role `TENANT_ADMIN`
+- Row `security_audit_logs` action_type=CREATE resource_name=tenants
+
+### Cara A — `pnpm tenant:create` CLI (Fase 1, sejak migration 0076; Fase 4 --send-email sejak Aug 2026)
 
 Kalau Anda cuma butuh menjalankan langkah 1–4 (row `tenants` → CoA →
 auth user → employees admin + audit log), pakai CLI yang di-bundle:
@@ -79,6 +102,7 @@ Flag berguna:
 | `--yes`                     | Non-interaktif — skip konfirmasi. Untuk CI/scripting.                              |
 | `--admin-password=<pw>`     | Password custom (min 12 char). Kalau tidak di-set, auto-generate 32-char base64url. |
 | `--skip-coa`                | Skip Chart of Accounts seed (edge case, biasanya tidak dipakai).                    |
+| `--send-email`              | **Fase 4**: kirim welcome email via env SMTP setelah sukses. Kalau `SMTP_HOST` unset, fall back ke print stdout dengan warning. |
 | `--source=<label>`          | Label metadata audit (default: `ops-cli`; gunakan `super-admin-ui` bila via UI).    |
 | `--help`                    | Print usage.                                                                        |
 
@@ -104,6 +128,119 @@ email dari template yang di-print).
 **Backward compat**: langkah 1–4 di section berikutnya (raw SQL
 templates) tetap valid untuk skenario offline / DR / audit / kalau
 CLI tidak bisa dijalankan (e.g. tidak ada Node.js env).
+
+### Cara B — Super-Admin UI (Fase 2, sejak migration 0077)
+
+URL: `https://controldesk.app/super-admin/tenants` (apex domain,
+BUKAN subdomain tenant). Development lokal: `http://localhost:3000/super-admin/tenants`.
+
+**Auth model**: Super-admin adalah **peran cross-tenant** yang
+disimpan di tabel `public.platform_admins` — TIDAK di
+`public.employees`, karena platform admin tidak scoped ke satu tenant.
+JWT hook (`custom_access_token_hook`, updated di migration 0077)
+otomatis inject claim `is_platform_admin: true` ke JWT saat user
+login jika ada row aktif di `platform_admins`.
+
+**Cara buat platform admin baru** (butuh service_role SQL akses;
+belum ada UI untuk manage platform admins — chicken-and-egg):
+
+```sql
+-- Prasyarat: auth.users row untuk email tersebut harus sudah ada.
+-- (Kalau belum, buat via Supabase Admin API / dashboard dulu.)
+insert into public.platform_admins (user_id, full_name, email, is_active)
+select u.id, 'Nama Ops', 'ops@controldesk.app'::citext, true
+from auth.users u
+where u.email = 'ops@controldesk.app'
+on conflict (user_id) do update set is_active = true;
+```
+
+Setelah row masuk, user tersebut logout+login lagi (supaya JWT baru
+di-issue dengan claim `is_platform_admin=true`), lalu buka
+`/super-admin/tenants`.
+
+**Fitur di Super-Admin UI**:
+
+- **List semua tenant** (`/super-admin/tenants`) — 1 baris per tenant,
+  status badge (active/suspended/terminated), counts employees +
+  projects, quick link ke detail.
+- **Provision tenant baru** (`/super-admin/tenants/new`) — form yang
+  memanggil server action `createTenantAction` (yang wrap RPC
+  `provision_tenant`). Setelah sukses, UI menampilkan panel confirm
+  dengan tombol **Copy password + Copy welcome email** — operator
+  kirim email manual via preferred channel.
+- **Detail tenant** (`/super-admin/tenants/{id}`) — stat cards
+  (employees/clients/projects/CA counts), **panel Suspend/Reactivate**,
+  **panel Feature flags** (Fase 3), **recent audit log** (10 aksi
+  platform-admin terakhir untuk tenant ini).
+
+**Semua aksi platform-admin di-audit** ke tabel terpisah
+`public.platform_admin_audit_logs` (immutable, INSERT-only, trigger
+enforced) — bukan `security_audit_logs` karena aksi cross-tenant
+tidak "milik" tenant tunggal.
+
+### Fase 3 — Feature flags per tenant
+
+Migration 0077 menambahkan tabel `public.tenant_feature_flags` untuk
+gating feature per tenant. Registry key feature ada di
+`src/lib/ops/feature-flags.ts` — 7 keys awal:
+
+| Feature key                | Default | Fungsi                                                                    |
+| -------------------------- | ------- | ------------------------------------------------------------------------- |
+| `wbs_gantt`                | ✓ on    | WBS + Gantt di project detail (migration 0075)                            |
+| `ai_insights`              | ✓ on    | AI narrative insights via Vercel AI SDK                                    |
+| `google_calendar_sync`     | ✗ off   | Push milestones + events ke Google Calendar (butuh OAuth setup)            |
+| `telegram_bot`             | ✗ off   | Forward notifications ke Telegram bot per-tenant                          |
+| `whatsapp_notifications`   | ✗ off   | Forward notifications via Fonnte / Twilio (butuh SMTP config di tenant)   |
+| `bulk_import`              | ✓ on    | CSV import clients/projects/employees                                     |
+| `advanced_reports`         | ✓ on    | Monthly reports PDF export (slice B)                                       |
+
+**Kontract**: missing row = fallback ke `defaultEnabled` di registry.
+`enabled=false` = OFF. `enabled=true` = ON. Fail-open — kalau DB
+query error, log warning + fallback ke default (mencegah down-time
+karena bug config).
+
+**Toggle**: hanya platform admin (via `/super-admin/tenants/{id}`).
+Tenant admin **tidak bisa** toggle flag mereka sendiri (RLS policy
+`tenant_feature_flags_platform_write` di migration 0077) — decision
+tersebut ada di sisi platform team. Tenant admin **bisa read**
+flag mereka lewat RLS `tenant_feature_flags_self_read` (tambahkan
+UI read-only kalau perlu; belum diimplementasi).
+
+**Bagaimana pakai di code**:
+
+```ts
+import { isFeatureEnabled } from "@/lib/ops/feature-flags";
+
+const employee = await requireCurrentEmployee();
+const canUseGcal = await isFeatureEnabled(employee.tenant_id, "google_calendar_sync");
+if (canUseGcal) {
+  // render Google Calendar OAuth setup panel
+}
+```
+
+`isFeatureEnabled()` cached per-request (React `cache()`) — panggil
+sebanyak yang perlu di RSC tree tanpa hit DB berulang.
+
+### Fase 2 — Tenant status (active / suspended / terminated)
+
+Migration 0077 menambah kolom `tenants.status public.tenant_status`
+(enum: `active`, `suspended`, `terminated`). Default `active`.
+
+**Behavior per status** (enforced di `src/proxy.ts` layer 1):
+
+| Status       | Effect                                                                         |
+| ------------ | ------------------------------------------------------------------------------ |
+| `active`     | Normal — request diteruskan ke app.                                            |
+| `suspended`  | Proxy rewrite ke `/suspended?slug={slug}` — halaman statis "Tenant sedang di-suspend, hubungi support". User TIDAK bisa login. Data tetap utuh. |
+| `terminated` | Proxy return `HTTP 410 Gone`. Sengaja tidak render halaman apapun.             |
+
+**Cara toggle**:
+
+- **Suspend / Reactivate**: via `/super-admin/tenants/{id}` panel.
+  Server action `setTenantStatusAction` — di-audit di
+  `platform_admin_audit_logs`.
+- **Terminate**: **TIDAK ADA** UI. Terminate hanya via SQL langsung —
+  by design supaya tidak accidental. Ikuti section Rollback di bawah.
 
 ## Prasyarat
 
@@ -552,18 +689,22 @@ dengan `ON CONFLICT DO NOTHING`. Butuh script custom — TBD di roadmap.
 
 Status roadmap tenant lifecycle:
 
-| Fase | Item                                                                                                    | Status                  |
-| ---- | ------------------------------------------------------------------------------------------------------- | ----------------------- |
-| 1    | **CLI script** `pnpm tenant:create` — atomic provisioning via `provision_tenant()` RPC + auto-rollback  | ✅ Shipped (migration 0076 + `scripts/tenant/create.ts`) |
-| 2    | **Super-admin UI** di route `/super-admin/tenants` dengan role baru `SUPER_ADMIN` + separate auth scope | ⏳ Planned              |
-| 2    | **Tenant suspension** — kolom `tenants.status enum('active', 'suspended', 'terminated')` + proxy guard  | ⏳ Planned              |
-| 3    | **Feature flag per tenant** — tabel `tenant_feature_flags` + `<FeatureFlag>` component                  | ⏳ Planned              |
-| 4    | **Automated welcome email** dispatch dari CLI (butuh mailer resolver yang tidak `server-only`)          | ⏳ Planned              |
-| 5+   | **Tenant self-signup** — marketing page apex → `/register-org` → auto-provision + Stripe billing        | ⏳ Planned              |
+| Fase | Item                                                                                                                                     | Status                                             |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| 1    | **CLI script** `pnpm tenant:create` — atomic provisioning via `provision_tenant()` RPC + auto-rollback                                   | ✅ Shipped — migration 0076 + `scripts/tenant/create.ts` |
+| 2    | **Super-admin UI** di route `/super-admin/tenants` + `platform_admins` table + JWT `is_platform_admin` claim + separate audit log        | ✅ Shipped — migration 0077 + `src/app/(super-admin)/`  |
+| 2    | **Tenant suspension** — kolom `tenants.status enum('active', 'suspended', 'terminated')` + proxy guard + `/suspended` static page        | ✅ Shipped — migration 0077 + `src/app/suspended/`      |
+| 3    | **Feature flag per tenant** — tabel `tenant_feature_flags` + `isFeatureEnabled()` helper + toggle UI + registry di `src/lib/ops/feature-flags.ts` | ✅ Shipped — migration 0077 + `src/lib/ops/feature-flags.ts` |
+| 4    | **Automated welcome email** — `--send-email` flag di CLI, env-scoped SMTP (bypass server-only mailer)                                    | ✅ Shipped — CLI `scripts/tenant/create.ts` upgrade    |
+| 5    | **Read-only feature-flag view untuk tenant admin** — panel "Fitur aktif untuk tenant Anda" di Settings                                    | ⏳ Planned                                          |
+| 5    | **Platform admin management UI** — tambah/hapus platform admin (chicken-egg: bootstrap admin via SQL, sisanya via UI)                    | ⏳ Planned                                          |
+| 6+   | **Tenant self-signup** — marketing page apex → `/register-org` → auto-provision + Stripe billing                                          | ⏳ Planned                                          |
 
-Sampai fase-fase berikutnya selesai, **utamakan CLI (`pnpm
-tenant:create`)** untuk provisioning normal, dan fallback ke raw SQL
-templates di bagian sebelumnya untuk skenario DR / offline / audit.
+Rekomendasi pattern:
+
+- **Onboarding satu-satu manual**: Super-Admin UI (Cara B).
+- **Batch / scripted onboarding**: `pnpm tenant:create --send-email --yes` (Cara A).
+- **DR / offline**: raw SQL templates (Cara C).
 
 ## Kontak
 

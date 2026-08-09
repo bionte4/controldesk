@@ -47,6 +47,15 @@ export type ParsedProvisioningArgs = {
   skipCoa: boolean;
   yes: boolean;
   source: string;
+  /**
+   * Fase 4 (Aug 2026). When true, the CLI attempts to send the welcome
+   * email via env-scoped SMTP (SMTP_HOST/PORT/USER/PASS/FROM) after a
+   * successful provisioning. When false (default), the CLI only prints
+   * the email to stdout for the operator to send manually. Kept as an
+   * opt-in so a broken SMTP config never causes accidental sends to
+   * the wrong address.
+   */
+  sendEmail: boolean;
 };
 
 export type ProvisioningParseError = { code: string; message: string };
@@ -65,7 +74,12 @@ export function parseProvisioningArgs(argv: readonly string[]): ParseResult {
   const flags = new Set<string>();
 
   for (const raw of argv) {
-    if (raw === "--dry-run" || raw === "--skip-coa" || raw === "--yes") {
+    if (
+      raw === "--dry-run" ||
+      raw === "--skip-coa" ||
+      raw === "--yes" ||
+      raw === "--send-email"
+    ) {
       flags.add(raw.slice(2));
       continue;
     }
@@ -173,6 +187,7 @@ export function parseProvisioningArgs(argv: readonly string[]): ParseResult {
       skipCoa: flags.has("skip-coa"),
       yes: flags.has("yes"),
       source,
+      sendEmail: flags.has("send-email"),
     },
   };
 }
@@ -250,11 +265,21 @@ Optional:
   --dry-run                  Validate + preflight only. Do not mutate DB.
   --skip-coa                 Skip Chart of Accounts seeding (edge cases).
   --yes                      Non-interactive; skip confirmation prompt.
+  --send-email               Send welcome email via env SMTP (Fase 4).
+                             Falls back to stdout print if SMTP_HOST unset.
 
 Environment (must be set in .env.local or shell):
   NEXT_PUBLIC_SUPABASE_URL
   SUPABASE_SERVICE_ROLE_KEY
   NEXT_PUBLIC_ROOT_DOMAIN     (default: controldesk.app)
+
+For --send-email (all optional; missing SMTP_HOST short-circuits to
+stdout with a warning so no accidental partial config is used):
+  SMTP_HOST                   e.g. smtp.gmail.com
+  SMTP_PORT                   default 587
+  SMTP_USER                   auth username
+  SMTP_PASS                   auth password / app password
+  SMTP_FROM                   From header (default: ControlDesk <no-reply@controldesk.app>)
 
 Examples:
   pnpm tenant:create --slug=acme --name="PT Acme" \\

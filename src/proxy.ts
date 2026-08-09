@@ -78,10 +78,23 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get("host");
   const tenant = resolveTenantFromHost(host);
 
-  // --- Apex domain: serve marketing only. Send anyone hitting an /app path
-  // back to the root to pick their tenant. ---
+  // --- Apex domain: serve marketing, /super-admin, or public auth. ---
+  // Anything else on the apex is rewritten to the marketing page so
+  // there's no leak of tenant-scoped surfaces. `/super-admin/*` (Fase 2,
+  // migration 0077) is served here — its own layout enforces the
+  // is_platform_admin JWT claim; the proxy just lets the request
+  // through. `/login` is included because that's where platform admins
+  // sign in from apex.
   if (tenant.kind === "apex") {
-    if (pathname === "/" || pathname.startsWith("/marketing")) {
+    if (
+      pathname === "/" ||
+      pathname.startsWith("/marketing") ||
+      pathname.startsWith("/super-admin") ||
+      pathname === "/login" ||
+      pathname === "/forgot-password" ||
+      pathname.startsWith("/auth") ||
+      pathname.startsWith("/api/auth")
+    ) {
       return NextResponse.next({ request });
     }
     const url = request.nextUrl.clone();
@@ -112,6 +125,49 @@ export async function proxy(request: NextRequest) {
   // in portal Server Actions.
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-request-id", requestId);
+
+  // --- Tenant lifecycle guard (Fase 2, migration 0077). ---
+  // Suspended/terminated tenants get a static "suspended" page instead
+  // of any app content. This runs before session refresh so we don't
+  // burn a DB round-trip refreshing tokens for a tenant nobody can
+  // access anyway.
+  try {
+    const anonForStatus = createServerClient<Database>(
+      process.env.SUPABASE_SERVER_URL && process.env.SUPABASE_SERVER_URL.trim() !== ""
+        ? process.env.SUPABASE_SERVER_URL
+        : process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } },
+    );
+    const { data: status } = await anonForStatus.rpc(
+      "resolve_tenant_status_by_slug",
+      { p_slug: tenant.slug },
+    );
+    if (status && status !== "active") {
+      // Suspended → send to /suspended (rewrite so URL stays intact).
+      // Terminated → 410 Gone. Both preserved for the same reason: no
+      // cookie shuffling for a dead tenant.
+      if (status === "terminated") {
+        return new NextResponse(`Tenant terminated: ${tenant.slug}`, {
+          status: 410,
+          headers: { "content-type": "text/plain; charset=utf-8" },
+        });
+      }
+      const url = request.nextUrl.clone();
+      url.pathname = "/suspended";
+      url.searchParams.set("slug", tenant.slug);
+      return NextResponse.rewrite(url);
+    }
+    // status === null → tenant slug not in DB. Fall through so the app
+    // still returns 404 for unknown tenants via its normal render path.
+  } catch (err) {
+    // Never let a status-check failure block the site — degrade to
+    // "assume active" and rely on the app layer to catch missing rows.
+    log.warn("tenant status lookup failed", {
+      tenant_slug: tenant.slug,
+      err: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   // --- Client Portal branch (rules §28) — separate auth surface. ---
   // Portal users don't have `auth.users` rows; auth is handled by the RSC

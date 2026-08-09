@@ -4294,6 +4294,92 @@ export type Database = {
           },
         ]
       }
+      platform_admin_audit_logs: {
+        Row: {
+          action_type: Database["public"]["Enums"]["audit_action_type"]
+          actor_email: string | null
+          actor_user_id: string | null
+          created_at: string
+          id: number
+          ip_address: unknown
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          resource_id: string | null
+          resource_name: string
+          target_tenant_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: Database["public"]["Enums"]["audit_action_type"]
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          id?: never
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_name: string
+          target_tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: Database["public"]["Enums"]["audit_action_type"]
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          id?: never
+          ip_address?: unknown
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          resource_id?: string | null
+          resource_name?: string
+          target_tenant_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_admin_audit_logs_target_tenant_id_fkey"
+            columns: ["target_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_admins: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          full_name: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          full_name: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          full_name?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pm_handover_audit_logs: {
         Row: {
           action: Database["public"]["Enums"]["approval_action"]
@@ -6423,6 +6509,44 @@ export type Database = {
           },
         ]
       }
+      tenant_feature_flags: {
+        Row: {
+          enabled: boolean
+          feature_key: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          notes?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          notes?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_feature_flags_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_smtp_configs: {
         Row: {
           created_at: string
@@ -6577,6 +6701,7 @@ export type Database = {
           name: string
           retirement_age: number
           slug: string
+          status: Database["public"]["Enums"]["tenant_status"]
           timezone: string
         }
         Insert: {
@@ -6585,6 +6710,7 @@ export type Database = {
           name: string
           retirement_age?: number
           slug: string
+          status?: Database["public"]["Enums"]["tenant_status"]
           timezone?: string
         }
         Update: {
@@ -6593,6 +6719,7 @@ export type Database = {
           name?: string
           retirement_age?: number
           slug?: string
+          status?: Database["public"]["Enums"]["tenant_status"]
           timezone?: string
         }
         Relationships: []
@@ -7574,6 +7701,7 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: boolean
       }
+      is_current_user_platform_admin: { Args: never; Returns: boolean }
       is_hr_or_management: { Args: never; Returns: boolean }
       next_ba_number: {
         Args: { v_tenant_id: string; v_year: number }
@@ -7607,6 +7735,20 @@ export type Database = {
         }
         Returns: string
       }
+      provision_tenant: {
+        Args: {
+          p_admin_email: string
+          p_admin_name: string
+          p_admin_user_id: string
+          p_name: string
+          p_slug: string
+          p_source?: string
+        }
+        Returns: {
+          employee_id: string
+          tenant_id: string
+        }[]
+      }
       purge_archived_audit_logs: {
         Args: {
           p_batch_end: string
@@ -7628,11 +7770,29 @@ export type Database = {
         }
         Returns: number
       }
+      record_platform_admin_audit: {
+        Args: {
+          p_action_type: Database["public"]["Enums"]["audit_action_type"]
+          p_ip_address?: unknown
+          p_metadata?: Json
+          p_new_values?: Json
+          p_old_values?: Json
+          p_resource_id?: string
+          p_resource_name: string
+          p_target_tenant?: string
+          p_user_agent?: string
+        }
+        Returns: number
+      }
       resolve_field_ops_l2_approver: {
         Args: { p_project_id: string }
         Returns: string
       }
       resolve_tenant_id_by_slug: { Args: { p_slug: string }; Returns: string }
+      resolve_tenant_status_by_slug: {
+        Args: { p_slug: string }
+        Returns: string
+      }
       revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
       secret_rotation_status: {
         Args: never
@@ -8009,6 +8169,7 @@ export type Database = {
         | "REVIEW"
         | "DONE"
         | "CANCELLED"
+      tenant_status: "active" | "suspended" | "terminated"
       timesheet_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       upk_status:
         | "DRAFT"
@@ -8536,6 +8697,7 @@ export const Constants = {
         "DONE",
         "CANCELLED",
       ],
+      tenant_status: ["active", "suspended", "terminated"],
       timesheet_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       upk_status: [
         "DRAFT",

@@ -195,6 +195,84 @@ async function rollbackAuthUser(
   }
 }
 
+/**
+ * Fase 4: env-scoped SMTP send. Dynamically imports nodemailer so the
+ * CLI doesn't couple to it at compile time — if the package isn't
+ * installed or SMTP_HOST is missing, we short-circuit to stdout and
+ * the operator sends manually. This is intentionally NOT using the
+ * server-only mailer at `src/lib/notify/mailer.ts` because tsx scripts
+ * can't safely import `server-only`-tagged modules.
+ */
+type SmtpSendResult =
+  | { ok: true; messageId: string; from: string }
+  | { ok: false; reason: string };
+
+async function sendWelcomeEmailViaSmtp(params: {
+  to: string;
+  subject: string;
+  body: string;
+}): Promise<SmtpSendResult> {
+  const host = process.env.SMTP_HOST;
+  if (!host || host.trim().length === 0) {
+    return {
+      ok: false,
+      reason: "SMTP_HOST is not set — cannot send. Print to stdout instead.",
+    };
+  }
+  const port = process.env.SMTP_PORT
+    ? Number.parseInt(process.env.SMTP_PORT, 10)
+    : 587;
+  if (Number.isNaN(port) || port <= 0) {
+    return { ok: false, reason: `Invalid SMTP_PORT: ${process.env.SMTP_PORT}` };
+  }
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from =
+    process.env.SMTP_FROM ?? "ControlDesk <no-reply@controldesk.app>";
+  const secure = port === 465;
+
+  try {
+    const dyn = new Function(
+      "spec",
+      "return import(spec);",
+    ) as (spec: string) => Promise<unknown>;
+    const mod = (await dyn("nodemailer")) as {
+      default?: { createTransport: (o: unknown) => unknown };
+      createTransport?: (o: unknown) => unknown;
+    };
+    const factory =
+      mod.createTransport ??
+      (mod.default && "createTransport" in mod.default
+        ? mod.default.createTransport.bind(mod.default)
+        : undefined);
+    if (!factory) {
+      return { ok: false, reason: "nodemailer.createTransport not found" };
+    }
+    const transporter = factory({
+      host,
+      port,
+      secure,
+      auth: user && pass ? { user, pass } : undefined,
+    }) as {
+      sendMail: (opts: Record<string, unknown>) => Promise<{
+        messageId?: string;
+      }>;
+    };
+    const res = await transporter.sendMail({
+      from,
+      to: params.to,
+      subject: params.subject,
+      text: params.body,
+    });
+    return { ok: true, messageId: res.messageId ?? "", from };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 async function seedCoaFallback(
   supa: ServiceClient,
   tenantId: string,
@@ -244,6 +322,7 @@ async function main(): Promise<void> {
   log(`Source       : ${args.source}`);
   log(`Dry run      : ${args.dryRun ? "YES — no writes will happen" : "no"}`);
   log(`Skip CoA     : ${args.skipCoa ? "YES" : "no"}`);
+  log(`Send email   : ${args.sendEmail ? "YES (via env SMTP)" : "no — will print to stdout"}`);
   log("");
 
   const supa = serviceClient();
@@ -324,6 +403,24 @@ async function main(): Promise<void> {
   log("");
   log(email.body);
   log("");
+
+  if (args.sendEmail) {
+    log("=".repeat(72));
+    log("Attempting SMTP send (Fase 4)…");
+    const sendRes = await sendWelcomeEmailViaSmtp({
+      to: args.adminEmail,
+      subject: email.subject,
+      body: email.body,
+    });
+    if (sendRes.ok) {
+      log(`      OK — messageId: ${sendRes.messageId || "(none returned)"}`);
+      log(`      from: ${sendRes.from}`);
+    } else {
+      warn(`      SKIPPED — ${sendRes.reason}`);
+      warn("      Operator must send the email above manually.");
+    }
+  }
+
   log("=".repeat(72));
   log("Reminder: DNS must resolve *.controldesk.app to the app for prod.");
   log("For dev: {slug}.localhost:3001 works out of the box.");
