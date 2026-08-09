@@ -53,3 +53,14 @@ supabase/.env
 AGENTS.md
 CLAUDE.md
 
+# personal / office scratch files that occasionally land in the repo
+# during evaluations, printouts, etc. Not meant to ship with the code.
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+# MS Office lock files (created while a document is open)
+~$*
+
