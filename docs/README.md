@@ -18,6 +18,7 @@ dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 | **Engineer baru**                            | [`getting-started.md`](getting-started.md) → [`architecture.md`](architecture.md) → [`development.md`](development.md) |
 | **Security / compliance auditor**            | [`security-model.md`](security-model.md) → [`ops/data-retention.md`](ops/data-retention.md) → [`ops/secret-rotation.md`](ops/secret-rotation.md) |
 | **On-call engineer**                         | [`ops/`](ops/) — semua runbooks.                                                    |
+| **Onboarding tenant baru**                   | [`ops/tenant-provisioning.md`](ops/tenant-provisioning.md) → [`training/README.md`](training/README.md) |
 | **QA / QC / Tester**                         | [`qa/`](qa/) — testing strategy, E2E playbook, test catalog, manual smoke, flake triage, a11y, bug reporting. |
 | **Trainer / Program Manager**                | [`training/README.md`](training/README.md) → [`training/curriculum.md`](training/curriculum.md) → [`training/facilitator-guide.md`](training/facilitator-guide.md) |
 | **Tenant Admin (baru di ControlDesk)**       | [`getting-started.md`](getting-started.md) + [`user-guides/internal-users.md#tenant-admin`](user-guides/internal-users.md#tenant-admin) + [`training/README.md`](training/README.md) |
@@ -129,11 +130,12 @@ Struktur: hub + silabus + lab hands-on + panduan trainer + rubric evaluasi.
 On-call reading. Print, tab, dan follow literally saat insiden.
 Mapping 1:1 ke section `.cursorrules` yang butuh operational surface.
 
-| Runbook                                                 | Coverage                                                    |
-| ------------------------------------------------------- | ----------------------------------------------------------- |
-| [`ops/data-retention.md`](ops/data-retention.md)        | 10-year retention, cold archive layout, restore procedure.  |
-| [`ops/observability.md`](ops/observability.md)          | Sentry / Axiom configuration, redaction, request IDs.       |
-| [`ops/secret-rotation.md`](ops/secret-rotation.md)      | 90-day rotation calendar + automation cron.                 |
+| Runbook                                                     | Coverage                                                                                      |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [`ops/tenant-provisioning.md`](ops/tenant-provisioning.md)  | 6-step SQL runbook untuk onboard tenant baru: tenants row → CoA → admin user → DNS → verify. |
+| [`ops/data-retention.md`](ops/data-retention.md)            | 10-year retention, cold archive layout, restore procedure.                                    |
+| [`ops/observability.md`](ops/observability.md)              | Sentry / Axiom configuration, redaction, request IDs.                                         |
+| [`ops/secret-rotation.md`](ops/secret-rotation.md)          | 90-day rotation calendar + automation cron.                                                   |
 
 ## Community + repo files
 
@@ -179,6 +181,7 @@ docs/
 │   └── client-portal-users.md
 │
 ├── ops/                                 ← On-call runbooks
+│   ├── tenant-provisioning.md           (onboard tenant baru — 6-step SQL)
 │   ├── data-retention.md
 │   ├── observability.md
 │   └── secret-rotation.md
