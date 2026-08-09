@@ -19,7 +19,8 @@ dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 | **Security / compliance auditor**            | [`security-model.md`](security-model.md) → [`ops/data-retention.md`](ops/data-retention.md) → [`ops/secret-rotation.md`](ops/secret-rotation.md) |
 | **On-call engineer**                         | [`ops/`](ops/) — semua runbooks.                                                    |
 | **QA / QC / Tester**                         | [`qa/`](qa/) — testing strategy, E2E playbook, test catalog, manual smoke, flake triage, a11y, bug reporting. |
-| **Tenant Admin (baru di ControlDesk)**       | [`getting-started.md`](getting-started.md) + [`user-guides/internal-users.md#tenant-admin`](user-guides/internal-users.md#tenant-admin) |
+| **Trainer / Program Manager**                | [`training/README.md`](training/README.md) → [`training/curriculum.md`](training/curriculum.md) → [`training/facilitator-guide.md`](training/facilitator-guide.md) |
+| **Tenant Admin (baru di ControlDesk)**       | [`getting-started.md`](getting-started.md) + [`user-guides/internal-users.md#tenant-admin`](user-guides/internal-users.md#tenant-admin) + [`training/README.md`](training/README.md) |
 
 ## Product / business
 
@@ -108,6 +109,20 @@ komplemen [`testing.md`](testing.md) (engineer-facing).
 | [`qa/accessibility-testing.md`](qa/accessibility-testing.md)               | WCAG 2.2 AAA verification: contrast, keyboard, ARIA, motion, screen reader. |
 | [`qa/bug-reporting.md`](qa/bug-reporting.md)                               | Bug filing template, severity guide, repro playbook, ready-to-use templates. |
 
+## Training (`training/`)
+
+Materi persiapan program **training pengguna** ControlDesk — onboarding
+tenant baru, upskill karyawan lama, refresher setelah rilis fitur besar.
+Struktur: hub + silabus + lab hands-on + panduan trainer + rubric evaluasi.
+
+| Doc                                                                        | Isi                                                                          |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`training/README.md`](training/README.md)                                 | Hub — tujuan program, audiens, 4 role tracks (T1–T4), timeline 2-hari.       |
+| [`training/curriculum.md`](training/curriculum.md)                         | Silabus 6 sesi (S1 Foundation → S6 Admin & Governance) × 4 tracks.           |
+| [`training/hands-on-labs.md`](training/hands-on-labs.md)                   | 12 lab praktik: login, WBS+Gantt, expense/CA chain, petty cash, integrations. |
+| [`training/facilitator-guide.md`](training/facilitator-guide.md)           | Panduan trainer: setup sandbox, timing, contingency, pelaporan akhir.        |
+| [`training/evaluation.md`](training/evaluation.md)                         | Rubric assessment: quiz 25 soal + hands-on scenario per track + 30-day check. |
+
 ## Ops runbooks (`ops/`)
 
 On-call reading. Print, tab, dan follow literally saat insiden.
@@ -177,6 +192,13 @@ docs/
 │   ├── flake-triage.md
 │   ├── accessibility-testing.md
 │   └── bug-reporting.md
+│
+├── training/                            ← Persiapan program training pengguna
+│   ├── README.md                        (hub + role tracks)
+│   ├── curriculum.md                    (silabus 6 sesi)
+│   ├── hands-on-labs.md                 (12 lab praktik)
+│   ├── facilitator-guide.md             (guide untuk trainer)
+│   └── evaluation.md                    (rubric assessment + quiz)
 │
 ├── architecture.md                      ← Engineering deep-dive
 ├── security-model.md
