@@ -82,6 +82,7 @@ export type ResourceType =
   | "telegram_bot_config"
   | "whatsapp_config"
   | "smtp_config"
+  | "ai_config"
   | "lookup_option"
   | "user_admin"
   | "coa"
@@ -230,6 +231,8 @@ export function authorize(input: {
       return decideWhatsAppConfig(actor, action);
     case "smtp_config":
       return decideSmtpConfig(actor, action);
+    case "ai_config":
+      return decideAiConfig(actor, action);
     case "lookup_option":
       return decideLookupOption(actor, action);
     case "user_admin":
@@ -296,6 +299,10 @@ function allowReadWithinTenant(
   // Same admin-only gate as the other messaging integrations.
   if (resource === "smtp_config") {
     return decideSmtpConfig(actor, "read");
+  }
+  // Tenant AI provider config — per-tenant LLM + API key + model choice.
+  if (resource === "ai_config") {
+    return decideAiConfig(actor, "read");
   }
   // Lookup options are tenant-scoped reference data — any tenant member
   // may read (dropdowns everywhere). Write restricted below.
@@ -1145,6 +1152,27 @@ function decideSmtpConfig(actor: Actor, action: ActionVerb): Decision {
         : DENY("smtp deactivation restricted to admins + GM");
     default:
       return DENY(`unsupported action on smtp_config: ${action}`);
+  }
+}
+
+function decideAiConfig(actor: Actor, action: ActionVerb): Decision {
+  const isAdmin = INTEGRATION_ADMIN_ROLES.includes(actor.role);
+  switch (action) {
+    case "read":
+      return isAdmin
+        ? ALLOW("admin/GM reads tenant ai config")
+        : DENY("ai config restricted to admins + GM");
+    case "create":
+    case "update":
+      return isAdmin
+        ? ALLOW("admin/GM manages tenant ai config")
+        : DENY("ai config mutations restricted to admins + GM");
+    case "delete":
+      return isAdmin
+        ? ALLOW("admin/GM may deactivate tenant ai config")
+        : DENY("ai deactivation restricted to admins + GM");
+    default:
+      return DENY(`unsupported action on ai_config: ${action}`);
   }
 }
 

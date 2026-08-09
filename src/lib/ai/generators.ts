@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { CurrentEmployee } from "@/lib/auth/session";
 import { parseMoneyFromDb } from "@/lib/format/money";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+import { resolveAiModel } from "@/lib/integrations/ai";
 import type {
   AnalyzeClientHealth,
   AnalyzeResourceUtilization,
@@ -88,56 +89,13 @@ export type InsightRunResult<T> = {
 };
 
 // ---------------------------------------------------------------------------
-// Provider resolution — kept intentionally lazy so builds don't fail when
-// no provider SDK is installed.
+// Provider resolution
 // ---------------------------------------------------------------------------
-type ProviderName = "openai" | "anthropic" | "google" | "mock";
-
-function providerName(): ProviderName {
-  const raw = (process.env.AI_PROVIDER ?? "mock").toLowerCase();
-  if (raw === "openai" || raw === "anthropic" || raw === "google") return raw;
-  return "mock";
-}
-
-function modelId(): string {
-  return process.env.AI_MODEL_ID ?? (providerName() === "mock" ? "mock" : "unknown");
-}
-
-async function resolveModel(): Promise<unknown> {
-  const name = providerName();
-  if (name === "mock") return null;
-  try {
-    // Dynamic imports — provider packages are optional deps. Using
-    // `Function` here keeps TypeScript from resolving the specifier at
-    // compile time (they may not be installed).
-    const dynImport: (spec: string) => Promise<unknown> = new Function(
-      "spec",
-      "return import(spec);",
-    ) as (spec: string) => Promise<unknown>;
-
-    if (name === "openai") {
-      const mod = (await dynImport("@ai-sdk/openai").catch(() => null)) as
-        | { openai: (id: string) => unknown }
-        | null;
-      return mod?.openai(modelId()) ?? null;
-    }
-    if (name === "anthropic") {
-      const mod = (await dynImport("@ai-sdk/anthropic").catch(() => null)) as
-        | { anthropic: (id: string) => unknown }
-        | null;
-      return mod?.anthropic(modelId()) ?? null;
-    }
-    if (name === "google") {
-      const mod = (await dynImport("@ai-sdk/google").catch(() => null)) as
-        | { google: (id: string) => unknown }
-        | null;
-      return mod?.google(modelId()) ?? null;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
+// Delegated to `src/lib/integrations/ai/resolver.ts` which knows about
+// both env-global config (backward-compat) and per-tenant rows in
+// `tenant_ai_configs`. The old `providerName()` / `modelId()` helpers
+// are gone — audit fields (`model_id`) now come from
+// `ResolvedAiModel.modelId` which reflects the actual model used.
 
 // ---------------------------------------------------------------------------
 // Prompt runner — wraps generateObject with common concerns.
@@ -150,17 +108,22 @@ async function run<T>(opts: {
   prompt: string;
   fallback: T;
   locale: Locale;
+  tenantId?: string;
 }): Promise<InsightRunResult<T>> {
-  const model = await resolveModel();
-  const scrubbed = scrubPrompt(opts.prompt);
+  const resolved = await resolveAiModel(opts.tenantId);
 
-  if (!model) {
+  // PII redaction defaults to ON. Only the per-tenant OPENAI_COMPATIBLE
+  // path (on-prem model) can flip it off after explicit admin consent.
+  const scrubbed =
+    resolved?.piiRedaction === false ? opts.prompt : scrubPrompt(opts.prompt);
+
+  if (!resolved) {
     return {
       payload: opts.fallback,
       tokens_input: 0,
       tokens_output: 0,
       latency_ms: 0,
-      model_id: modelId(),
+      model_id: "mock",
       prompt_version: PROMPT_VERSION,
     };
   }
@@ -180,7 +143,7 @@ async function run<T>(opts: {
     temperature?: number;
   }) => Promise<{ object: unknown; usage?: { inputTokens?: number; outputTokens?: number } }>;
   const { object, usage } = await genObj({
-    model,
+    model: resolved.model,
     schema: opts.schema,
     system: systemWithLocale,
     prompt: scrubbed,
@@ -193,7 +156,7 @@ async function run<T>(opts: {
     tokens_input: usage?.inputTokens ?? 0,
     tokens_output: usage?.outputTokens ?? 0,
     latency_ms,
-    model_id: modelId(),
+    model_id: resolved.modelId,
     prompt_version: PROMPT_VERSION,
   };
 }
@@ -310,6 +273,7 @@ export async function predictExpenseImpact(
     prompt,
     fallback,
     locale,
+    tenantId: actor.tenant_id,
   });
 }
 
@@ -468,6 +432,7 @@ export async function analyzeResourceUtilization(
     prompt,
     fallback,
     locale,
+    tenantId: actor.tenant_id,
   });
 }
 
@@ -614,6 +579,7 @@ export async function analyzeClientHealth(
     prompt,
     fallback,
     locale,
+    tenantId: actor.tenant_id,
   });
 }
 
@@ -740,6 +706,7 @@ export async function analyzeSlaBreach(
     prompt,
     fallback,
     locale,
+    tenantId: actor.tenant_id,
   });
 }
 

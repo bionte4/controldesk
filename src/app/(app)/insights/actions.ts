@@ -10,6 +10,7 @@ import { log } from "@/lib/observability/log";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { AI_INSIGHT_KINDS, runInsight } from "@/lib/ai/generators";
 import { schemaForKind, type AiInsightKindLiteral } from "@/lib/ai/schemas";
+import { resolveDailyTokenCap } from "@/lib/integrations/ai";
 import { runAllInsightsSchema, runInsightSchema } from "@/lib/validation/insights";
 import {
   DEFAULT_LOCALE,
@@ -40,9 +41,16 @@ async function generateAndStore(kind: AiInsightKindLiteral) {
   const actor = await requireCurrentEmployee();
   const locale = await resolveInsightLocale();
 
+  // Per-tenant daily cap override — falls back to env default when null.
+  // Loaded here (not inside reserve) so the AI config load happens
+  // exactly once even when the tenant runs all four insights back-to-back
+  // (Redis cost is one round-trip regardless).
+  const tenantCap = await resolveDailyTokenCap(actor.tenant_id);
+
   const reservation = await reserve({
     tenantId: actor.tenant_id,
     estimatedOutputTokens: ESTIMATED_OUTPUT_TOKENS,
+    cap: tenantCap ?? undefined,
   });
   if (!reservation.ok) {
     throw new Error(

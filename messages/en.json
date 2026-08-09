@@ -1890,6 +1890,10 @@
       "notAvailable": "Coming soon"
     },
     "cards": {
+      "ai": {
+        "title": "AI Provider",
+        "description": "Pick an LLM provider (Gemini, OpenAI, Anthropic, or local LLM via Ollama/LM Studio) for AI insights."
+      },
       "calendar": {
         "title": "Google Calendar",
         "description": "Push projects and milestones to a shared team calendar."
@@ -1905,6 +1909,98 @@
       "whatsapp_business": {
         "title": "WhatsApp Business",
         "description": "Send notifications via WhatsApp. Pick a provider: Fonnte (local, affordable) or Twilio (official Meta partner)."
+      }
+    }
+  },
+  "aiAdmin": {
+    "kicker": "Integrations · AI Provider",
+    "title": "AI Provider",
+    "subtitle": "Pick an LLM provider for AI Insight features (expense impact, resource utilization, client health, SLA breach). Each tenant can use a different provider — Google Gemini, OpenAI, Anthropic Claude, or a self-hosted local LLM (Ollama, LM Studio, vLLM).",
+    "status": {
+      "connected": "AI provider is active",
+      "inactive": "Provider registered but inactive",
+      "noConfig": "No AI provider registered — insights use the deterministic mock",
+      "disabled": "AI insights disabled (explicit opt-out)",
+      "lastError": "Last error",
+      "hintConnected": "All AI insights for this tenant use the provider above. Check call history in the ai_insights table (model_id, tokens_output, latency_ms).",
+      "hintNotConfigured": "Without tenant config, AI insights use the env-global provider. For data sovereignty or a custom LLM, add your provider in the form."
+    },
+    "runbook": {
+      "title": "1 · Pick an LLM provider",
+      "description": "Four options: cloud provider (Google/OpenAI/Anthropic), local LLM via an OpenAI-compatible endpoint, or disable AI entirely.",
+      "step1": "Create an API key at the provider's dashboard (e.g. Google AI Studio, OpenAI Platform, Anthropic Console). For a local LLM, install Ollama or LM Studio and run a model.",
+      "step2": "For local LLMs, make sure the OpenAI-compatible endpoint is reachable from the ControlDesk server. Ollama example: `http://ollama-server:11434/v1`.",
+      "step3": "Pick a model — Gemini flash for low latency, gpt-4o-mini for cost, claude-sonnet-5 for reasoning, or llama3.1:70b/qwen2.5 for on-prem.",
+      "step4": "Set a daily token cap (optional) to bound cost. Default global is 10,000 output tokens per day per tenant.",
+      "step5": "Fill in the form on the right. The system verifies credentials with a test call before saving.",
+      "warning": "PII redaction is on by default for cloud providers — sensitive data (employee names, salary, bank account) is hashed before being sent to the LLM. For a fully self-hosted local LLM, you can disable redaction for more accurate analysis."
+    },
+    "form": {
+      "title": "Register or update the AI provider",
+      "description": "The system verifies credentials with a test call ('Respond with the single word: pong.') before persisting. If verification fails, no credentials are stored.",
+      "fields": {
+        "provider": "LLM provider",
+        "modelId": "Model ID",
+        "baseUrl": "Base URL",
+        "apiKey": "API Key",
+        "dailyCap": "Daily token cap (optional)",
+        "dailyCapHint": "Max output tokens per day per tenant. Leave blank to use the global default (10,000).",
+        "piiRedaction": "PII Redaction",
+        "piiRedactionHint": "Hash / mask sensitive data before sending to the LLM. Recommended on; only disable for fully self-hosted on-prem LLMs inside your network."
+      },
+      "providers": {
+        "GOOGLE": {
+          "label": "Google Gemini (cloud)",
+          "tagline": "Google models — Gemini flash is fast & cheap, Gemini pro handles reasoning. Data passes through Google.",
+          "modelPlaceholder": "gemini-2.5-flash",
+          "modelHint": "Examples: gemini-2.5-flash, gemini-2.5-pro, gemini-flash-latest.",
+          "apiKeyPlaceholder": "AIza...",
+          "apiKeyHint": "Create at https://aistudio.google.com/apikey. Encrypted at rest.",
+          "apiKeyHintUpdate": "Leave blank to keep the current key. Paste a fresh value to rotate."
+        },
+        "OPENAI": {
+          "label": "OpenAI (cloud)",
+          "tagline": "OpenAI models — gpt-4o-mini is cheapest, gpt-4o for quality, o1-mini for reasoning. Data passes through OpenAI.",
+          "modelPlaceholder": "gpt-4o-mini",
+          "modelHint": "Examples: gpt-4o-mini, gpt-4o, o1-mini, o1-preview.",
+          "apiKeyPlaceholder": "sk-...",
+          "apiKeyHint": "Create at https://platform.openai.com/api-keys. Encrypted at rest.",
+          "apiKeyHintUpdate": "Leave blank to keep the current key. Paste a fresh value to rotate."
+        },
+        "ANTHROPIC": {
+          "label": "Anthropic Claude (cloud)",
+          "tagline": "Anthropic models — Claude Sonnet for balance, Claude Opus for max reasoning. Data passes through Anthropic.",
+          "modelPlaceholder": "claude-sonnet-5",
+          "modelHint": "Examples: claude-sonnet-5, claude-opus-5, claude-haiku-5.",
+          "apiKeyPlaceholder": "sk-ant-...",
+          "apiKeyHint": "Create at https://console.anthropic.com/settings/keys. Encrypted at rest.",
+          "apiKeyHintUpdate": "Leave blank to keep the current key. Paste a fresh value to rotate."
+        },
+        "OPENAI_COMPATIBLE": {
+          "label": "Local LLM (OpenAI-compatible)",
+          "tagline": "Self-hosted LLM via Ollama, LM Studio, vLLM, or third-party (Groq, Together AI, Cerebras). Data never leaves your network.",
+          "modelPlaceholder": "llama3.1:70b",
+          "modelHint": "Model name at the target endpoint. Ollama examples: llama3.1:70b, qwen2.5:32b, mixtral:8x7b.",
+          "baseUrlPlaceholder": "http://localhost:11434/v1",
+          "baseUrlHint": "OpenAI-compatible endpoint. Ollama: http://ollama:11434/v1, LM Studio: http://localhost:1234/v1, vLLM: http://vllm-server:8000/v1.",
+          "apiKeyPlaceholder": "Optional (Ollama typically has no auth)",
+          "apiKeyHint": "Optional. Ollama & LM Studio on a private LAN typically need no key. Groq/Together AI require a key.",
+          "apiKeyHintUpdate": "Leave blank to keep the current key. Paste a fresh value to rotate or clear to remove."
+        },
+        "DISABLED": {
+          "label": "Disabled (turn AI off)",
+          "tagline": "Explicit opt-out — all AI insight features fall back to the deterministic mock. Useful for tenants without an AI budget or when compliance forbids LLM use."
+        }
+      },
+      "actions": {
+        "save": "Save & verify",
+        "update": "Update & re-verify",
+        "deactivate": "Deactivate"
+      },
+      "deactivateConfirm": "Deactivate the tenant AI provider? Insight features will fall back to the deterministic mock until you re-enable it.",
+      "toast": {
+        "savedOk": "AI provider saved and verified.",
+        "deactivatedOk": "AI provider deactivated."
       }
     }
   },

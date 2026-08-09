@@ -1890,6 +1890,10 @@
       "notAvailable": "Segera hadir"
     },
     "cards": {
+      "ai": {
+        "title": "AI Provider",
+        "description": "Pilih provider LLM (Gemini, OpenAI, Anthropic, atau local LLM via Ollama/LM Studio) untuk fitur insight."
+      },
       "calendar": {
         "title": "Google Calendar",
         "description": "Push proyek dan milestone ke kalender bersama tim."
@@ -1905,6 +1909,98 @@
       "whatsapp_business": {
         "title": "WhatsApp Business",
         "description": "Kirim notifikasi lewat WhatsApp. Pilih provider Fonnte (lokal, murah) atau Twilio (partner resmi Meta)."
+      }
+    }
+  },
+  "aiAdmin": {
+    "kicker": "Integrasi · AI Provider",
+    "title": "AI Provider",
+    "subtitle": "Pilih penyedia LLM untuk fitur Insight AI (analisis biaya, utilisasi resource, kesehatan klien, SLA breach). Setiap tenant bisa pakai provider yang berbeda — Google Gemini, OpenAI, Anthropic Claude, atau LLM lokal yang di-host sendiri (Ollama, LM Studio, vLLM).",
+    "status": {
+      "connected": "Provider AI aktif",
+      "inactive": "Provider terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada provider AI — insight akan pakai mock deterministic",
+      "disabled": "Insight AI dinonaktifkan (opt-out eksplisit)",
+      "lastError": "Error terakhir",
+      "hintConnected": "Semua insight AI tenant ini akan pakai provider di atas. Cek riwayat panggilan di tabel ai_insights (model_id, tokens_output, latency_ms).",
+      "hintNotConfigured": "Tanpa konfigurasi tenant, insight AI pakai provider dari env global. Untuk data sovereignty atau custom LLM, tambahkan provider Anda di form."
+    },
+    "runbook": {
+      "title": "1 · Pilih provider LLM",
+      "description": "Empat pilihan: cloud provider (Google/OpenAI/Anthropic), local LLM via OpenAI-compatible endpoint, atau disable AI sepenuhnya.",
+      "step1": "Buat API key di dashboard provider (misal Google AI Studio, OpenAI Platform, atau Anthropic Console). Untuk LLM lokal, install Ollama atau LM Studio dan jalankan model.",
+      "step2": "Untuk LLM lokal, pastikan endpoint OpenAI-compatible bisa diakses dari server ControlDesk. Contoh Ollama: `http://ollama-server:11434/v1`.",
+      "step3": "Pilih model — Gemini flash untuk latency rendah, gpt-4o-mini untuk hemat, claude-sonnet-5 untuk reasoning, atau llama3.1:70b/qwen2.5 untuk on-prem.",
+      "step4": "Tentukan daily token cap (opsional) untuk batasi biaya. Default global 10.000 token output per hari per tenant.",
+      "step5": "Isi form di sebelah kanan. Sistem verifikasi credential dengan test call sebelum menyimpan.",
+      "warning": "PII redaction aktif secara default untuk cloud provider — data sensitif (nama karyawan, salary, bank account) di-hash sebelum dikirim ke LLM. Untuk LLM lokal yang di-host sendiri, redaction bisa dinonaktifkan agar analisis lebih akurat."
+    },
+    "form": {
+      "title": "Daftarkan atau update provider AI",
+      "description": "Sistem verifikasi credential dengan panggilan test ('Respond with the single word: pong.') sebelum persist. Kalau gagal, tidak ada credential yang tersimpan.",
+      "fields": {
+        "provider": "Provider LLM",
+        "modelId": "Model ID",
+        "baseUrl": "Base URL",
+        "apiKey": "API Key",
+        "dailyCap": "Daily token cap (opsional)",
+        "dailyCapHint": "Batas maksimum token output per hari per tenant. Kosongkan untuk pakai default global (10.000).",
+        "piiRedaction": "PII Redaction",
+        "piiRedactionHint": "Hash / mask data sensitif sebelum dikirim ke LLM. Direkomendasikan aktif; hanya matikan untuk LLM on-prem sepenuhnya di dalam network Anda."
+      },
+      "providers": {
+        "GOOGLE": {
+          "label": "Google Gemini (cloud)",
+          "tagline": "Model Google — Gemini flash cepat & murah, Gemini pro untuk reasoning. Data melewati Google.",
+          "modelPlaceholder": "gemini-2.5-flash",
+          "modelHint": "Contoh: gemini-2.5-flash, gemini-2.5-pro, gemini-flash-latest.",
+          "apiKeyPlaceholder": "AIza...",
+          "apiKeyHint": "Buat di https://aistudio.google.com/apikey. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "OPENAI": {
+          "label": "OpenAI (cloud)",
+          "tagline": "Model OpenAI — gpt-4o-mini paling hemat, gpt-4o untuk kualitas, o1-mini untuk reasoning. Data melewati OpenAI.",
+          "modelPlaceholder": "gpt-4o-mini",
+          "modelHint": "Contoh: gpt-4o-mini, gpt-4o, o1-mini, o1-preview.",
+          "apiKeyPlaceholder": "sk-...",
+          "apiKeyHint": "Buat di https://platform.openai.com/api-keys. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "ANTHROPIC": {
+          "label": "Anthropic Claude (cloud)",
+          "tagline": "Model Anthropic — Claude Sonnet untuk balance, Claude Opus untuk reasoning maksimum. Data melewati Anthropic.",
+          "modelPlaceholder": "claude-sonnet-5",
+          "modelHint": "Contoh: claude-sonnet-5, claude-opus-5, claude-haiku-5.",
+          "apiKeyPlaceholder": "sk-ant-...",
+          "apiKeyHint": "Buat di https://console.anthropic.com/settings/keys. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "OPENAI_COMPATIBLE": {
+          "label": "Local LLM (OpenAI-compatible)",
+          "tagline": "LLM yang di-host sendiri via Ollama, LM Studio, vLLM, atau third-party (Groq, Together AI, Cerebras). Data tidak keluar network Anda.",
+          "modelPlaceholder": "llama3.1:70b",
+          "modelHint": "Nama model di endpoint target. Contoh Ollama: llama3.1:70b, qwen2.5:32b, mixtral:8x7b.",
+          "baseUrlPlaceholder": "http://localhost:11434/v1",
+          "baseUrlHint": "Endpoint OpenAI-compatible. Contoh Ollama: http://ollama:11434/v1, LM Studio: http://localhost:1234/v1, vLLM: http://vllm-server:8000/v1.",
+          "apiKeyPlaceholder": "Opsional (Ollama biasanya tanpa auth)",
+          "apiKeyHint": "Optional. Ollama & LM Studio di LAN pribadi biasanya tidak butuh key. Groq/Together AI butuh key.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi atau kosongkan untuk hapus."
+        },
+        "DISABLED": {
+          "label": "Disabled (nonaktifkan AI)",
+          "tagline": "Opt-out eksplisit — semua fitur insight AI akan pakai mock deterministic. Cocok untuk tenant tanpa budget AI atau saat compliance melarang penggunaan LLM."
+        }
+      },
+      "actions": {
+        "save": "Simpan & verifikasi",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan provider AI tenant ini? Fitur insight akan pakai mock deterministic sampai Anda aktifkan lagi.",
+      "toast": {
+        "savedOk": "Provider AI tersimpan dan terverifikasi.",
+        "deactivatedOk": "Provider AI dinonaktifkan."
       }
     }
   },

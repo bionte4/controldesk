@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Plug,
   Send,
+  Sparkles,
   type LucideIcon,
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { getCalendarConnectionStatus } from "@/lib/data/calendar-sync";
+import { loadTenantAiConfig } from "@/lib/integrations/ai";
 import { loadTenantSmtpConfig } from "@/lib/integrations/smtp";
 import { loadTenantBotConfig } from "@/lib/integrations/telegram";
 import { loadTenantWhatsAppConfig } from "@/lib/integrations/whatsapp";
@@ -44,7 +46,12 @@ const ACCESS_ROLES: readonly EmployeeRole[] = [
 type IntegrationStatus = "connected" | "disconnected" | "not_available";
 
 type IntegrationCard = {
-  key: "calendar" | "telegram_bot" | "whatsapp_business" | "smtp";
+  key:
+    | "calendar"
+    | "telegram_bot"
+    | "whatsapp_business"
+    | "smtp"
+    | "ai";
   href: string | null;
   icon: LucideIcon;
   status: IntegrationStatus;
@@ -54,13 +61,14 @@ export default async function IntegrationsHubPage() {
   const employee = await requireCurrentEmployee();
   if (!ACCESS_ROLES.includes(employee.role as EmployeeRole)) notFound();
 
-  const [t, calendarStatus, telegramBot, whatsappCfg, smtpCfg] =
+  const [t, calendarStatus, telegramBot, whatsappCfg, smtpCfg, aiCfg] =
     await Promise.all([
       getTranslations("integrationsHub"),
       getCalendarConnectionStatus(employee.tenant_id),
       loadTenantBotConfig(employee.tenant_id),
       loadTenantWhatsAppConfig(employee.tenant_id),
       loadTenantSmtpConfig(employee.tenant_id),
+      loadTenantAiConfig(employee.tenant_id),
     ]);
 
   // Derive status per integration. Order of decision for the
@@ -83,8 +91,17 @@ export default async function IntegrationsHubPage() {
   const smtpStatus: IntegrationStatus = smtpCfg?.isActive
     ? "connected"
     : "disconnected";
+  const aiStatus: IntegrationStatus = aiCfg?.isActive
+    ? "connected"
+    : "disconnected";
 
   const cards: IntegrationCard[] = [
+    {
+      key: "ai",
+      href: "/settings/integrations/ai",
+      icon: Sparkles,
+      status: aiStatus,
+    },
     {
       key: "calendar",
       href: "/settings/integrations/calendar",

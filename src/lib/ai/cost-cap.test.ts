@@ -103,4 +103,77 @@ describe("AI cost cap (in-memory fallback)", () => {
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.used).toBe(0);
   });
+
+  // -------------------------------------------------------------------------
+  // Per-tenant cap override (Phase 3 — tenant_ai_configs.daily_token_cap)
+  // -------------------------------------------------------------------------
+  it("honours a per-tenant cap tighter than the global default", async () => {
+    // Simulates the caller passing `cap: resolveDailyTokenCap(tenantId)`
+    // when the tenant has `daily_token_cap = 1500` in tenant_ai_configs.
+    const first = await reserve({
+      tenantId: "tenant-strict",
+      estimatedOutputTokens: 1000,
+      cap: 1500,
+    });
+    expect(first.ok).toBe(true);
+
+    const second = await reserve({
+      tenantId: "tenant-strict",
+      estimatedOutputTokens: 600,
+      cap: 1500,
+    });
+    expect(second.ok).toBe(false);
+    if (!second.ok) {
+      expect(second.wouldExceedBy).toBe(100);
+      // Rollback keeps the used counter at 1000, not 1600.
+      expect(second.used).toBe(1000);
+    }
+  });
+
+  it("honours a per-tenant cap wider than the global default", async () => {
+    // Enterprise tenant with `daily_token_cap = 50_000` — should be able
+    // to spend much more than the env default (10_000 in prod).
+    const r = await reserve({
+      tenantId: "tenant-enterprise",
+      estimatedOutputTokens: 25_000,
+      cap: 50_000,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.remaining).toBe(25_000);
+  });
+
+  it("isolates per-tenant caps across tenants (no leakage)", async () => {
+    // Tenant A has a 1000 cap and is at its ceiling.
+    await reserve({
+      tenantId: "tenant-a",
+      estimatedOutputTokens: 1000,
+      cap: 1000,
+    });
+
+    // Tenant B has a 5000 cap. It must NOT inherit A's exhausted budget.
+    const b = await reserve({
+      tenantId: "tenant-b",
+      estimatedOutputTokens: 3000,
+      cap: 5000,
+    });
+    expect(b.ok).toBe(true);
+    if (b.ok) expect(b.remaining).toBe(2000);
+  });
+
+  it("uses DEFAULT_DAILY_TOKEN_CAP when the caller omits `cap`", async () => {
+    // Simulates the code path where `resolveDailyTokenCap()` returns
+    // null (no tenant config or provider inactive) — the reserve() call
+    // then omits `cap` and falls back to the env default.
+    const r = await reserve({
+      tenantId: "tenant-default",
+      estimatedOutputTokens: 500,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      // Default is 10_000 unless AI_DAILY_TOKEN_CAP env is set — either
+      // way the reservation must succeed and `cap` must be a positive int.
+      expect(r.cap).toBeGreaterThan(0);
+      expect(r.used).toBe(500);
+    }
+  });
 });

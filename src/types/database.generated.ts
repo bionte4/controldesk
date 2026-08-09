@@ -6194,6 +6194,56 @@ export type Database = {
           },
         ]
       }
+      tenant_ai_configs: {
+        Row: {
+          base_url: string | null
+          created_at: string
+          daily_token_cap: number | null
+          encrypted_api_key: string | null
+          is_active: boolean
+          last_error: string | null
+          model_id: string
+          pii_redaction_enabled: boolean
+          provider: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          base_url?: string | null
+          created_at?: string
+          daily_token_cap?: number | null
+          encrypted_api_key?: string | null
+          is_active?: boolean
+          last_error?: string | null
+          model_id: string
+          pii_redaction_enabled?: boolean
+          provider: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string | null
+          created_at?: string
+          daily_token_cap?: number | null
+          encrypted_api_key?: string | null
+          is_active?: boolean
+          last_error?: string | null
+          model_id?: string
+          pii_redaction_enabled?: boolean
+          provider?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_ai_configs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_ba_counters: {
         Row: {
           last_seq: number
