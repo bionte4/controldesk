@@ -166,7 +166,7 @@ export function NewFundSheet({
                   <FormItem>
                     <FormLabel>{tf("custodian")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={field.onChange}
                     >
                       <FormControl>

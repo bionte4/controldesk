@@ -154,7 +154,7 @@ export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
                   <FormItem>
                     <FormLabel>{tf("project")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={field.onChange}
                     >
                       <FormControl>

@@ -393,7 +393,7 @@ export function NewCashAdvanceSheet({
                     <FormItem>
                       <FormLabel>{tf("project")}</FormLabel>
                       <Select
-                        value={field.value || undefined}
+                        value={field.value ?? ""}
                         onValueChange={field.onChange}
                       >
                         <FormControl>

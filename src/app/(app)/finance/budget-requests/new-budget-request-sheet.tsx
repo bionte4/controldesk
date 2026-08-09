@@ -256,7 +256,7 @@ export function NewBudgetRequestSheet({
                   <FormItem>
                     <FormLabel>{tf("sourceLine")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={(v) => field.onChange(v)}
                     >
                       <FormControl>
@@ -290,7 +290,7 @@ export function NewBudgetRequestSheet({
                   <FormItem>
                     <FormLabel>{tf("targetLine")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={(v) => field.onChange(v)}
                     >
                       <FormControl>

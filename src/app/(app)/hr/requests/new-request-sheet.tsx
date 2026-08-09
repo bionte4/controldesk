@@ -198,7 +198,7 @@ export function NewHrRequestSheet() {
                   <FormItem>
                     <FormLabel>{tf("leaveType")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={field.onChange}
                     >
                       <FormControl>

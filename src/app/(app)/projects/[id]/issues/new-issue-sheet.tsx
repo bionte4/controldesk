@@ -464,7 +464,7 @@ export function NewIssueSheet({
                   <FormItem className="min-w-0">
                     <FormLabel>{tf("assignee")}</FormLabel>
                     <Select
-                      value={field.value || undefined}
+                      value={field.value ?? ""}
                       onValueChange={(v) => field.onChange(v)}
                     >
                       <FormControl>
