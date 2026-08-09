@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -130,14 +131,11 @@ export default async function ContractDetailPage(props: {
               {contract.contract_number}
             </h1>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <Badge
-                variant="outline"
-                className={
-                  CONTRACT_STATUS_TONE[contract.status as ContractStatus]
-                }
-              >
-                {tStatus(contract.status as ContractStatus)}
-              </Badge>
+              <FinanceStatusBadge
+                tone={CONTRACT_STATUS_TONE[contract.status as ContractStatus]}
+                label={tStatus(contract.status as ContractStatus)}
+                data-testid="contract-status-badge"
+              />
               {client ? (
                 <Link
                   href={`/clients/${client.id}`}

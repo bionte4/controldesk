@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Receipt } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -334,12 +335,10 @@ export default async function ExpensesPage({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <Badge
-                            variant="outline"
-                            className={STATUS_TONE[e.status]}
-                          >
-                            {STATUS_LABEL[e.status]}
-                          </Badge>
+                          <FinanceStatusBadge
+                            tone={STATUS_TONE[e.status]}
+                            label={STATUS_LABEL[e.status]}
+                          />
                           {(() => {
                             const hint = computeExpenseSlaHint(e);
                             return hint ? (

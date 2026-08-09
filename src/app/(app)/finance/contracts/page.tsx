@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import { Badge } from "@/components/ui/badge";
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import {
   Card,
   CardContent,
@@ -157,12 +157,10 @@ export default async function ContractsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={STATUS_TONE[c.status]}
-                        >
-                          {tStatus(c.status)}
-                        </Badge>
+                        <FinanceStatusBadge
+                          tone={STATUS_TONE[c.status]}
+                          label={tStatus(c.status)}
+                        />
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         {formatIDR(parseMoneyFromDb(c.mrr_amount), {

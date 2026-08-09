@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BadgeDollarSign } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -274,12 +275,11 @@ export default async function BudgetDetailPage(props: {
             <h1 className="font-display text-3xl font-semibold tracking-tight">
               {budget.title}
             </h1>
-            <Badge
-              variant="outline"
-              className={BUDGET_STATUS_TONE[budget.status]}
-            >
-              {BUDGET_STATUS_LABEL[budget.status]}
-            </Badge>
+            <FinanceStatusBadge
+              tone={BUDGET_STATUS_TONE[budget.status]}
+              label={BUDGET_STATUS_LABEL[budget.status]}
+              data-testid="budget-status-badge"
+            />
           </div>
           <p className="text-sm text-muted-foreground">
             <Link

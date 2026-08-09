@@ -5,7 +5,7 @@ import { ArrowLeft, Clock, Receipt } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { ApprovalTimeline } from "@/components/approvals/approval-timeline";
-import { Badge } from "@/components/ui/badge";
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -235,9 +235,11 @@ export default async function ExpenseDetailPage(props: {
               {expense.description}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={STATUS_TONE[status]}>
-                {STATUS_LABEL[status]}
-              </Badge>
+              <FinanceStatusBadge
+                tone={STATUS_TONE[status]}
+                label={STATUS_LABEL[status]}
+                data-testid="expense-status-badge"
+              />
               {project ? (
                 <Link
                   href={`/projects/${project.id}`}

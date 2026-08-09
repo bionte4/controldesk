@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 import { ApprovalTimeline } from "@/components/approvals/approval-timeline";
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -330,9 +331,11 @@ export default async function CashAdvanceDetailPage(props: {
               {ca.purpose}
             </h1>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="outline" className={caTone(status)}>
-                {caLabel(status)}
-              </Badge>
+              <FinanceStatusBadge
+                tone={caTone(status)}
+                label={caLabel(status)}
+                data-testid="ca-status-badge"
+              />
               <Badge
                 variant="outline"
                 className={

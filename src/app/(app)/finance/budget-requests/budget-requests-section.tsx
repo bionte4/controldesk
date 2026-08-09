@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 import { formatInTz } from "@/lib/format/date";
@@ -164,12 +165,10 @@ export async function BudgetRequestsSection({
                         {formatIDR(BigInt(amount), { compact: true })}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={STATUS_TONE[r.status]}
-                        >
-                          {tStatus(r.status)}
-                        </Badge>
+                        <FinanceStatusBadge
+                          tone={STATUS_TONE[r.status]}
+                          label={tStatus(r.status)}
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <ApprovalChainProgress

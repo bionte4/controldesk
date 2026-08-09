@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BadgeDollarSign } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
-import { Badge } from "@/components/ui/badge";
+import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import {
   Card,
   CardContent,
@@ -154,12 +154,10 @@ export default async function BudgetsPage() {
                         })}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge
-                          variant="outline"
-                          className={BUDGET_STATUS_TONE[b.status]}
-                        >
-                          {BUDGET_STATUS_LABEL[b.status]}
-                        </Badge>
+                        <FinanceStatusBadge
+                          tone={BUDGET_STATUS_TONE[b.status]}
+                          label={BUDGET_STATUS_LABEL[b.status]}
+                        />
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {formatInTz(b.created_at, "dd MMM yyyy")}
