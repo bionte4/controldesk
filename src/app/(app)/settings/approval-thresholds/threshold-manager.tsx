@@ -41,7 +41,7 @@ import {
 import {
   APPROVAL_DEFAULTS,
   type ApprovalThresholdRow,
-} from "@/lib/data/approval-thresholds";
+} from "@/lib/data/approval-thresholds-defaults";
 import type { ApprovalKind } from "@/lib/validation/approval-thresholds";
 
 type Overrides = Partial<Record<ApprovalKind, ApprovalThresholdRow>>;
