@@ -2,7 +2,15 @@ import { expect, test } from "@playwright/test";
 
 import { loginAs } from "./fixtures";
 
-test.describe("PM handovers", () => {
+// DEPRECATED per rules §13 (PM Handover module removed in Fase 0).
+// The `/handovers` route + `pm_handovers` table are scheduled for
+// drop in migration 0.4; the UI has already been unwired. Tests below
+// therefore time out looking for a page that no longer renders. They
+// remain here as an executable spec so we can re-enable them once a
+// replacement flow (change-log + notify) lands — see migration plan
+// docs/gas-migration-plan.md. Skip prevents CI red without deleting
+// coverage intent.
+test.describe.skip("PM handovers (deprecated per rules §13 — module removed)", () => {
   test("OM sees the seeded PENDING_OM handover", async ({ page }) => {
     await loginAs(page, "om");
     await page.goto("/handovers");

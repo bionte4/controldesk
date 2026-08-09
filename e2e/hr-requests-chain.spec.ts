@@ -41,7 +41,10 @@ async function approveOnDetailPage(
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("HR sick request — single-hop chain", () => {
+// DEPRECATED per rules §12 — `hr_requests` (SICK / OVERTIME) chain is
+// superseded by the Timesheet module. UI removed; re-enable when a
+// formal request module lands (Fase 12+).
+test.describe.skip("HR sick request — single-hop chain (deprecated per rules §12)", () => {
   test("HR admin approves seeded SICK request", async ({ page }) => {
     await loginAs(page, "hr");
     await page.goto(SICK_URL);
@@ -59,7 +62,7 @@ test.describe("HR sick request — single-hop chain", () => {
   });
 });
 
-test.describe("HR overtime request — remaining chain", () => {
+test.describe.skip("HR overtime request — remaining chain (deprecated per rules §12)", () => {
   test("PM approves L2 → L3 OM", async ({ page }) => {
     await loginAs(page, "pm");
     await page.goto(OT_URL);
@@ -98,7 +101,7 @@ test.describe("HR overtime request — remaining chain", () => {
   });
 });
 
-test.describe("HR requests access-control denials", () => {
+test.describe.skip("HR requests access-control denials (deprecated per rules §12)", () => {
   test("employee cannot see Approve/Reject on their own SICK request", async ({
     page,
   }) => {

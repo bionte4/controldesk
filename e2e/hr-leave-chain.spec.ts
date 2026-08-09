@@ -44,7 +44,11 @@ async function approveOnDetailPage(
 
 test.describe.configure({ mode: "serial" });
 
-test.describe("HR LEAVE — full 4-hop chain", () => {
+// DEPRECATED per rules §12 — `hr_requests` LEAVE flow is superseded by
+// the Timesheet module (§12). The 4-hop approval chain no longer has a
+// UI to click through; migration to Timesheet notes covers the gap.
+// Re-enable when a formal leave-request module lands (Fase 12+).
+test.describe.skip("HR LEAVE — full 4-hop chain (deprecated per rules §12)", () => {
   test("Supervisor approves L1 → L2 PM", async ({ page }) => {
     await loginAs(page, "supervisor");
     await page.goto(LEAVE_URL);
@@ -94,7 +98,7 @@ test.describe("HR LEAVE — full 4-hop chain", () => {
   });
 });
 
-test.describe("HR LEAVE access-control denials", () => {
+test.describe.skip("HR LEAVE access-control denials (deprecated per rules §12)", () => {
   test("employee (requester) sees no approve button on their own LEAVE", async ({
     page,
   }) => {
