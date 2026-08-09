@@ -9,6 +9,7 @@ dokumen turunan di folder yang sama.
 | ------------------------------------------------------------- | --------------------------------------------------------------- |
 | [`README.md`](README.md) (Anda di sini)                       | Semua stakeholder — pahami program & pilih track Anda           |
 | [`curriculum.md`](curriculum.md)                              | Program Manager & Trainer — silabus 6 sesi + role tracks        |
+| [`user-guide-workflows.md`](user-guide-workflows.md)          | Peserta & Trainer — alur harian per role + 12 scenario end-to-end (Mermaid) |
 | [`hands-on-labs.md`](hands-on-labs.md)                        | Peserta & Trainer — 12 lab praktik dengan step-by-step          |
 | [`facilitator-guide.md`](facilitator-guide.md)                | Trainer / Instructor — persiapan, timing, tips, contingency     |
 | [`evaluation.md`](evaluation.md)                              | Program Manager & Trainer — rubrik penilaian, quiz, sign-off    |
@@ -127,6 +128,8 @@ menciptakan pengetahuan baru. Semua yang diajar sudah ada rujukannya:
 | Apa itu ControlDesk?                           | [`../product/overview.md`](../product/overview.md)                                             |
 | Role apa saja + bisa apa?                      | [`../product/roles-and-permissions.md`](../product/roles-and-permissions.md)                   |
 | Threshold approval berapa?                     | [`../product/approval-workflows.md`](../product/approval-workflows.md)                         |
+| Alur harian saya seperti apa?                  | [`user-guide-workflows.md`](user-guide-workflows.md) — diagram Mermaid per role                |
+| Approval saya melibatkan siapa?                | [`user-guide-workflows.md#cross-role-scenarios-end-to-end`](user-guide-workflows.md#cross-role-scenarios-end-to-end) |
 | Cara pakai Client Portal?                      | [`../user-guides/client-portal-users.md`](../user-guides/client-portal-users.md)               |
 | Cara pakai fitur harian per role?              | [`../user-guides/internal-users.md`](../user-guides/internal-users.md)                         |
 | Cara setup WhatsApp / SMTP / AI / Telegram?    | [`../integrations/README.md`](../integrations/README.md)                                       |

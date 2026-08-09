@@ -456,6 +456,22 @@ Setelah S6 peserta bisa:
 Tambah 60–120 menit lab per hari + break → alokasi realistis
 **2 hari kerja** untuk track penuh manapun.
 
+## Materi visual pelengkap
+
+Semua sesi ditemani doc **[`user-guide-workflows.md`](user-guide-workflows.md)**
+— alur harian per role + 12 cross-role scenario end-to-end dengan
+diagram Mermaid (sequence · flowchart · state). Trainer dianjurkan
+screen-share bagian yang relevan di masing-masing sesi:
+
+| Sesi | Bagian yang relevan di `user-guide-workflows.md`                                                    |
+| ---- | --------------------------------------------------------------------------------------------------- |
+| S1   | [Universal — semua role](user-guide-workflows.md#universal--semua-role) — login + bell notification |
+| S2   | [Scenario 7 WBS lifecycle](user-guide-workflows.md#scenario-7--wbs-task-lifecycle-todo--done) + [Scenario 8 Gantt](user-guide-workflows.md#scenario-8--gantt-drag-to-reschedule) |
+| S3   | [Scenario 1–6](user-guide-workflows.md#cross-role-scenarios-end-to-end) — semua finance flow        |
+| S4   | [Scenario 9 timesheet](user-guide-workflows.md#scenario-9--weekly-timesheet--approval) + [Scenario 10 HR request](user-guide-workflows.md#scenario-10--hr-leave-request-employee--supervisor--pm) |
+| S5   | [Bell notification workflow](user-guide-workflows.md#notification-bell-workflow) — fail-open channel |
+| S6   | [Decision tree "Approver saya siapa?"](user-guide-workflows.md#approver-saya-siapa) — untuk threshold tuning |
+
 ## Materi ekstra (optional deep-dive)
 
 Untuk peserta advance / trainer sendiri:

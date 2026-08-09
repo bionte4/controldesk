@@ -119,6 +119,7 @@ Struktur: hub + silabus + lab hands-on + panduan trainer + rubric evaluasi.
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [`training/README.md`](training/README.md)                                 | Hub — tujuan program, audiens, 4 role tracks (T1–T4), timeline 2-hari.       |
 | [`training/curriculum.md`](training/curriculum.md)                         | Silabus 6 sesi (S1 Foundation → S6 Admin & Governance) × 4 tracks.           |
+| [`training/user-guide-workflows.md`](training/user-guide-workflows.md)     | User guide visual — alur harian per role + 12 scenario end-to-end (Mermaid). |
 | [`training/hands-on-labs.md`](training/hands-on-labs.md)                   | 12 lab praktik: login, WBS+Gantt, expense/CA chain, petty cash, integrations. |
 | [`training/facilitator-guide.md`](training/facilitator-guide.md)           | Panduan trainer: setup sandbox, timing, contingency, pelaporan akhir.        |
 | [`training/evaluation.md`](training/evaluation.md)                         | Rubric assessment: quiz 25 soal + hands-on scenario per track + 30-day check. |
@@ -196,6 +197,7 @@ docs/
 ├── training/                            ← Persiapan program training pengguna
 │   ├── README.md                        (hub + role tracks)
 │   ├── curriculum.md                    (silabus 6 sesi)
+│   ├── user-guide-workflows.md          (alur harian per role + 12 sequence diagram)
 │   ├── hands-on-labs.md                 (12 lab praktik)
 │   ├── facilitator-guide.md             (guide untuk trainer)
 │   └── evaluation.md                    (rubric assessment + quiz)
