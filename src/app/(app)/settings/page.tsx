@@ -7,6 +7,7 @@ import {
   KeyRound,
   ListTree,
   Plug,
+  Scale,
   Settings as SettingsIcon,
   Sparkles,
   Upload,
@@ -42,6 +43,7 @@ type TileKey =
   | "users"
   | "coa"
   | "lookups"
+  | "approvalThresholds"
   | "bulkImport"
   | "integrations"
   | "secrets"
@@ -71,6 +73,16 @@ const ADMIN_TILES: readonly AdminTile[] = [
     key: "lookups",
     href: "/settings/lookups",
     icon: ListTree,
+    allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+  },
+  {
+    key: "approvalThresholds",
+    href: "/settings/approval-thresholds",
+    icon: Scale,
+    // ADMIN + DIRECTOR (mapped from legacy `GENERAL_MANAGER`) may edit
+    // per-tenant thresholds. RLS policy on `approval_thresholds` also
+    // gates writes to canonical ADMIN/DIRECTOR — this list only decides
+    // whether the tile renders in the hub.
     allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
   },
   {
@@ -130,6 +142,10 @@ export default async function SettingsHubPage() {
     lookups: {
       title: t("admin.tiles.lookups.title"),
       description: t("admin.tiles.lookups.description"),
+    },
+    approvalThresholds: {
+      title: t("admin.tiles.approvalThresholds.title"),
+      description: t("admin.tiles.approvalThresholds.description"),
     },
     bulkImport: {
       title: t("admin.tiles.bulkImport.title"),

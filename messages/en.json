@@ -1856,6 +1856,10 @@
           "title": "Lookups",
           "description": "Departments, positions, budget categories, and other lookups."
         },
+        "approvalThresholds": {
+          "title": "Approval Thresholds",
+          "description": "Tune the IDR amounts that drive PM / Finance / Director routing per tenant."
+        },
         "bulkImport": {
           "title": "Bulk import",
           "description": "Upload CSV/XLSX for clients, employees, projects, and budget lines."
@@ -2227,6 +2231,63 @@
         "confirmMarkRotated": "Confirm rotation",
         "markSuccess": "{name} marked as freshly rotated.",
         "markFailed": "Failed to mark as rotated."
+      }
+    },
+    "approvalThresholds": {
+      "backToSettings": "Back to Settings",
+      "kicker": "Admin · Approval thresholds",
+      "title": "Approval Thresholds",
+      "subtitle": "Tune the IDR amounts that drive PM / Finance / Director routing per tenant. Changes apply to new submissions; in-flight items keep the chain snapshot they were submitted with.",
+      "overrideCount": "{count} custom active",
+      "noOverrides": "Using global defaults",
+      "customBadge": "Custom",
+      "defaultBadge": "Default",
+      "hint": {
+        "title": "How this works",
+        "body": "Blank fields inherit the global default. New submissions route through your custom values; existing in-flight items are frozen against their submit-time chain so threshold edits never re-route mid-approval."
+      },
+      "kinds": {
+        "EXPENSE": "Expense",
+        "BUDGET": "Budget",
+        "CASH_ADVANCE_GENERAL": "Cash Advance (General)",
+        "CASH_ADVANCE_FIELD_OPS": "Cash Advance (Field Ops)",
+        "PETTY_CASH": "Petty Cash",
+        "BUDGET_REQUEST": "Budget Request"
+      },
+      "descriptions": {
+        "EXPENSE": "≥ PM threshold requires PM approval. ≥ Director threshold requires Director. Finance is always on the chain.",
+        "BUDGET": "≥ Director threshold requires Director approval. Finance is always on the chain.",
+        "CASH_ADVANCE_GENERAL": "≥ PM threshold requires PM. ≥ Director threshold requires Director.",
+        "CASH_ADVANCE_FIELD_OPS": "Supervisor always at rung 0. PM / OM / Director thresholds add slots as amount escalates. Settlement SLA counts from disbursed_at.",
+        "PETTY_CASH": "< Auto-approve: posts immediately. ≥ Receipt-required: receipt mandatory. > Hard ceiling: use the Expense flow instead.",
+        "BUDGET_REQUEST": "Increase / Decrease / Transfer. Threshold ladder mirrors Expense."
+      },
+      "fields": {
+        "supervisor_threshold": "Supervisor threshold",
+        "pm_threshold": "PM threshold",
+        "om_threshold": "OM threshold",
+        "director_threshold": "Director threshold",
+        "petty_auto_approve_below": "Auto-approve below",
+        "petty_receipt_required_above": "Receipt required at",
+        "petty_hard_ceiling": "Hard ceiling",
+        "settlement_sla_days": "Settlement SLA (days)"
+      },
+      "defaultIdr": "Default: {value}",
+      "defaultSlaDays": "Default: {days} days",
+      "noDefault": "—",
+      "updatedAt": "Last edited: {when}",
+      "neverEdited": "Never customised.",
+      "actions": {
+        "save": "Save",
+        "reset": "Reset to default",
+        "saveAria": "Save {kind} threshold",
+        "resetAria": "Reset {kind} threshold to default"
+      },
+      "toasts": {
+        "saved": "{kind} threshold saved.",
+        "saveFailed": "Failed to save threshold.",
+        "reset": "{kind} threshold reset to default.",
+        "resetFailed": "Failed to reset threshold."
       }
     },
     "lookups": {

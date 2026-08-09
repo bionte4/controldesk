@@ -1856,6 +1856,10 @@
           "title": "Data Referensi",
           "description": "Departemen, jabatan, kategori anggaran, dan lookup lain."
         },
+        "approvalThresholds": {
+          "title": "Ambang Approval",
+          "description": "Sesuaikan nominal batas rantai approval per tenant (Expense, Cash Advance, Budget, Petty Cash)."
+        },
         "bulkImport": {
           "title": "Impor Massal",
           "description": "Unggah CSV/XLSX untuk klien, karyawan, proyek, dan budget line."
@@ -2227,6 +2231,63 @@
         "confirmMarkRotated": "Konfirmasi rotasi",
         "markSuccess": "{name} ditandai baru saja dirotasi.",
         "markFailed": "Gagal menandai rotasi."
+      }
+    },
+    "approvalThresholds": {
+      "backToSettings": "Kembali ke Pengaturan",
+      "kicker": "Admin · Ambang Approval",
+      "title": "Ambang Approval",
+      "subtitle": "Sesuaikan nominal batas rantai approval per tenant. Perubahan berlaku untuk pengajuan baru; item yang sudah tersubmit tetap memakai chain snapshot saat submit.",
+      "overrideCount": "{count} kustom aktif",
+      "noOverrides": "Memakai default global",
+      "customBadge": "Kustom",
+      "defaultBadge": "Default",
+      "hint": {
+        "title": "Bagaimana ini bekerja",
+        "body": "Field yang dikosongkan otomatis pakai default global. Rantai approval untuk item baru mengikuti nilai ini; item yang sudah submit dibekukan (frozen chain) supaya perubahan tidak me-re-route pengajuan yang sedang berjalan."
+      },
+      "kinds": {
+        "EXPENSE": "Expense",
+        "BUDGET": "Budget",
+        "CASH_ADVANCE_GENERAL": "Cash Advance (General)",
+        "CASH_ADVANCE_FIELD_OPS": "Cash Advance (Field Ops)",
+        "PETTY_CASH": "Petty Cash",
+        "BUDGET_REQUEST": "Budget Request"
+      },
+      "descriptions": {
+        "EXPENSE": "≥ PM threshold butuh approval PM. ≥ Director threshold butuh approval Director. Finance selalu di jalur.",
+        "BUDGET": "≥ Director threshold butuh approval Director. Finance selalu di jalur.",
+        "CASH_ADVANCE_GENERAL": "≥ PM threshold butuh approval PM. ≥ Director threshold butuh approval Director.",
+        "CASH_ADVANCE_FIELD_OPS": "Supervisor selalu di rung 0. Threshold PM / OM / Director menambah slot berurutan. SLA settlement dihitung dari tanggal disburse.",
+        "PETTY_CASH": "< Auto-approve: langsung di-post. ≥ Receipt-required: struk wajib. > Hard ceiling: tidak boleh via petty cash, harus lewat Expense flow.",
+        "BUDGET_REQUEST": "Increase / Decrease / Transfer. Threshold mirror Expense."
+      },
+      "fields": {
+        "supervisor_threshold": "Threshold Supervisor",
+        "pm_threshold": "Threshold PM",
+        "om_threshold": "Threshold OM",
+        "director_threshold": "Threshold Director",
+        "petty_auto_approve_below": "Auto-approve di bawah",
+        "petty_receipt_required_above": "Struk wajib mulai",
+        "petty_hard_ceiling": "Batas maksimum (hard ceiling)",
+        "settlement_sla_days": "SLA settlement (hari)"
+      },
+      "defaultIdr": "Default: {value}",
+      "defaultSlaDays": "Default: {days} hari",
+      "noDefault": "—",
+      "updatedAt": "Terakhir diubah: {when}",
+      "neverEdited": "Belum pernah dikustomisasi.",
+      "actions": {
+        "save": "Simpan",
+        "reset": "Reset ke default",
+        "saveAria": "Simpan threshold {kind}",
+        "resetAria": "Reset threshold {kind} ke default"
+      },
+      "toasts": {
+        "saved": "Threshold {kind} tersimpan.",
+        "saveFailed": "Gagal menyimpan threshold.",
+        "reset": "Threshold {kind} kembali ke default.",
+        "resetFailed": "Gagal reset threshold."
       }
     },
     "lookups": {
