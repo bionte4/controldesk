@@ -298,7 +298,8 @@
       "upk": "UPK",
       "overview": "Ringkasan",
       "preferences": "Preferensi",
-      "integrations": "Integrasi"
+      "integrations": "Integrasi",
+      "approvalThresholds": "Ambang Approval"
     },
     "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
     "commandPlaceholder": "Cari perintah, lompat ke halaman…",

@@ -20,6 +20,7 @@ import {
   ListTree,
   Plug,
   ReceiptText,
+  Scale,
   ShieldCheck,
   Sparkles,
   Upload,
@@ -276,6 +277,16 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "lookups",
         href: "/settings/lookups",
         icon: ListTree,
+        roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+      },
+      {
+        titleKey: "approvalThresholds",
+        href: "/settings/approval-thresholds",
+        icon: Scale,
+        // Mirrors the settings-hub tile gate (`ADMIN_TILES`). DB RLS on
+        // `public.approval_thresholds` (migration 0024) enforces the
+        // same ADMIN/DIRECTOR write policy at the row layer as a second
+        // line of defence.
         roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
       },
       {

@@ -298,7 +298,8 @@
       "upk": "UPK",
       "overview": "Overview",
       "preferences": "Preferences",
-      "integrations": "Integrations"
+      "integrations": "Integrations",
+      "approvalThresholds": "Approval thresholds"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",

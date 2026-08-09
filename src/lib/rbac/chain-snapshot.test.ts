@@ -182,35 +182,52 @@ describe("chain-snapshot — thresholdsFromSnapshot() reader", () => {
   });
 
   it("round-trip preserves values across all five kinds", () => {
-    const cases = [
-      snapshotExpenseChain({
-        amountIDR: 1,
-        thresholds: { PM_THRESHOLD: 1, DIRECTOR_THRESHOLD: 2 },
-      }),
-      snapshotBudgetChain({
-        totalPlannedIDR: 1,
-        thresholds: { DIRECTOR_THRESHOLD: 3 },
-      }),
-      snapshotCaGeneralChain({
-        amountIDR: 1,
-        thresholds: { PM_THRESHOLD: 4, DIRECTOR_THRESHOLD: 5 },
-      }),
-      snapshotCaFieldOpsChain({
-        amountIDR: 1,
-        thresholds: {
-          PM_THRESHOLD: 6,
-          OM_THRESHOLD: 7,
-          DIRECTOR_THRESHOLD: 8,
-        },
-      }),
-      snapshotBudgetRequestChain({
-        amountIDR: 1,
-        thresholds: { PM_THRESHOLD: 9, DIRECTOR_THRESHOLD: 10 },
-      }),
-    ];
-    for (const s of cases) {
-      const back = thresholdsFromSnapshot(s, s.kind);
-      expect(back).toEqual(s.thresholds);
-    }
+    // Assert each round-trip explicitly (rather than a for-loop) so the
+    // overloaded return type of `thresholdsFromSnapshot()` narrows correctly
+    // per-kind. A generic loop widens `s.kind` to the union and TypeScript
+    // no longer picks the right overload.
+    const expense = snapshotExpenseChain({
+      amountIDR: 1,
+      thresholds: { PM_THRESHOLD: 1, DIRECTOR_THRESHOLD: 2 },
+    });
+    expect(thresholdsFromSnapshot(expense, "EXPENSE")).toEqual(
+      expense.thresholds,
+    );
+
+    const budget = snapshotBudgetChain({
+      totalPlannedIDR: 1,
+      thresholds: { DIRECTOR_THRESHOLD: 3 },
+    });
+    expect(thresholdsFromSnapshot(budget, "BUDGET")).toEqual(
+      budget.thresholds,
+    );
+
+    const caGeneral = snapshotCaGeneralChain({
+      amountIDR: 1,
+      thresholds: { PM_THRESHOLD: 4, DIRECTOR_THRESHOLD: 5 },
+    });
+    expect(
+      thresholdsFromSnapshot(caGeneral, "CASH_ADVANCE_GENERAL"),
+    ).toEqual(caGeneral.thresholds);
+
+    const caFieldOps = snapshotCaFieldOpsChain({
+      amountIDR: 1,
+      thresholds: {
+        PM_THRESHOLD: 6,
+        OM_THRESHOLD: 7,
+        DIRECTOR_THRESHOLD: 8,
+      },
+    });
+    expect(
+      thresholdsFromSnapshot(caFieldOps, "CASH_ADVANCE_FIELD_OPS"),
+    ).toEqual(caFieldOps.thresholds);
+
+    const br = snapshotBudgetRequestChain({
+      amountIDR: 1,
+      thresholds: { PM_THRESHOLD: 9, DIRECTOR_THRESHOLD: 10 },
+    });
+    expect(thresholdsFromSnapshot(br, "BUDGET_REQUEST")).toEqual(
+      br.thresholds,
+    );
   });
 });
