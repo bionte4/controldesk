@@ -1,36 +1,19 @@
 "use client";
 
-import * as React from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useTranslations } from "next-intl";
-import { Check, Loader2, Play, X } from "lucide-react";
-import { toast } from "sonner";
+// DEPRECATED per rules §13 — PM handover module is scheduled for drop in
+// migration 0.4 (replacement: change-log + notify on
+// project_employee_assignments edit). Wired to <ApprovalActionDialog> so
+// the component stays consistent with the rest of the approval fleet
+// until the module is fully removed.
 
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Play } from "lucide-react";
+import { useTranslations } from "next-intl";
+
+import { ApprovalActionDialog } from "@/components/approvals/approval-action-dialog";
 import {
   approvePmHandoverSchema,
+  executePmHandoverSchema,
   rejectPmHandoverSchema,
-  type ApprovePmHandoverInput,
-  type RejectPmHandoverInput,
 } from "@/lib/validation/handover";
 
 import {
@@ -47,215 +30,74 @@ export function HandoverActionButtons({
   mode: "approve" | "execute";
 }) {
   const t = useTranslations("handovers.actions");
-  const [isPending, startTransition] = React.useTransition();
-
-  const [approveOpen, setApproveOpen] = React.useState(false);
-  const [rejectOpen, setRejectOpen] = React.useState(false);
-  const [executeOpen, setExecuteOpen] = React.useState(false);
-
-  const approveForm = useForm<ApprovePmHandoverInput>({
-    resolver: zodResolver(approvePmHandoverSchema),
-    defaultValues: { id, comment: "" },
-  });
-  const rejectForm = useForm<RejectPmHandoverInput>({
-    resolver: zodResolver(rejectPmHandoverSchema),
-    defaultValues: { id, reason: "" },
-  });
-
-  function onApprove(values: ApprovePmHandoverInput) {
-    startTransition(async () => {
-      const res = await approvePmHandoverAction(values);
-      if (res.ok) {
-        toast.success(t("approvedToast"));
-        setApproveOpen(false);
-        approveForm.reset({ id, comment: "" });
-      } else {
-        toast.error(res.reason);
-      }
-    });
-  }
-
-  function onReject(values: RejectPmHandoverInput) {
-    startTransition(async () => {
-      const res = await rejectPmHandoverAction(values);
-      if (res.ok) {
-        toast.success(t("rejectedToast"));
-        setRejectOpen(false);
-        rejectForm.reset({ id, reason: "" });
-      } else {
-        toast.error(res.reason);
-      }
-    });
-  }
-
-  function onExecute() {
-    startTransition(async () => {
-      const res = await executePmHandoverAction({ id });
-      if (res.ok) {
-        toast.success(t("executedToast"));
-        setExecuteOpen(false);
-      } else {
-        toast.error(res.reason);
-      }
-    });
-  }
 
   if (mode === "execute") {
+    // Execute is a "confirmation-only" flow — no user input to capture,
+    // just a modal to prevent accidental execution. Empty `fields`
+    // array is fine; the dialog still renders the confirm/cancel
+    // footer via the shared shell.
     return (
-      <Dialog open={executeOpen} onOpenChange={setExecuteOpen}>
-        <DialogTrigger
-          render={
-            <Button size="sm">
-              <Play className="size-4" /> {t("execute")}
-            </Button>
-          }
-        />
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("executeTitle")}</DialogTitle>
-            <DialogDescription>{t("executeDescription")}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setExecuteOpen(false)}
-              disabled={isPending}
-            >
-              {t("cancel")}
-            </Button>
-            <Button onClick={onExecute} disabled={isPending}>
-              {isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : null}
-              {t("confirmExecute")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ApprovalActionDialog
+        intent="custom"
+        icon={<Play className="size-4" />}
+        schema={executePmHandoverSchema}
+        defaultValues={{ id }}
+        fields={[]}
+        action={executePmHandoverAction}
+        triggerLabel={t("execute")}
+        title={t("executeTitle")}
+        description={t("executeDescription")}
+        confirmLabel={t("confirmExecute")}
+        cancelLabel={t("cancel")}
+        successToast={t("executedToast")}
+        testId="handover-execute"
+      />
     );
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <Dialog open={approveOpen} onOpenChange={setApproveOpen}>
-        <DialogTrigger
-          render={
-            <Button size="sm">
-              <Check className="size-4" /> {t("approve")}
-            </Button>
-          }
-        />
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("approveTitle")}</DialogTitle>
-            <DialogDescription>{t("approveDescription")}</DialogDescription>
-          </DialogHeader>
-          <Form {...approveForm}>
-            <form
-              onSubmit={approveForm.handleSubmit(onApprove)}
-              className="flex flex-col gap-3"
-            >
-              <FormField
-                control={approveForm.control}
-                name="comment"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("comment")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={3}
-                        placeholder={t("commentPlaceholder")}
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setApproveOpen(false)}
-                  disabled={isPending}
-                >
-                  {t("cancel")}
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  {isPending ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : null}
-                  {t("confirmApprove")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <ApprovalActionDialog
+        intent="approve"
+        schema={approvePmHandoverSchema}
+        defaultValues={{ id, comment: "" }}
+        fields={[
+          {
+            name: "comment",
+            label: t("comment"),
+            placeholder: t("commentPlaceholder"),
+          },
+        ]}
+        action={approvePmHandoverAction}
+        triggerLabel={t("approve")}
+        title={t("approveTitle")}
+        description={t("approveDescription")}
+        confirmLabel={t("confirmApprove")}
+        cancelLabel={t("cancel")}
+        successToast={t("approvedToast")}
+        testId="handover-approve"
+      />
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogTrigger
-          render={
-            <Button size="sm" variant="destructive">
-              <X className="size-4" /> {t("reject")}
-            </Button>
-          }
-        />
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("rejectTitle")}</DialogTitle>
-            <DialogDescription>{t("rejectDescription")}</DialogDescription>
-          </DialogHeader>
-          <Form {...rejectForm}>
-            <form
-              onSubmit={rejectForm.handleSubmit(onReject)}
-              className="flex flex-col gap-3"
-            >
-              <FormField
-                control={rejectForm.control}
-                name="reason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t("reason")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={3}
-                        placeholder={t("reasonPlaceholder")}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setRejectOpen(false)}
-                  disabled={isPending}
-                >
-                  {t("cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                  ) : null}
-                  {t("confirmReject")}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+      <ApprovalActionDialog
+        intent="reject"
+        schema={rejectPmHandoverSchema}
+        defaultValues={{ id, reason: "" }}
+        fields={[
+          {
+            name: "reason",
+            label: t("reason"),
+            placeholder: t("reasonPlaceholder"),
+          },
+        ]}
+        action={rejectPmHandoverAction}
+        triggerLabel={t("reject")}
+        title={t("rejectTitle")}
+        description={t("rejectDescription")}
+        confirmLabel={t("confirmReject")}
+        cancelLabel={t("cancel")}
+        successToast={t("rejectedToast")}
+        testId="handover-reject"
+      />
     </div>
   );
 }
