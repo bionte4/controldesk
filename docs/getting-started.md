@@ -203,6 +203,68 @@ curl -s -X POST 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
 See the [Seeded demo users](#seeded-demo-users) table above for the
 full role → email mapping.
 
+### Post-login navigation feels slow on `pnpm dev`
+
+Symptom: after clicking **Sign in**, the browser hangs on the loading
+spinner for 5–20 seconds before the dashboard renders. Subsequent
+navigations feel snappy.
+
+Root cause: **Turbopack compiles routes on demand.** The first request
+to each route (`/dashboard`, `/finance/expenses`, `/settings/**`, etc.)
+after a fresh `pnpm dev` — or any restart with `rm -rf .next` — triggers
+a synchronous compile of the route's module graph plus the proxy
+middleware. Next.js dev logs report this compile time inside the
+`proxy.ts:` and `application-code:` buckets, which makes it look like
+the app is slow, when in reality the timer is bounded by Turbopack.
+
+Typical timing profile of a cold dev server:
+
+| Hit                     | `proxy.ts` | `application-code` | Total    |
+| ----------------------- | ---------- | ------------------ | -------- |
+| 1st hit `/dashboard`    | 7.3 s      | 9.3 s              | ~17 s    |
+| 2nd hit `/dashboard`    | 1.5 s      | 1.6 s              | ~1.7 s   |
+| Warm hit `/dashboard`   | 16 ms      | 344 ms             | ~400 ms  |
+
+Once every route in the user's flow is compiled once, it stays cached
+until code changes invalidate it.
+
+**Option 1 — accept it (default).** Cold-compile penalty is unavoidable
+in dev mode. Live-reload is worth the trade-off while writing code.
+
+**Option 2 — warm up the dev server with a one-shot curl loop.** Run
+this once right after `pnpm dev` reports `Ready`:
+
+```bash
+for path in / /login /dashboard \
+            /finance/expenses /finance/cash-advances /finance/budgets \
+            /projects /hr/requests /timesheets \
+            /approvals /insights \
+            /settings /settings/integrations \
+            /settings/integrations/ai /settings/integrations/smtp \
+            /settings/integrations/telegram-bot \
+            /settings/integrations/whatsapp-business \
+            /settings/preferences; do
+  curl -s -o /dev/null -H "Host: demo.localhost" \
+    "http://127.0.0.1:3000${path}" \
+    -w "${path}: %{time_total}s\n"
+done
+```
+
+The first pass takes ~30–60 s; every user request after that is < 500 ms.
+Protected routes will 307-redirect to `/login` — that's fine, the
+compile still happens.
+
+**Option 3 — use the pre-built prod container on `:3001`.** For
+testing / demo (not coding), `docker compose --profile prod up` boots a
+Next.js standalone build where every route is compiled at image-build
+time. Cold hit ≈ 200 ms, warm hit ≈ 150 ms. Same Supabase, same seed —
+just swap the port:
+
+- Dev (Turbopack, HMR): **http://demo.localhost:3000**
+- Prod (pre-built, no HMR): **http://demo.localhost:3001**
+
+See [`development.md`](development.md) for the full dev vs prod matrix.
+
 ### The subdomain doesn't resolve
 
 Windows without WSL is the common culprit. Add:
