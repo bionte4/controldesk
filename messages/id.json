@@ -965,6 +965,88 @@
       "deleted": "Milestone dihapus."
     }
   },
+  "tasks": {
+    "title": "WBS (Work Breakdown Structure)",
+    "subtitle": "Uraikan pekerjaan proyek menjadi paket kerja bertingkat. {total, plural, =0 {Belum ada task.} one {# task tercatat} other {# task tercatat}} · {overdue, plural, =0 {} one {# overdue} other {# overdue}} · rata-rata progress {progress}%",
+    "empty": "Belum ada task. Tambahkan task utama untuk mulai memecah pekerjaan.",
+    "new": "Task baru",
+    "newChild": "Sub-task",
+    "expandAll": "Buka semua",
+    "collapseAll": "Tutup semua",
+    "columns": {
+      "code": "WBS",
+      "name": "Nama",
+      "owner": "Owner",
+      "progress": "Progress",
+      "planned": "Rencana",
+      "status": "Status",
+      "actions": "Aksi"
+    },
+    "status": {
+      "TODO": "Belum",
+      "IN_PROGRESS": "Berjalan",
+      "BLOCKED": "Terhambat",
+      "REVIEW": "Review",
+      "DONE": "Selesai",
+      "CANCELLED": "Dibatalkan"
+    },
+    "form": {
+      "titleCreate": "Task baru",
+      "titleEdit": "Edit task",
+      "description": "Task adalah unit kerja yang bisa di-assign, di-track progress-nya, dan (opsional) dikaitkan ke milestone.",
+      "name": "Nama task",
+      "namePlaceholder": "cth. Design DB schema, Deploy staging…",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Ceritakan konteks & acceptance criteria",
+      "parent": "Parent task (opsional)",
+      "parentPlaceholder": "Root level",
+      "milestone": "Milestone (opsional)",
+      "milestonePlaceholder": "Tidak terkait",
+      "owner": "Owner",
+      "ownerPlaceholder": "Pilih owner…",
+      "weight": "Bobot (%)",
+      "weightHint": "Bobot dalam kelompok sibling; kosongkan = 0",
+      "progress": "Progress (%)",
+      "plannedStart": "Mulai rencana",
+      "plannedEnd": "Selesai rencana",
+      "budget": "Anggaran (opsional)",
+      "budgetPlaceholder": "0",
+      "dependsOn": "Predecessor (finish-to-start)",
+      "dependsOnPlaceholder": "Tidak ada",
+      "submitCreate": "Simpan task",
+      "submitEdit": "Simpan perubahan",
+      "created": "Task ditambahkan.",
+      "updated": "Task diperbarui."
+    },
+    "actions": {
+      "openMenu": "Buka menu task",
+      "edit": "Edit",
+      "addChild": "Tambah sub-task",
+      "moveTo": "Ubah status ke {status}",
+      "setProgress": "Set progress…",
+      "delete": "Hapus task (+ sub-tree)",
+      "deleteConfirm": "Hapus task ini beserta seluruh sub-task-nya?",
+      "statusUpdated": "Status task diperbarui.",
+      "progressUpdated": "Progress task diperbarui.",
+      "deleted": "Task dihapus."
+    },
+    "stats": {
+      "total": "Total",
+      "inProgress": "Berjalan",
+      "done": "Selesai",
+      "overdue": "Overdue",
+      "avgProgress": "Rata-rata progress"
+    },
+    "tabs": {
+      "tree": "Tree",
+      "gantt": "Gantt"
+    },
+    "gantt": {
+      "hint": "Drag bar untuk reschedule · drag ujung bar untuk atur progress · hari ini {date}",
+      "emptyPlanned": "Belum ada task dengan tanggal rencana. Isi Start + End date pada task untuk menampilkannya di Gantt.",
+      "unplanned": "{count} task belum punya tanggal rencana (tidak muncul di Gantt)"
+    }
+  },
   "issues": {
     "title": "Issue",
     "subtitle": "{count, plural, =0 {Belum ada issue.} one {# issue tercatat.} other {# issue tercatat.}}",

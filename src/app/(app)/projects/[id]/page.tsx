@@ -60,6 +60,7 @@ import { MilestoneRowActions } from "./milestones/milestone-row-actions";
 import { ProjectIssuesSection } from "./issues/issues-section";
 import type { IssueAssigneeOption } from "./issues/new-issue-sheet";
 import { ProjectDirectLaborSection } from "./direct-labor-section";
+import { ProjectTasksSection } from "./tasks/tasks-section";
 import {
   ProjectLifecycleBanner,
   type PmPickOption,
@@ -692,6 +693,8 @@ export default async function ProjectDetailPage(props: {
           </CardContent>
         </Card>
       </div>
+
+      <ProjectTasksSection projectId={id} tenantId={employee.tenant_id} />
 
       <ProjectDirectLaborSection projectId={id} />
 

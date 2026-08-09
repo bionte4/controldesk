@@ -55,6 +55,7 @@ export type CanonicalActionVerb =
  */
 export type CanonicalResource =
   | "project_milestone"
+  | "project_task"
   | "budget"
   | "budget_detail"
   | "budget_request"
@@ -202,6 +203,8 @@ export function authorizeCanonical(input: {
   switch (resource) {
     case "project_milestone":
       return decideMilestone(actor, action, attributes);
+    case "project_task":
+      return decideProjectTask(actor, action, attributes);
     case "budget":
       return decideBudget(actor, action);
     case "budget_detail":
@@ -252,6 +255,7 @@ function decideCanonicalApproval(
     attrs.amountIDR !== undefined &&
     attrs.thresholds !== undefined &&
     resource !== "project_milestone" &&
+    resource !== "project_task" &&
     resource !== "client_portal_view" &&
     resource !== "approval_threshold"
   ) {
@@ -364,6 +368,38 @@ function decideMilestone(
       : DENY("only OM / DIRECTOR may delete milestones");
   }
   return DENY(`unsupported action on project_milestone: ${action}`);
+}
+
+// ---------------------------------------------------------------------------
+// Project tasks (WBS — Phase 1 of the Work Breakdown Structure initiative).
+//   - Mirrors milestone policy for CREATE/UPDATE/DELETE.
+//   - `owner` update (task assignee) SHOULD stay editable by SUPERVISOR too
+//     (team lead can re-assign work) but not by generic EMPLOYEE.
+// ---------------------------------------------------------------------------
+function decideProjectTask(
+  actor: CanonicalActor,
+  action: CanonicalActionVerb,
+  _attrs: CanonicalAttributes,
+): Decision {
+  if (action === "create" || action === "update") {
+    if (
+      actor.role === "PM" ||
+      actor.role === "OM" ||
+      actor.role === "DIRECTOR" ||
+      actor.role === "SUPERVISOR"
+    ) {
+      return ALLOW("Supervisor+ edits WBS tasks");
+    }
+    return DENY("only SUPERVISOR / PM / OM / DIRECTOR may edit WBS tasks");
+  }
+  if (action === "delete") {
+    return actor.role === "PM" ||
+      actor.role === "OM" ||
+      actor.role === "DIRECTOR"
+      ? ALLOW("PM+ deletes WBS tasks")
+      : DENY("only PM / OM / DIRECTOR may delete WBS tasks");
+  }
+  return DENY(`unsupported action on project_task: ${action}`);
 }
 
 // ---------------------------------------------------------------------------

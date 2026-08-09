@@ -965,6 +965,88 @@
       "deleted": "Milestone removed."
     }
   },
+  "tasks": {
+    "title": "WBS (Work Breakdown Structure)",
+    "subtitle": "Decompose the project into a tree of work packages. {total, plural, =0 {No tasks yet.} one {# task tracked} other {# tasks tracked}} · {overdue, plural, =0 {} one {# overdue} other {# overdue}} · average progress {progress}%",
+    "empty": "No tasks yet. Add a top-level task to start breaking down the work.",
+    "new": "New task",
+    "newChild": "Sub-task",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "columns": {
+      "code": "WBS",
+      "name": "Name",
+      "owner": "Owner",
+      "progress": "Progress",
+      "planned": "Planned",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "TODO": "To do",
+      "IN_PROGRESS": "In progress",
+      "BLOCKED": "Blocked",
+      "REVIEW": "Review",
+      "DONE": "Done",
+      "CANCELLED": "Cancelled"
+    },
+    "form": {
+      "titleCreate": "New task",
+      "titleEdit": "Edit task",
+      "description": "Tasks are assignable work units with tracked progress that may optionally link to a milestone.",
+      "name": "Task name",
+      "namePlaceholder": "e.g. Design DB schema, Deploy staging…",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Context, acceptance criteria, links…",
+      "parent": "Parent task (optional)",
+      "parentPlaceholder": "Root level",
+      "milestone": "Milestone (optional)",
+      "milestonePlaceholder": "Not linked",
+      "owner": "Owner",
+      "ownerPlaceholder": "Assign an owner…",
+      "weight": "Weight (%)",
+      "weightHint": "Sibling weight; leave 0 to skip weighted rollup",
+      "progress": "Progress (%)",
+      "plannedStart": "Planned start",
+      "plannedEnd": "Planned end",
+      "budget": "Budget (optional)",
+      "budgetPlaceholder": "0",
+      "dependsOn": "Predecessor (finish-to-start)",
+      "dependsOnPlaceholder": "None",
+      "submitCreate": "Save task",
+      "submitEdit": "Save changes",
+      "created": "Task added.",
+      "updated": "Task updated."
+    },
+    "actions": {
+      "openMenu": "Open task menu",
+      "edit": "Edit",
+      "addChild": "Add sub-task",
+      "moveTo": "Move to {status}",
+      "setProgress": "Set progress…",
+      "delete": "Delete task (+ subtree)",
+      "deleteConfirm": "Delete this task and all of its sub-tasks?",
+      "statusUpdated": "Task status updated.",
+      "progressUpdated": "Task progress updated.",
+      "deleted": "Task removed."
+    },
+    "stats": {
+      "total": "Total",
+      "inProgress": "In progress",
+      "done": "Done",
+      "overdue": "Overdue",
+      "avgProgress": "Avg progress"
+    },
+    "tabs": {
+      "tree": "Tree",
+      "gantt": "Gantt"
+    },
+    "gantt": {
+      "hint": "Drag a bar to reschedule · drag the bar edge to set progress · today {date}",
+      "emptyPlanned": "No tasks with planned dates yet. Fill in Start + End date on a task to see it on the Gantt.",
+      "unplanned": "{count} tasks have no planned dates (not shown on Gantt)"
+    }
+  },
   "issues": {
     "title": "Issues",
     "subtitle": "{count, plural, =0 {No issues raised yet.} one {# open or historical issue.} other {# issues tracked here.}}",

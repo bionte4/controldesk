@@ -5838,6 +5838,156 @@ export type Database = {
           },
         ]
       }
+      project_tasks: {
+        Row: {
+          actual_end_date: string | null
+          actual_start_date: string | null
+          budget_amount: number | null
+          created_at: string
+          created_by: string | null
+          depends_on_task_id: string | null
+          description: string | null
+          id: string
+          milestone_id: string | null
+          name: string
+          owner_employee_id: string | null
+          parent_task_id: string | null
+          planned_end_date: string | null
+          planned_start_date: string | null
+          progress_pct: number
+          project_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["task_status"]
+          tenant_id: string
+          updated_at: string
+          weight_pct: number
+        }
+        Insert: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          budget_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          depends_on_task_id?: string | null
+          description?: string | null
+          id?: string
+          milestone_id?: string | null
+          name: string
+          owner_employee_id?: string | null
+          parent_task_id?: string | null
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_pct?: number
+          project_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["task_status"]
+          tenant_id: string
+          updated_at?: string
+          weight_pct?: number
+        }
+        Update: {
+          actual_end_date?: string | null
+          actual_start_date?: string | null
+          budget_amount?: number | null
+          created_at?: string
+          created_by?: string | null
+          depends_on_task_id?: string | null
+          description?: string | null
+          id?: string
+          milestone_id?: string | null
+          name?: string
+          owner_employee_id?: string | null
+          parent_task_id?: string | null
+          planned_end_date?: string | null
+          planned_start_date?: string | null
+          progress_pct?: number
+          project_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["task_status"]
+          tenant_id?: string
+          updated_at?: string
+          weight_pct?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "project_tasks_depends_on_task_id_fkey"
+            columns: ["depends_on_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "project_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_owner_employee_id_fkey"
+            columns: ["owner_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_owner_employee_id_fkey"
+            columns: ["owner_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_owner_employee_id_fkey"
+            columns: ["owner_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "project_tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           bc_approved_at: string | null
@@ -7852,6 +8002,13 @@ export type Database = {
         | "ARCHIVED"
       project_type: "FIXED_PRICE" | "TIME_MATERIAL" | "RETAINER" | "INTERNAL"
       secret_priority: "P0" | "P1" | "P2"
+      task_status:
+        | "TODO"
+        | "IN_PROGRESS"
+        | "BLOCKED"
+        | "REVIEW"
+        | "DONE"
+        | "CANCELLED"
       timesheet_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       upk_status:
         | "DRAFT"
@@ -8371,6 +8528,14 @@ export const Constants = {
       ],
       project_type: ["FIXED_PRICE", "TIME_MATERIAL", "RETAINER", "INTERNAL"],
       secret_priority: ["P0", "P1", "P2"],
+      task_status: [
+        "TODO",
+        "IN_PROGRESS",
+        "BLOCKED",
+        "REVIEW",
+        "DONE",
+        "CANCELLED",
+      ],
       timesheet_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       upk_status: [
         "DRAFT",

@@ -67,6 +67,7 @@ export type ProjectPriority = E<"project_priority">;
 export type ProjectStatus = E<"project_status">;
 export type ProjectType = E<"project_type">;
 export type SecretPriority = E<"secret_priority">;
+export type TaskStatus = E<"task_status">;
 export type TimesheetStatus = E<"timesheet_status">;
 
 // ---------------------------------------------------------------------------
