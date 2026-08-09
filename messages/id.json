@@ -2621,6 +2621,29 @@
       "budgets": "Anggaran",
       "budgetRequests": "Permintaan anggaran",
       "weeklyTimesheets": "Timesheet mingguan"
+    },
+    "nextAction": {
+      "pendingTitle": "Menunggu approval {slot}",
+      "pendingTitleAny": "Menunggu approval",
+      "pendingDescription": "Aksi berikutnya akan dilakukan oleh {slot}.",
+      "pendingSelfBadge": "Giliran Anda",
+      "pendingSelfDescription": "Anda adalah approver berikutnya. Klik Approve atau Reject di bawah.",
+      "approvedTitle": "Sudah disetujui",
+      "approvedDescription": "Approval chain selesai. Item siap untuk tahap berikutnya.",
+      "rejectedTitle": "Ditolak",
+      "rejectedDescription": "Pengajuan ditolak. Lihat alasan di timeline di bawah.",
+      "cancelledTitle": "Dibatalkan",
+      "cancelledDescription": "Pengaju menarik pengajuan sebelum selesai review.",
+      "draftTitle": "Draft — belum dikirim",
+      "draftDescription": "Lengkapi data, lalu klik Kirim untuk memulai approval chain.",
+      "paidTitle": "Sudah dibayar",
+      "paidDescription": "Pembayaran dicatat oleh Finance.",
+      "disbursedTitle": "Sudah dicairkan",
+      "disbursedDescription": "Menunggu bukti settlement dari pengaju.",
+      "settledTitle": "Settlement selesai",
+      "settledDescription": "Uang muka sudah dipertanggungjawabkan.",
+      "returnedTitle": "Settlement dikembalikan",
+      "returnedDescription": "Finance mengembalikan settlement — pengaju harus mengunggah bukti perbaikan."
     }
   },
   "employees": {

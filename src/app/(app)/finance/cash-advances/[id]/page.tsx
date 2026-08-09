@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 import { ApprovalTimeline } from "@/components/approvals/approval-timeline";
+import { NextActionHint } from "@/components/approvals/next-action-hint";
 import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ import {
   CA_STATUS_LABEL,
   CA_STATUS_TONE,
   canApproveNextCa,
+  expectedCaApproverRole,
+  isCaPendingApproval,
 } from "@/lib/cash-advance/state";
 import {
   CANONICAL_CA_STATUS_LABEL,
@@ -92,11 +95,12 @@ export default async function CashAdvanceDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, t, tSlots, tAttach] = await Promise.all([
+  const [employee, t, tSlots, tAttach, tHint] = await Promise.all([
     requireCurrentEmployee(),
     getTranslations("cashAdvances.detail"),
     getTranslations("cashAdvances.chainSlot"),
     getTranslations("cashAdvances.attachments"),
+    getTranslations("approvals.nextAction"),
   ]);
 
   const supabase = await createClient();
@@ -278,6 +282,88 @@ export default async function CashAdvanceDetailPage(props: {
     return canonical ?? CA_STATUS_TONE[s];
   }
 
+  // Derive the workflow hint banner. CA has both a legacy 5-tier chain and a
+  // canonical GAS chain (see rules §7); the branch here mirrors how the rest
+  // of this page picks the right label source — canonical rows read from
+  // `CANONICAL_CA_STATUS_SLOT` and localise via `tSlots`; legacy rows fall
+  // back to `expectedCaApproverRole` + `formatRole`.
+  const isPendingRow = isCanonicalRow
+    ? CANONICAL_CA_STATUS_SLOT[status as CanonicalCaStatus] != null
+    : isCaPendingApproval(status);
+  const nextSlotLabel: string = (() => {
+    if (isCanonicalRow) {
+      const slot = CANONICAL_CA_STATUS_SLOT[status as CanonicalCaStatus];
+      return slot ? tSlots(slot as CanonicalApprovalSlot) : tHint("pendingTitleAny");
+    }
+    const role = expectedCaApproverRole(status);
+    return role ? formatRole(role) : tHint("pendingTitleAny");
+  })();
+  const caHint: {
+    intent: "pending" | "approved" | "rejected" | "cancelled" | "info";
+    title: string;
+    description: string;
+  } | null = (() => {
+    if (status === "DRAFT") {
+      return {
+        intent: "info",
+        title: tHint("draftTitle"),
+        description: tHint("draftDescription"),
+      };
+    }
+    if (status === "REJECTED") {
+      return {
+        intent: "rejected",
+        title: tHint("rejectedTitle"),
+        description: tHint("rejectedDescription"),
+      };
+    }
+    if (status === "CANCELLED") {
+      return {
+        intent: "cancelled",
+        title: tHint("cancelledTitle"),
+        description: tHint("cancelledDescription"),
+      };
+    }
+    if (status === "APPROVED") {
+      // Awaiting disbursement — treat as an actionable info state so the
+      // Finance disbursement CTA (already in the action bar) gets a clear
+      // upstream cue.
+      return {
+        intent: "info",
+        title: tHint("approvedTitle"),
+        description: canDisburse
+          ? tHint("pendingSelfDescription")
+          : tHint("approvedDescription"),
+      };
+    }
+    if (status === "DISBURSED") {
+      return {
+        intent: "info",
+        title: tHint("disbursedTitle"),
+        description: canSubmitSettlement
+          ? tHint("pendingSelfDescription")
+          : tHint("disbursedDescription"),
+      };
+    }
+    if (status === "SETTLED") {
+      return {
+        intent: "approved",
+        title: tHint("settledTitle"),
+        description: tHint("settledDescription"),
+      };
+    }
+    if (isPendingRow) {
+      return {
+        intent: "pending",
+        title: tHint("pendingTitle", { slot: nextSlotLabel }),
+        description: canApprove
+          ? tHint("pendingSelfDescription")
+          : tHint("pendingDescription", { slot: nextSlotLabel }),
+      };
+    }
+    return null;
+  })();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -376,6 +462,15 @@ export default async function CashAdvanceDetailPage(props: {
           ) : null}
         </div>
       </header>
+
+      {caHint ? (
+        <NextActionHint
+          intent={caHint.intent}
+          title={caHint.title}
+          description={caHint.description}
+          data-testid="ca-next-action-hint"
+        />
+      ) : null}
 
       {status === "DISBURSED" && ca.settlement_due_at ? (
         (() => {

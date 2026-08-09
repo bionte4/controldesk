@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BadgeDollarSign } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { NextActionHint } from "@/components/approvals/next-action-hint";
 import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -190,16 +191,27 @@ export default async function BudgetDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, budget, lines, t, tCat, budgetCategoryLookup, coaAccounts] =
-    await Promise.all([
-      requireCurrentEmployee(),
-      loadBudget(id),
-      loadLines(id),
-      getTranslations("budgets.detail"),
-      getTranslations("budgets.categories"),
-      loadLookupOptions("budget_category"),
-      loadPostableAccounts(),
-    ]);
+  const [
+    employee,
+    budget,
+    lines,
+    t,
+    tCat,
+    tHint,
+    tSlots,
+    budgetCategoryLookup,
+    coaAccounts,
+  ] = await Promise.all([
+    requireCurrentEmployee(),
+    loadBudget(id),
+    loadLines(id),
+    getTranslations("budgets.detail"),
+    getTranslations("budgets.categories"),
+    getTranslations("approvals.nextAction"),
+    getTranslations("cashAdvances.chainSlot"),
+    loadLookupOptions("budget_category"),
+    loadPostableAccounts(),
+  ]);
   if (!budget) notFound();
 
   // Build a label lookup keyed by code so both the read-only cell and the
@@ -255,6 +267,56 @@ export default async function BudgetDetailPage(props: {
   const pendingSlot = budgetSlotForStatus(budget.status);
   const nextSeq = lines.reduce((max, l) => Math.max(max, l.seq), 0) + 1;
 
+  // Workflow hint — Budget has no REJECTED terminal (uses REVISED to bounce
+  // back to submitter), so we treat REVISED as "info + returned to owner" and
+  // wire APPROVED/CANCELLED per rules §9.
+  const canActNow = canBudgetAdvance(canonicalRole, budget.status);
+  const budgetHint: {
+    intent: "pending" | "approved" | "rejected" | "cancelled" | "info";
+    title: string;
+    description: string;
+  } | null = (() => {
+    if (budget.status === "DRAFT") {
+      return {
+        intent: "info",
+        title: tHint("draftTitle"),
+        description: tHint("draftDescription"),
+      };
+    }
+    if (budget.status === "APPROVED") {
+      return {
+        intent: "approved",
+        title: tHint("approvedTitle"),
+        description: tHint("approvedDescription"),
+      };
+    }
+    if (budget.status === "CANCELLED") {
+      return {
+        intent: "cancelled",
+        title: tHint("cancelledTitle"),
+        description: tHint("cancelledDescription"),
+      };
+    }
+    if (budget.status === "REVISED") {
+      return {
+        intent: "info",
+        title: tHint("returnedTitle"),
+        description: tHint("returnedDescription"),
+      };
+    }
+    if (pendingSlot) {
+      const slotLabel = tSlots(pendingSlot);
+      return {
+        intent: "pending",
+        title: tHint("pendingTitle", { slot: slotLabel }),
+        description: canActNow
+          ? tHint("pendingSelfDescription")
+          : tHint("pendingDescription", { slot: slotLabel }),
+      };
+    }
+    return null;
+  })();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -298,6 +360,15 @@ export default async function BudgetDetailPage(props: {
         </div>
         <BudgetActionButtons id={budget.id} mode={actionMode} />
       </header>
+
+      {budgetHint ? (
+        <NextActionHint
+          intent={budgetHint.intent}
+          title={budgetHint.title}
+          description={budgetHint.description}
+          data-testid="budget-next-action-hint"
+        />
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-4">
         <SummaryTile

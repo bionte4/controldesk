@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, Receipt } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { ApprovalTimeline } from "@/components/approvals/approval-timeline";
+import { NextActionHint } from "@/components/approvals/next-action-hint";
 import { FinanceStatusBadge } from "@/components/finance/finance-status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,9 @@ import {
   STATUS_LABEL,
   STATUS_TONE,
   canApproveNext,
+  expectedApproverRole,
+  isPending,
+  isTerminal,
 } from "@/lib/expenses/state";
 import type {
   ApprovalAction,
@@ -66,9 +70,10 @@ export default async function ExpenseDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, t] = await Promise.all([
+  const [employee, t, tHint] = await Promise.all([
     requireCurrentEmployee(),
     getTranslations("expenses.detail"),
+    getTranslations("approvals.nextAction"),
   ]);
 
   const supabase = await createClient();
@@ -189,6 +194,62 @@ export default async function ExpenseDetailPage(props: {
     NON_TERMINAL_STATES.includes(status) &&
     Boolean(project);
 
+  // Derive the workflow hint banner shown above the details grid. Keeps the
+  // status pill (single-word summary) and this contextual banner in sync — pill
+  // says *what*, banner says *what next and by whom*.
+  const nextApproverRole = expectedApproverRole(status);
+  const nextApproverLabel = nextApproverRole
+    ? formatRole(nextApproverRole)
+    : tHint("pendingTitleAny");
+  const isSelfNextApprover = canAct && isPending(status);
+  const hint: {
+    intent: "pending" | "approved" | "rejected" | "cancelled" | "info";
+    title: string;
+    description: string;
+  } | null = (() => {
+    if (status === "DRAFT") {
+      return {
+        intent: "info",
+        title: tHint("draftTitle"),
+        description: tHint("draftDescription"),
+      };
+    }
+    if (status === "APPROVED") {
+      return {
+        intent: "approved",
+        title: tHint("approvedTitle"),
+        description: tHint("approvedDescription"),
+      };
+    }
+    if (status === "REJECTED") {
+      return {
+        intent: "rejected",
+        title: tHint("rejectedTitle"),
+        description: tHint("rejectedDescription"),
+      };
+    }
+    if (status === "CANCELLED") {
+      return {
+        intent: "cancelled",
+        title: tHint("cancelledTitle"),
+        description: tHint("cancelledDescription"),
+      };
+    }
+    if (isPending(status)) {
+      return {
+        intent: "pending",
+        title: tHint("pendingTitle", { slot: nextApproverLabel }),
+        description: isSelfNextApprover
+          ? tHint("pendingSelfDescription")
+          : tHint("pendingDescription", { slot: nextApproverLabel }),
+      };
+    }
+    // Should be unreachable given isTerminal covers the rest — keep the guard
+    // so a future enum widening surfaces a clear compile error.
+    void isTerminal(status);
+    return null;
+  })();
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -263,6 +324,15 @@ export default async function ExpenseDetailPage(props: {
           </p>
         </div>
       </header>
+
+      {hint ? (
+        <NextActionHint
+          intent={hint.intent}
+          title={hint.title}
+          description={hint.description}
+          data-testid="expense-next-action-hint"
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="glass lg:col-span-1">

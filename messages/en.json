@@ -2621,6 +2621,29 @@
       "budgets": "Budgets",
       "budgetRequests": "Budget requests",
       "weeklyTimesheets": "Weekly timesheets"
+    },
+    "nextAction": {
+      "pendingTitle": "Awaiting {slot} approval",
+      "pendingTitleAny": "Awaiting approval",
+      "pendingDescription": "The next action is expected from {slot}.",
+      "pendingSelfBadge": "Your turn",
+      "pendingSelfDescription": "You are the next approver. Click Approve or Reject below.",
+      "approvedTitle": "Approved",
+      "approvedDescription": "The approval chain is complete. This item is ready for the next stage.",
+      "rejectedTitle": "Rejected",
+      "rejectedDescription": "The request was rejected. See the timeline below for the reason.",
+      "cancelledTitle": "Cancelled",
+      "cancelledDescription": "The submitter withdrew this request before review completed.",
+      "draftTitle": "Draft — not submitted yet",
+      "draftDescription": "Complete the form, then click Submit to start the approval chain.",
+      "paidTitle": "Paid",
+      "paidDescription": "Payment has been recorded by Finance.",
+      "disbursedTitle": "Disbursed",
+      "disbursedDescription": "Awaiting settlement evidence from the requester.",
+      "settledTitle": "Settlement complete",
+      "settledDescription": "The advance has been fully accounted for.",
+      "returnedTitle": "Settlement returned",
+      "returnedDescription": "Finance sent the settlement back — the requester needs to resubmit with corrections."
     }
   },
   "employees": {
