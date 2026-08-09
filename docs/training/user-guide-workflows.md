@@ -84,7 +84,7 @@ Password sandbox universal: **`ControlDesk#2026`**.
 
 ```mermaid
 flowchart TD
-    Start([Buka URL tenant]) --> Login[/Halaman /login/]
+    Start([Buka URL tenant]) --> Login["/login page"]
     Login --> Auth{Email + password<br/>benar?}
     Auth -- Tidak --> Retry[Tampil error<br/>3× salah → captcha]
     Retry --> Login
@@ -193,8 +193,8 @@ flowchart LR
     Inbox --> Filter{Filter apa yang<br/>butuh saya?}
     Filter -->|Field Ops CA| CAFO[Review RAB<br/>+ justifikasi]
     Filter -->|HR request L1| HR[Review cuti/lembur<br/>tim]
-    Filter -->|Timesheet<br/>(opsional)| TS[Review packet<br/>anggota tim]
-    Filter -->|Expense L1<br/>(kalau ada)| EXP[Review dokumen<br/>+ receipt]
+    Filter -->|Timesheet opsional| TS[Review packet<br/>anggota tim]
+    Filter -->|Expense L1 bila di chain| EXP[Review dokumen<br/>+ receipt]
     CAFO --> Decide{Approve /<br/>Reject / Klarifikasi}
     HR --> Decide
     TS --> Decide
@@ -381,10 +381,10 @@ flowchart LR
     Morning([Mulai kerja]) --> Adm{Admin task hari ini}
     Adm -->|User baru| Invite[Invite via email<br/>+ role assignment]
     Adm -->|Client portal| Portal[Invite client user<br/>+ trigger reset]
-    Adm -->|Tune threshold| Threshold[/settings/approval-thresholds/]
+    Adm -->|Tune threshold| Threshold["/settings/approval-thresholds"]
     Adm -->|Setup integrasi| Int[SMTP · WA · TG ·<br/>AI · Calendar]
     Adm -->|Rotate secret| Secret[Rotate encryption<br/>+ API keys]
-    Adm -->|Audit review| Audit[/settings/audit-log/<br/>filter · export]
+    Adm -->|Audit review| Audit["/settings/audit-log<br/>filter · export"]
     Adm -->|Emergency override| Ovr[Approve step manapun<br/>+ justification]
     Invite --> Done([Selesai])
     Portal --> Done
@@ -413,8 +413,8 @@ flowchart LR
     Auth --> Home[/portal/]
     Home --> View{Lihat apa?}
     View -->|Progress proyek| Proj["/portal/projects/:id<br/>timeline + milestone"]
-    View -->|Notifikasi| Notif[/portal/notifications/]
-    View -->|Dokumen| Docs[Download signed URL<br/>(TTL 300s)]
+    View -->|Notifikasi| Notif["/portal/notifications"]
+    View -->|Dokumen| Docs["Download signed URL<br/>TTL 300 detik"]
     Proj --> Read((Read-only))
     Notif --> Read
     Docs --> Read
