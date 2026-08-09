@@ -29,7 +29,8 @@
     "test:wa": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/test-whatsapp-fonnte.ts",
     "fonnte:device": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/fonnte-device-status.ts",
     "test:ai": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/test-ai-insight.ts",
-    "test:tg": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/test-telegram.ts"
+    "test:tg": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/test-telegram.ts",
+    "tenant:create": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/tenant/create.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.39",

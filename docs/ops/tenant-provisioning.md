@@ -55,7 +55,55 @@ dengan `tenant_id` + RLS):
 
 **Kesimpulan operasional**: menambah tenant baru **tidak butuh deploy
 ulang**, **tidak butuh migrasi baru**, **tidak butuh restart container**.
-Cukup 6 langkah SQL + DNS di bawah.
+Cukup 6 langkah SQL + DNS di bawah, atau **1 command CLI** untuk
+langkah 1–4.
+
+## Cara cepat — `pnpm tenant:create` CLI (Fase 1, sejak migration 0076)
+
+Kalau Anda cuma butuh menjalankan langkah 1–4 (row `tenants` → CoA →
+auth user → employees admin + audit log), pakai CLI yang di-bundle:
+
+```bash
+pnpm tenant:create \
+  --slug=acme \
+  --name="PT Acme Sejahtera Nusantara" \
+  --admin-email=admin@acme.co.id \
+  --admin-name="Budi Santoso"
+```
+
+Flag berguna:
+
+| Flag                        | Fungsi                                                                             |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `--dry-run`                 | Validasi + preflight (cek slug + email unik) tanpa mutasi. Aman diulang.           |
+| `--yes`                     | Non-interaktif — skip konfirmasi. Untuk CI/scripting.                              |
+| `--admin-password=<pw>`     | Password custom (min 12 char). Kalau tidak di-set, auto-generate 32-char base64url. |
+| `--skip-coa`                | Skip Chart of Accounts seed (edge case, biasanya tidak dipakai).                    |
+| `--source=<label>`          | Label metadata audit (default: `ops-cli`; gunakan `super-admin-ui` bila via UI).    |
+| `--help`                    | Print usage.                                                                        |
+
+CLI melakukan preflight (slug regex + reserved list + slug uniqueness
+di DB + email uniqueness di `auth.users`), lalu:
+
+1. Buat `auth.users` via Supabase Admin API.
+2. Panggil RPC `public.provision_tenant()` — **atomic transaction**
+   yang insert `tenants` + seed CoA + insert `employees` admin + insert
+   `security_audit_logs`. Kalau step 2 gagal, auth user dari step 1
+   otomatis dihapus (rollback).
+3. Verifikasi count CoA (minimum 30 akun).
+4. Print welcome email siap-copy ke stdout dengan password
+   ter-generate.
+
+CLI **tidak** mengurus **DNS** (langkah 5) dan **tidak** mengirim
+**email** (langkah 6) — dua langkah tersebut tetap manual by design
+(operator harus punya kontrol eksplisit atas kirim credential).
+
+Setelah CLI selesai, lanjut ke langkah 5 (DNS) + langkah 6 (kirim
+email dari template yang di-print).
+
+**Backward compat**: langkah 1–4 di section berikutnya (raw SQL
+templates) tetap valid untuk skenario offline / DR / audit / kalau
+CLI tidak bisa dijalankan (e.g. tidak ada Node.js env).
 
 ## Prasyarat
 
@@ -336,26 +384,66 @@ tenant lain):
 
 ## Rollback
 
-Kalau provisioning gagal di tengah atau butuh menghapus tenant test:
+**Penting — audit log immutability (rules §3)**: begitu ada row di
+`public.security_audit_logs` yang mereferensikan tenant, tenant
+**tidak bisa** di-hard-delete lewat `DELETE FROM tenants` biasa. FK
+kolom `security_audit_logs.tenant_id` menggunakan `ON DELETE RESTRICT`
+sehingga PostgreSQL akan raise error. Ini disengaja — audit trail
+harus utuh.
+
+`pnpm tenant:create` sendiri menulis 1 audit log entry, jadi tenant
+yang baru di-provision **sudah tidak bisa** di-hard-delete secara
+langsung.
+
+Opsi rollback:
+
+**A. CLI rollback otomatis** (built-in, tidak butuh manual):
+
+- Kalau `pnpm tenant:create` gagal setelah step 2 (auth user dibuat)
+  tapi sebelum step 3 (`provision_tenant` RPC selesai), auth user
+  otomatis di-delete via Supabase Admin API. State DB tetap bersih.
+- Kalau `provision_tenant` sudah selesai lalu terjadi kegagalan
+  eksternal (mis. DNS gagal), tenant tetap ada di DB — gunakan opsi B
+  atau C.
+
+**B. Soft-freeze** (recommended untuk tenant apapun yang sudah ada
+audit log — misal tenant test yang sudah di-provision full):
 
 ```sql
--- HAPUS DENGAN CASCADE — akan menghapus:
---   1. auth.users semua user tenant ini (via _delete_orphaned_auth trigger)
---   2. semua row di 75 tabel yang punya tenant_id FK
---   3. file di Supabase Storage bucket `tenant-attachments/{tenant_id}/*`
---      TIDAK auto-delete — hapus manual dari Supabase Studio.
---
--- Konfirmasi count dulu sebelum jalankan!
-select id, slug, name from public.tenants where slug = 'acme';
-
--- Setelah confirm:
-delete from public.tenants where slug = 'acme';
+-- Turunkan semua user tenant jadi inactive. Hook JWT tidak akan
+-- inject claim untuk user inactive → user tidak bisa login → tenant
+-- efektif "frozen" tanpa hilang audit trail.
+update public.employees
+set is_active = false
+where tenant_id = (select id from public.tenants where slug = 'acme');
 ```
 
-**Warning**: `on delete cascade` di kolom `tenant_id` (migration 0002)
-akan menghapus **semua row anak**. Ini permanen — tidak ada trigger
-untuk archive ke cold storage saat delete tenant. Kalau tenant sudah
-produksi > 1 bulan, pertimbangkan **suspend** dulu:
+**C. Hard-delete untuk dev / smoke test only** (JANGAN dipakai di
+staging/prod):
+
+```sql
+-- Bypass audit immutability trigger. HANYA di dev DB.
+begin;
+set session_replication_role = 'replica';
+delete from public.security_audit_logs
+  where tenant_id = (select id from public.tenants where slug = 'acme');
+delete from auth.users
+  where id in (select user_id from public.employees
+               where tenant_id = (select id from public.tenants where slug = 'acme'));
+delete from public.tenants where slug = 'acme';
+set session_replication_role = 'origin';
+commit;
+```
+
+`on delete cascade` di FK `tenant_id` (migration 0002) menghapus row
+anak (`employees`, `chart_of_accounts`, `projects`, dst) tapi FK
+`security_audit_logs.tenant_id` adalah `ON DELETE RESTRICT` — makanya
+audit log harus dihapus dulu (dengan trigger dibypass sementara).
+
+File di Supabase Storage bucket `tenant-attachments/{tenant_id}/*`
+**tidak** auto-delete — hapus manual dari Supabase Studio.
+
+Untuk tenant produksi, **JANGAN opsi C**. Selalu pakai opsi B.
 
 ```sql
 -- Opsi soft-delete: tambahkan kolom is_active kalau belum ada
@@ -460,27 +548,22 @@ restore per tenant: (1) restore full DB ke staging, (2) `pg_dump` filter
 `WHERE tenant_id = ...` untuk semua tabel, (3) apply ke production DB
 dengan `ON CONFLICT DO NOTHING`. Butuh script custom — TBD di roadmap.
 
-## Roadmap penyempurnaan (belum landed)
+## Roadmap penyempurnaan
 
-Runbook ini masih **manual SQL-driven** — cocok untuk skala < 20 tenant
-atau untuk saat masih hardening. Untuk skala > 20 tenant butuh
-automation. Roadmap yang direncanakan:
+Status roadmap tenant lifecycle:
 
-1. **CLI script** `pnpm tenant:create --slug=acme --name="PT Acme"
-   --admin-email=...` yang wrap step 1–4 + kirim welcome email
-   (Fase 1).
-2. **Super-admin UI** di route `/super-admin/tenants` dengan role baru
-   `SUPER_ADMIN` (di luar 7 canonical role) + separate auth scope
-   (Fase 2).
-3. **Tenant suspension** — kolom `tenants.status enum('active',
-   'suspended', 'terminated')` + middleware guard (Fase 2).
-4. **Feature flag per tenant** — tabel `tenant_feature_flags` +
-   `<FeatureFlag>` component (Fase 3).
-5. **Tenant self-signup** — marketing page apex `controldesk.app` →
-   `/register-org` → auto-provision + Stripe billing (Fase 5+).
+| Fase | Item                                                                                                    | Status                  |
+| ---- | ------------------------------------------------------------------------------------------------------- | ----------------------- |
+| 1    | **CLI script** `pnpm tenant:create` — atomic provisioning via `provision_tenant()` RPC + auto-rollback  | ✅ Shipped (migration 0076 + `scripts/tenant/create.ts`) |
+| 2    | **Super-admin UI** di route `/super-admin/tenants` dengan role baru `SUPER_ADMIN` + separate auth scope | ⏳ Planned              |
+| 2    | **Tenant suspension** — kolom `tenants.status enum('active', 'suspended', 'terminated')` + proxy guard  | ⏳ Planned              |
+| 3    | **Feature flag per tenant** — tabel `tenant_feature_flags` + `<FeatureFlag>` component                  | ⏳ Planned              |
+| 4    | **Automated welcome email** dispatch dari CLI (butuh mailer resolver yang tidak `server-only`)          | ⏳ Planned              |
+| 5+   | **Tenant self-signup** — marketing page apex → `/register-org` → auto-provision + Stripe billing        | ⏳ Planned              |
 
-Sampai roadmap tersebut selesai, **stick to this runbook + SQL
-templates** — konsisten + auditable + safe.
+Sampai fase-fase berikutnya selesai, **utamakan CLI (`pnpm
+tenant:create`)** untuk provisioning normal, dan fallback ke raw SQL
+templates di bagian sebelumnya untuk skenario DR / offline / audit.
 
 ## Kontak
 
