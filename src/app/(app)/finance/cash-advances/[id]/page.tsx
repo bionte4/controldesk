@@ -5,6 +5,7 @@ import { ArrowLeft, Clock, Wallet } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
+import { ApprovalTimeline } from "@/components/approvals/approval-timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -463,52 +464,17 @@ export default async function CashAdvanceDetailPage(props: {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {logs.length === 0 ? (
-              <p className="p-6 text-sm text-muted-foreground">
-                {t("timelineEmpty")}
-              </p>
-            ) : (
-              <ol className="relative divide-y divide-border/50">
-                {logs.map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3"
-                  >
-                    <Badge
-                      variant="outline"
-                      className={ACTION_TONE[entry.action]}
-                    >
-                      {ACTION_LABEL[entry.action]}
-                    </Badge>
-                    <div>
-                      <p className="text-sm">
-                        <span className="font-medium">
-                          {entry.actor?.full_name ?? "System"}
-                        </span>{" "}
-                        {entry.actor_role ? (
-                          <span className="text-xs text-muted-foreground">
-                            · {formatRole(entry.actor_role as EmployeeRole)}
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {caLabel(entry.from_status)}
-                        {" → "}
-                        {caLabel(entry.to_status)}
-                      </p>
-                      {entry.comment ? (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          “{entry.comment}”
-                        </p>
-                      ) : null}
-                    </div>
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      {formatInTz(entry.created_at, "dd MMM, HH:mm")}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
+            <ApprovalTimeline
+              entries={logs}
+              actionLabelMap={ACTION_LABEL}
+              actionToneMap={ACTION_TONE}
+              formatStatus={(status) =>
+                caLabel(status as CashAdvanceStatus)
+              }
+              emptyLabel={t("timelineEmpty")}
+              ariaLabel="Cash advance approval timeline"
+              data-testid="ca-approval-timeline"
+            />
           </CardContent>
         </Card>
       </div>
