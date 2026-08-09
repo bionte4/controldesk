@@ -40,19 +40,24 @@ export const saveWhatsAppConfigAction = withSecureAction({
     tenantId: ctx.actor.tenantId,
   }),
   handler: async (input, ctx) => {
-    // Schema is FONNTE-only; provider literal narrows to "FONNTE"
-    // for the callee's sake. When we bring TWILIO / META_CLOUD
-    // back into the UI we'll re-introduce the discriminated union
-    // and the corresponding branches here.
+    // Discriminated union narrows the payload here. Twilio branch
+    // carries `account_sid`; Fonnte branch does not (null in DB).
+    // Meta Cloud is intentionally NOT part of the schema union yet —
+    // its send path returns NOT_IMPLEMENTED (see whatsapp/client.ts).
+    const accountSid =
+      input.provider === "TWILIO" ? input.account_sid : null;
+
     const verify = await verifyWhatsAppCredentials({
       provider: input.provider,
       phoneNumberId: input.phone_number_id,
       apiToken: input.api_token,
-      accountSid: null,
+      accountSid,
     });
     if (!verify.ok) {
+      const providerLabel =
+        input.provider === "TWILIO" ? "Twilio" : "Fonnte";
       throw new Error(
-        `Fonnte rejected the device token: ${verify.error}`,
+        `${providerLabel} rejected the credentials: ${verify.error}`,
       );
     }
 
@@ -63,7 +68,7 @@ export const saveWhatsAppConfigAction = withSecureAction({
       provider: input.provider,
       phoneNumberId: input.phone_number_id,
       apiToken: input.api_token,
-      accountSid: null,
+      accountSid,
       webhookVerifyToken: null,
     });
 

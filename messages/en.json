@@ -1959,13 +1959,13 @@
     }
   },
   "whatsappAdmin": {
-    "kicker": "Integrations · WhatsApp (Fonnte)",
-    "title": "WhatsApp (Fonnte)",
-    "subtitle": "Configure the tenant's outbound WhatsApp channel via Fonnte's device-token gateway. Pair a WhatsApp Web session on your phone and paste the device token — no Meta business verification required.",
+    "kicker": "Integrations · WhatsApp",
+    "title": "WhatsApp Business",
+    "subtitle": "Configure the tenant's outbound WhatsApp channel. Pick a provider: Fonnte (device-token gateway, affordable, Indonesia-local) or Twilio (official Meta partner, strict compliance, billed per message).",
     "status": {
-      "connected": "Fonnte device is active",
-      "inactive": "Device registered but inactive",
-      "noConfig": "No Fonnte device registered for this tenant",
+      "connected": "WhatsApp sender is active",
+      "inactive": "Sender registered but inactive",
+      "noConfig": "No WhatsApp sender registered for this tenant",
       "lastError": "Last error",
       "hintConnected": "Employees can link their WhatsApp number from Preferences. Keep your Fonnte-paired phone online — a disconnected device stops delivery.",
       "hintNotConfigured": "Once a device is registered, employees will see a Link WhatsApp button in Preferences."
@@ -1981,26 +1981,47 @@
       "warning": "Warning: Fonnte is an unofficial gateway. The paired WhatsApp account can be banned by WhatsApp if flagged. For high-volume production, plan to migrate to Meta Cloud API (adapter already exists in the backend)."
     },
     "form": {
-      "title": "Register or update the Fonnte device",
-      "description": "Paste the WhatsApp number and device token from your Fonnte dashboard. On save, we verify the token against Fonnte's /device endpoint before persisting.",
+      "title": "Register or update the WhatsApp sender",
+      "description": "Pick a provider (Fonnte or Twilio), paste the credentials from that provider's dashboard. Before saving, we verify the credentials against the provider's API.",
       "fields": {
-        "phoneFonnte": "Business phone",
-        "phoneFonntePlaceholder": "6281234567890 or +6281234567890",
-        "phoneFonnteHint": "The WhatsApp number you paired to this Fonnte device (for display + audit). Fonnte routes by device token, so this field is informational.",
-        "deviceToken": "Device token",
-        "deviceTokenPlaceholder": "Paste your Fonnte device token here",
-        "deviceTokenHint": "Copy from Fonnte dashboard → Device list. Encrypted at rest; never displayed after save.",
-        "deviceTokenHintUpdate": "Paste a fresh token to rotate. The stored token is never shown."
+        "provider": "Provider"
+      },
+      "providers": {
+        "FONNTE": {
+          "label": "Fonnte (Indonesia, device-token gateway)",
+          "tagline": "Affordable local gateway — pair a WhatsApp Web session on your phone. Great for startups + low-mid volume.",
+          "phoneLabel": "Business phone",
+          "phonePlaceholder": "6281234567890 or +6281234567890",
+          "phoneHint": "The WhatsApp number you paired to this Fonnte device (for display + audit). Fonnte routes by device token, so this field is informational.",
+          "tokenLabel": "Device token",
+          "tokenPlaceholder": "Paste your Fonnte device token here",
+          "tokenHint": "Copy from Fonnte dashboard → Device list. Encrypted at rest; never displayed after save.",
+          "tokenHintUpdate": "Paste a fresh token to rotate. The stored token is never shown."
+        },
+        "TWILIO": {
+          "label": "Twilio (official Meta partner)",
+          "tagline": "Official Meta partner with strict compliance. Free sandbox for testing; production senders are billed per message.",
+          "phoneLabel": "WhatsApp Business number (E.164)",
+          "phonePlaceholder": "+14155238886",
+          "phoneHint": "The Meta-approved Twilio WhatsApp number. E.164 format required (starts with `+`, e.g. `+14155238886`).",
+          "tokenLabel": "Auth Token",
+          "tokenPlaceholder": "Paste your Twilio Auth Token here",
+          "tokenHint": "Find it in Twilio Console → Account → API keys & tokens → Live Credentials. Encrypted at rest; never displayed after save.",
+          "tokenHintUpdate": "Paste a fresh token to rotate. The stored token is never shown.",
+          "sidLabel": "Account SID",
+          "sidPlaceholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "sidHint": "Twilio Account SID (starts with AC, 34 characters total). Copy from the Account Info page in the Console."
+        }
       },
       "actions": {
         "save": "Save & activate",
         "update": "Update & re-verify",
         "deactivate": "Deactivate"
       },
-      "deactivateConfirm": "Deactivate this Fonnte device? Outbound notifications will stop and personal linking will be hidden in Preferences.",
+      "deactivateConfirm": "Deactivate this WhatsApp sender? Outbound notifications will stop and personal linking will be hidden in Preferences.",
       "toast": {
-        "savedOk": "Fonnte device saved and verified.",
-        "deactivatedOk": "Fonnte device deactivated."
+        "savedOk": "WhatsApp sender saved and verified.",
+        "deactivatedOk": "WhatsApp sender deactivated."
       }
     }
   },

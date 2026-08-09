@@ -1959,13 +1959,13 @@
     }
   },
   "whatsappAdmin": {
-    "kicker": "Integrasi · WhatsApp (Fonnte)",
-    "title": "WhatsApp (Fonnte)",
-    "subtitle": "Konfigurasi channel WhatsApp keluar untuk tenant via gateway device-token Fonnte. Pairing sesi WhatsApp Web di HP Anda lalu tempel device token — tidak perlu verifikasi bisnis Meta.",
+    "kicker": "Integrasi · WhatsApp",
+    "title": "WhatsApp Business",
+    "subtitle": "Konfigurasi channel WhatsApp keluar untuk tenant. Pilih provider: Fonnte (gateway device-token, murah, lokal) atau Twilio (partner resmi Meta, compliance ketat, per-pesan berbayar).",
     "status": {
-      "connected": "Device Fonnte aktif",
-      "inactive": "Device terdaftar tapi tidak aktif",
-      "noConfig": "Belum ada device Fonnte terdaftar untuk tenant ini",
+      "connected": "Sender WhatsApp aktif",
+      "inactive": "Sender terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada sender WhatsApp terdaftar untuk tenant ini",
       "lastError": "Error terakhir",
       "hintConnected": "Karyawan bisa menautkan nomor WhatsApp mereka lewat Preferences. Pastikan HP yang di-pairing tetap online — device yang terputus akan menghentikan pengiriman.",
       "hintNotConfigured": "Setelah device didaftarkan, tombol Link WhatsApp akan muncul di Preferences setiap karyawan."
@@ -1981,26 +1981,47 @@
       "warning": "Peringatan: Fonnte adalah gateway tidak resmi. Akun WhatsApp yang di-pairing bisa di-banned oleh WhatsApp kalau di-flag. Untuk produksi volume tinggi, rencanakan migrasi ke Meta Cloud API (adapter-nya sudah ada di backend)."
     },
     "form": {
-      "title": "Daftarkan atau update device Fonnte",
-      "description": "Tempel nomor WhatsApp dan device token dari dashboard Fonnte Anda. Saat disimpan, kami verifikasi token ke endpoint /device Fonnte sebelum menyimpannya.",
+      "title": "Daftarkan atau update sender WhatsApp",
+      "description": "Pilih provider (Fonnte atau Twilio), tempel kredensial dari dashboard provider Anda. Sebelum disimpan, kami verifikasi ke endpoint provider untuk memastikan kredensial valid.",
       "fields": {
-        "phoneFonnte": "Nomor bisnis",
-        "phoneFonntePlaceholder": "6281234567890 atau +6281234567890",
-        "phoneFonnteHint": "Nomor WhatsApp yang Anda pairing ke device Fonnte ini (untuk display + audit). Fonnte routing pakai device token, jadi field ini informational.",
-        "deviceToken": "Device token",
-        "deviceTokenPlaceholder": "Tempel device token Fonnte Anda di sini",
-        "deviceTokenHint": "Copy dari dashboard Fonnte → Device list. Terenkripsi di database; tidak pernah ditampilkan setelah tersimpan.",
-        "deviceTokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan."
+        "provider": "Provider"
+      },
+      "providers": {
+        "FONNTE": {
+          "label": "Fonnte (Indonesia, device-token gateway)",
+          "tagline": "Gateway lokal murah — pairing WhatsApp Web di HP Anda. Cocok untuk startup + volume rendah-menengah.",
+          "phoneLabel": "Nomor bisnis",
+          "phonePlaceholder": "6281234567890 atau +6281234567890",
+          "phoneHint": "Nomor WhatsApp yang Anda pairing ke device Fonnte ini (untuk display + audit). Fonnte routing pakai device token, jadi field ini informational.",
+          "tokenLabel": "Device token",
+          "tokenPlaceholder": "Tempel device token Fonnte Anda di sini",
+          "tokenHint": "Copy dari dashboard Fonnte → Device list. Terenkripsi di database; tidak pernah ditampilkan setelah tersimpan.",
+          "tokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan."
+        },
+        "TWILIO": {
+          "label": "Twilio (partner resmi Meta)",
+          "tagline": "Partner resmi Meta dengan compliance ketat. Sandbox gratis untuk testing; production sender berbayar per pesan.",
+          "phoneLabel": "Nomor WhatsApp Business (E.164)",
+          "phonePlaceholder": "+14155238886",
+          "phoneHint": "Nomor Twilio WhatsApp yang di-approve Meta. Format E.164 wajib pakai `+`, misal `+6281234567890`.",
+          "tokenLabel": "Auth Token",
+          "tokenPlaceholder": "Tempel Auth Token dari Twilio Console",
+          "tokenHint": "Ada di Twilio Console → Account → API keys & tokens → Live Credentials. Terenkripsi; tidak pernah ditampilkan setelah tersimpan.",
+          "tokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan.",
+          "sidLabel": "Account SID",
+          "sidPlaceholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "sidHint": "Account SID Twilio (mulai dengan AC, 34 karakter total). Copy dari halaman Account Info di Console."
+        }
       },
       "actions": {
         "save": "Simpan & aktifkan",
         "update": "Update & verifikasi ulang",
         "deactivate": "Nonaktifkan"
       },
-      "deactivateConfirm": "Nonaktifkan device Fonnte ini? Notifikasi keluar akan berhenti dan tombol link pribadi di Preferences akan disembunyikan.",
+      "deactivateConfirm": "Nonaktifkan sender WhatsApp ini? Notifikasi keluar akan berhenti dan tombol link pribadi di Preferences akan disembunyikan.",
       "toast": {
-        "savedOk": "Device Fonnte tersimpan dan terverifikasi.",
-        "deactivatedOk": "Device Fonnte dinonaktifkan."
+        "savedOk": "Sender WhatsApp tersimpan dan terverifikasi.",
+        "deactivatedOk": "Sender WhatsApp dinonaktifkan."
       }
     }
   },

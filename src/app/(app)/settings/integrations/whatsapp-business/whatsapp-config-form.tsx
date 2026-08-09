@@ -19,6 +19,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { WhatsAppProvider } from "@/lib/integrations/whatsapp";
 import {
   saveWhatsAppConfigSchema,
@@ -29,6 +36,19 @@ import {
   deactivateWhatsAppConfigAction,
   saveWhatsAppConfigAction,
 } from "./actions";
+
+/**
+ * Only providers we can save. META_CLOUD stays out — its adapter still
+ * returns NOT_IMPLEMENTED at send time (see whatsapp/client.ts), so we
+ * don't want admins to pick it and then have every message silently
+ * fail. Legacy META_CLOUD rows still render (see hub tile), they just
+ * can't be re-saved through this form.
+ */
+type SelectableProvider = Extract<WhatsAppProvider, "FONNTE" | "TWILIO">;
+const SELECTABLE_PROVIDERS: readonly SelectableProvider[] = [
+  "FONNTE",
+  "TWILIO",
+] as const;
 
 const DEFAULT_VALUES: SaveWhatsAppConfigInput = {
   provider: "FONNTE",
@@ -42,8 +62,7 @@ type Props = {
   /**
    * Current DB state. `null` when no row exists. `provider` is kept
    * on the type so the display badge can render correctly for legacy
-   * TWILIO / META_CLOUD rows (dormant code paths), but the form
-   * only writes FONNTE rows.
+   * META_CLOUD rows even though the form can only write FONNTE / TWILIO.
    */
   current:
     | {
@@ -56,34 +75,55 @@ type Props = {
 };
 
 /**
- * Fonnte-only admin registration form for the tenant WhatsApp
- * channel. Two fields:
- *   * Business phone   — WhatsApp number paired to the Fonnte
- *                        device (for display / audit; Fonnte routes
- *                        by device token, not by number).
- *   * Device token     — the API key from
- *                        https://md.fonnte.com/new/device.
+ * Tenant WhatsApp channel admin — provider picker with conditional
+ * fields per provider:
  *
- * On submit the server action calls Fonnte's `/device` endpoint to
- * verify the token before persisting. Failure surfaces the Fonnte
- * `reason` string via toast.
+ *   FONNTE (Indonesian device-token gateway)
+ *     - Phone number (paired WhatsApp number, informational)
+ *     - Device token (from https://md.fonnte.com/new/device)
+ *
+ *   TWILIO (official partner)
+ *     - WhatsApp Business number in E.164 form
+ *     - Auth Token (from console dashboard)
+ *     - Account SID (AC + 32 hex chars)
+ *
+ * On submit the server action calls the provider-specific verify
+ * endpoint (Fonnte `/device` or Twilio `/Accounts/{sid}.json`) BEFORE
+ * persisting. Failure surfaces the provider's error string via toast.
  */
 export function WhatsAppConfigForm({ current }: Props) {
   const t = useTranslations("whatsappAdmin.form");
+  const tProviders = useTranslations("whatsappAdmin.form.providers");
   const [isSaving, startSave] = React.useTransition();
   const [isDeactivating, startDeactivate] = React.useTransition();
 
+  // Seed the picker from the current row if it's one we support. Legacy
+  // META_CLOUD rows land the user on the FONNTE branch by default (they
+  // still see the badge on the status card so nothing is destroyed on
+  // read); saving from this form will write a fresh FONNTE row.
+  const initialProvider: SelectableProvider =
+    current?.provider === "TWILIO" ? "TWILIO" : "FONNTE";
+
   const initialValues = React.useMemo<SaveWhatsAppConfigInput>(
-    () => ({
-      provider: "FONNTE",
-      // Preserve the current phone (if any) so admins updating just
-      // the token don't have to retype the number.
-      phone_number_id: current?.phoneNumberId ?? "",
-      api_token: "",
-      account_sid: null,
-      webhook_verify_token: null,
-    }),
-    [current],
+    () =>
+      initialProvider === "TWILIO"
+        ? {
+            provider: "TWILIO",
+            phone_number_id:
+              current?.provider === "TWILIO" ? current.phoneNumberId : "",
+            api_token: "",
+            account_sid: "",
+            webhook_verify_token: null,
+          }
+        : {
+            provider: "FONNTE",
+            phone_number_id:
+              current?.provider === "FONNTE" ? current.phoneNumberId : "",
+            api_token: "",
+            account_sid: null,
+            webhook_verify_token: null,
+          },
+    [current, initialProvider],
   );
 
   const form = useForm<SaveWhatsAppConfigInput>({
@@ -93,20 +133,59 @@ export function WhatsAppConfigForm({ current }: Props) {
     >,
   });
 
+  // Watch provider so labels + conditional fields react instantly.
+  const provider = form.watch("provider") as SelectableProvider;
+
+  function onProviderChange(next: SelectableProvider) {
+    // Reset only when swapping providers to avoid stray Twilio SID
+    // showing up in a Fonnte payload (Zod would reject it, but the
+    // form UX is nicer if the fields wipe on switch). We keep the
+    // phone number since it's the field an admin re-types least
+    // (Twilio and Fonnte both use E.164 in practice).
+    const keptPhone = form.getValues("phone_number_id");
+    if (next === "TWILIO") {
+      form.reset({
+        provider: "TWILIO",
+        phone_number_id: keptPhone,
+        api_token: "",
+        account_sid: "",
+        webhook_verify_token: null,
+      });
+    } else {
+      form.reset({
+        provider: "FONNTE",
+        phone_number_id: keptPhone,
+        api_token: "",
+        account_sid: null,
+        webhook_verify_token: null,
+      });
+    }
+  }
+
   function onSubmit(values: SaveWhatsAppConfigInput) {
     startSave(async () => {
       const result = await saveWhatsAppConfigAction(values);
       if (result.ok) {
         toast.success(t("toast.savedOk"));
-        // Wipe the token field on success. Keep the phone visible
-        // so admins can confirm what landed.
-        form.reset({
-          provider: "FONNTE",
-          phone_number_id: result.data.phoneNumberId,
-          api_token: "",
-          account_sid: null,
-          webhook_verify_token: null,
-        });
+        // Wipe secrets on success. Phone stays visible so admins can
+        // confirm what landed.
+        if (values.provider === "TWILIO") {
+          form.reset({
+            provider: "TWILIO",
+            phone_number_id: result.data.phoneNumberId,
+            api_token: "",
+            account_sid: "",
+            webhook_verify_token: null,
+          });
+        } else {
+          form.reset({
+            provider: "FONNTE",
+            phone_number_id: result.data.phoneNumberId,
+            api_token: "",
+            account_sid: null,
+            webhook_verify_token: null,
+          });
+        }
       } else {
         toast.error(result.reason);
       }
@@ -144,21 +223,33 @@ export function WhatsAppConfigForm({ current }: Props) {
           >
             <FormField
               control={form.control}
-              name="phone_number_id"
+              name="provider"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("fields.phoneFonnte")}</FormLabel>
+                  <FormLabel>{t("fields.provider")}</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      autoComplete="off"
-                      spellCheck={false}
-                      placeholder={t("fields.phoneFonntePlaceholder")}
+                    <Select
+                      value={field.value}
+                      onValueChange={(v) => {
+                        if (v == null) return;
+                        onProviderChange(v as SelectableProvider);
+                      }}
                       disabled={busy}
-                    />
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SELECTABLE_PROVIDERS.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {tProviders(`${p}.label`)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </FormControl>
                   <FormDescription>
-                    {t("fields.phoneFonnteHint")}
+                    {tProviders(`${provider}.tagline`)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -167,24 +258,81 @@ export function WhatsAppConfigForm({ current }: Props) {
 
             <FormField
               control={form.control}
+              name="phone_number_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    {tProviders(`${provider}.phoneLabel`)}
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      autoComplete="off"
+                      spellCheck={false}
+                      placeholder={tProviders(
+                        `${provider}.phonePlaceholder`,
+                      )}
+                      disabled={busy}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {tProviders(`${provider}.phoneHint`)}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {provider === "TWILIO" ? (
+              <FormField
+                control={form.control}
+                name="account_sid"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tProviders("TWILIO.sidLabel")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder={tProviders("TWILIO.sidPlaceholder")}
+                        disabled={busy}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {tProviders("TWILIO.sidHint")}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+
+            <FormField
+              control={form.control}
               name="api_token"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("fields.deviceToken")}</FormLabel>
+                  <FormLabel>
+                    {tProviders(`${provider}.tokenLabel`)}
+                  </FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       type="password"
                       autoComplete="off"
                       spellCheck={false}
-                      placeholder={t("fields.deviceTokenPlaceholder")}
+                      placeholder={tProviders(
+                        `${provider}.tokenPlaceholder`,
+                      )}
                       disabled={busy}
                     />
                   </FormControl>
                   <FormDescription>
                     {current
-                      ? t("fields.deviceTokenHintUpdate")
-                      : t("fields.deviceTokenHint")}
+                      ? tProviders(`${provider}.tokenHintUpdate`)
+                      : tProviders(`${provider}.tokenHint`)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

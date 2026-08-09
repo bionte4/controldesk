@@ -3,27 +3,23 @@ import { z } from "zod";
 /**
  * Zod schemas for the tenant WhatsApp admin surface (rules §17).
  *
- * FONNTE-only in this build: the admin form exposes only the Fonnte
- * provider because that is the tenant's chosen channel. The DB
- * CHECK constraint (migration 0071) still permits TWILIO / META_CLOUD
- * so we retain a forward-compat migration path — the adapter code in
- * `whatsapp/client.ts` for those providers stays dormant.
+ * Phase A (this build): tenants pick between **Fonnte** and **Twilio**
+ * from the admin form. The full adapter dispatch (send, verify) for
+ * BOTH providers already exists in `whatsapp/client.ts` — the picker
+ * simply un-hides Twilio which was previously kept out of the UI until
+ * both adapters were verified end-to-end.
  *
- * Field notes:
- *   * `phone_number_id` is the WhatsApp number paired to the Fonnte
- *     device — stored for display + audit only. Fonnte's `/send`
- *     endpoint routes purely by device token, not by number.
- *   * `api_token` is the "device token" from
- *     https://md.fonnte.com/new/device — treat like a password
- *     (encrypted at rest via `token-crypto.ts`).
- *   * `account_sid` + `webhook_verify_token` are TWILIO / META_CLOUD
- *     columns; Fonnte writes NULL for both. Kept in the schema as
- *     `.null()` so `saveTenantWhatsAppConfig` receives a well-typed
- *     payload without conditional plumbing at the call site.
+ * Meta Cloud API stays hidden — `whatsapp/client.ts::sendWhatsAppMessage`
+ * still returns `NOT_IMPLEMENTED` for META_CLOUD, so exposing it in the
+ * form would be a footgun. The DB CHECK still permits the value so
+ * legacy rows (or the eventual Phase B implementation) migrate cleanly.
  *
- * The behavioural gate — "does this device token actually work?" —
- * lives in `verifyWhatsAppCredentials` (calls Fonnte's `/device`
- * endpoint) and is invoked by the server action BEFORE persist.
+ * The submit path is a Zod discriminated union keyed on `provider`. The
+ * two branches share `phone_number_id` and `api_token` (with per-provider
+ * validation rules and hints) and Twilio adds `account_sid`. Fonnte
+ * always writes NULL for `account_sid` / `webhook_verify_token` so the
+ * repository call receives a fully-typed payload without conditional
+ * plumbing at the call site.
  */
 
 // Fonnte accepts either Indonesian local (`08xxx`) or E.164
@@ -34,7 +30,16 @@ import { z } from "zod";
 // that way).
 const FONNTE_PHONE_PATTERN = /^(whatsapp:)?\+?[0-9]{7,15}$/;
 
-export const saveWhatsAppConfigSchema = z.object({
+// Twilio expects `whatsapp:+E164`. We accept either the bare E.164
+// number or the prefixed form — the send adapter normalises before
+// hitting the API. The strict `+`-prefixed E.164 keeps admins from
+// pasting bare local numbers by accident (Twilio rejects those).
+const TWILIO_PHONE_PATTERN = /^(whatsapp:)?\+[1-9][0-9]{6,14}$/;
+
+// Twilio Account SID is `AC` followed by exactly 32 hex chars.
+const TWILIO_SID_PATTERN = /^AC[a-f0-9]{32}$/i;
+
+const fonnteConfigSchema = z.object({
   provider: z.literal("FONNTE"),
   phone_number_id: z
     .string()
@@ -50,11 +55,40 @@ export const saveWhatsAppConfigSchema = z.object({
     .trim()
     .min(10, "Device token is too short.")
     .max(200, "Device token is too long."),
-  // Kept explicit + null so the discriminated payload shape stays
-  // stable — the repository layer expects the full object.
   account_sid: z.null().optional(),
   webhook_verify_token: z.null().optional(),
 });
+
+const twilioConfigSchema = z.object({
+  provider: z.literal("TWILIO"),
+  phone_number_id: z
+    .string()
+    .trim()
+    .min(6, "WhatsApp number too short.")
+    .max(80, "WhatsApp number too long.")
+    .refine((v) => TWILIO_PHONE_PATTERN.test(v), {
+      message:
+        "Enter the WhatsApp Business number in E.164 form, e.g. +14155238886.",
+    }),
+  api_token: z
+    .string()
+    .trim()
+    .min(20, "Twilio Auth Token looks too short.")
+    .max(300, "Twilio Auth Token is too long."),
+  account_sid: z
+    .string()
+    .trim()
+    .refine((v) => TWILIO_SID_PATTERN.test(v), {
+      message:
+        "Twilio Account SID must start with AC followed by 32 hex characters.",
+    }),
+  webhook_verify_token: z.null().optional(),
+});
+
+export const saveWhatsAppConfigSchema = z.discriminatedUnion("provider", [
+  fonnteConfigSchema,
+  twilioConfigSchema,
+]);
 export type SaveWhatsAppConfigInput = z.infer<typeof saveWhatsAppConfigSchema>;
 
 /**
