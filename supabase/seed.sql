@@ -744,6 +744,13 @@ declare
   budget_id constant uuid := '99999999-1111-4111-8111-111111111111';
   pm_eid uuid;
   fin_eid uuid;
+  -- Chart-of-Accounts (migration 0055) resolved by code, so budget line
+  -- items are demoable with real MA codes instead of dashes. Codes must
+  -- match the seeded hierarchy exactly.
+  coa_5101 uuid; -- Beban Gaji Direct
+  coa_5201 uuid; -- Beban Cloud & Hosting
+  coa_5202 uuid; -- Beban Software & Lisensi (fallback: 5201 if absent)
+  coa_5900 uuid; -- Beban Operasional Lain
 begin
   select id into pm_eid  from public.employees e
     where e.tenant_id = tenant_id and e.role = 'PROJECT_MANAGER' limit 1;
@@ -751,6 +758,15 @@ begin
     where e.tenant_id = tenant_id and e.role = 'LEAD_FINANCE' limit 1;
 
   if pm_eid is null then return; end if;
+
+  select id into coa_5101 from public.chart_of_accounts
+    where tenant_id = tenant_id and code = '5101' limit 1;
+  select id into coa_5201 from public.chart_of_accounts
+    where tenant_id = tenant_id and code = '5201' limit 1;
+  select id into coa_5202 from public.chart_of_accounts
+    where tenant_id = tenant_id and code = '5202' limit 1;
+  select id into coa_5900 from public.chart_of_accounts
+    where tenant_id = tenant_id and code = '5900' limit 1;
 
   insert into public.budgets
     (id, tenant_id, project_id, fiscal_year, title, currency, status,
@@ -763,19 +779,19 @@ begin
      pm_eid, pm_eid);
 
   insert into public.budget_details
-    (tenant_id, budget_id, seq, category, description,
+    (tenant_id, budget_id, seq, category, coa_id, description,
      planned_amount, realized_amount, outstanding_amount, created_by, updated_by)
   values
-    (tenant_id, budget_id, 1, 'DIRECT_LABOUR',
+    (tenant_id, budget_id, 1, 'DIRECT_LABOUR', coa_5101,
      'Annotator + QA hourly wages (10 orang × 3 bulan).',
      120000000, 15000000, 4000000, pm_eid, pm_eid),
-    (tenant_id, budget_id, 2, 'INFRASTRUCTURE',
+    (tenant_id, budget_id, 2, 'INFRASTRUCTURE', coa_5201,
      'Cloud GPU + data lake storage.',
      25000000, 3500000, 0, pm_eid, pm_eid),
-    (tenant_id, budget_id, 3, 'TOOLING',
+    (tenant_id, budget_id, 3, 'TOOLING', coalesce(coa_5202, coa_5201),
      'Annotation platform license + QA suite.',
      18000000, 0, 6000000, pm_eid, pm_eid),
-    (tenant_id, budget_id, 4, 'CONTINGENCY',
+    (tenant_id, budget_id, 4, 'CONTINGENCY', coa_5900,
      '10% buffer atas total direct cost.',
      17000000, 0, 0, pm_eid, pm_eid);
 
@@ -1015,6 +1031,12 @@ declare
   v_line_infra_id   uuid := '55555555-2222-4111-8111-000000000002';
   v_line_tools_id   uuid := '55555555-2222-4111-8111-000000000003';
   v_line_conting_id uuid := '55555555-2222-4111-8111-000000000004';
+  -- CoA lookups (rules §16 — reference master). Resolved by code so the
+  -- demo shows real MA badges instead of dashes.
+  v_coa_5101        uuid;
+  v_coa_5201        uuid;
+  v_coa_5202        uuid;
+  v_coa_5900        uuid;
 begin
   select id into v_tenant_id from public.tenants where slug = 'demo';
   if v_tenant_id is null then
@@ -1036,6 +1058,15 @@ begin
     return;
   end if;
 
+  select id into v_coa_5101 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5101' limit 1;
+  select id into v_coa_5201 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5201' limit 1;
+  select id into v_coa_5202 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5202' limit 1;
+  select id into v_coa_5900 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5900' limit 1;
+
   -- 20a. Seed an APPROVED FY2026 budget for NUSA-CS if none exists yet.
   insert into public.budgets
     (id, tenant_id, project_id, fiscal_year, title, currency, status,
@@ -1051,20 +1082,21 @@ begin
   on conflict (id) do nothing;
 
   insert into public.budget_details
-    (id, tenant_id, budget_id, seq, category, description,
+    (id, tenant_id, budget_id, seq, category, coa_id, description,
      planned_amount, realized_amount, outstanding_amount,
      created_by, updated_by)
   values
-    (v_line_labor_id, v_tenant_id, v_budget_id, 1, 'DIRECT_LABOUR',
+    (v_line_labor_id, v_tenant_id, v_budget_id, 1, 'DIRECT_LABOUR', v_coa_5101,
      'CS agents hourly.',
      80000000, 12000000, 3000000, v_pm_eid, v_pm_eid),
-    (v_line_infra_id, v_tenant_id, v_budget_id, 2, 'INFRASTRUCTURE',
+    (v_line_infra_id, v_tenant_id, v_budget_id, 2, 'INFRASTRUCTURE', v_coa_5201,
      'Softphone + CRM seats.',
      35000000, 5000000, 0, v_pm_eid, v_pm_eid),
     (v_line_tools_id, v_tenant_id, v_budget_id, 3, 'TOOLING',
+     coalesce(v_coa_5202, v_coa_5201),
      'QA scripting + observability.',
      15000000, 0, 0, v_pm_eid, v_pm_eid),
-    (v_line_conting_id, v_tenant_id, v_budget_id, 4, 'CONTINGENCY',
+    (v_line_conting_id, v_tenant_id, v_budget_id, 4, 'CONTINGENCY', v_coa_5900,
      '10% buffer.',
      10000000, 0, 0, v_pm_eid, v_pm_eid)
   on conflict (id) do nothing;
@@ -1178,6 +1210,12 @@ declare
   v_pm_eid  uuid;
   v_fin_eid uuid;
   v_dir_eid uuid;
+  -- CoA lookups (rules §16) — resolved so demo budgets carry real MA
+  -- codes instead of dashes in the UI.
+  v_coa_5101 uuid;
+  v_coa_5201 uuid;
+  v_coa_5202 uuid;
+  v_coa_5900 uuid;
 begin
   select id into v_pm_eid  from public.employees
     where tenant_id = v_tenant_id and role = 'PROJECT_MANAGER'    limit 1;
@@ -1187,6 +1225,15 @@ begin
     where tenant_id = v_tenant_id and role = 'GENERAL_MANAGER'    limit 1;
 
   if v_pm_eid is null then return; end if;
+
+  select id into v_coa_5101 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5101' limit 1;
+  select id into v_coa_5201 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5201' limit 1;
+  select id into v_coa_5202 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5202' limit 1;
+  select id into v_coa_5900 from public.chart_of_accounts
+    where tenant_id = v_tenant_id and code = '5900' limit 1;
 
   -- NUSA-BO — APPROVED FY2026 budget.
   insert into public.budgets
@@ -1203,19 +1250,20 @@ begin
   on conflict (id) do nothing;
 
   insert into public.budget_details
-    (tenant_id, budget_id, seq, category, description,
+    (tenant_id, budget_id, seq, category, coa_id, description,
      planned_amount, realized_amount, outstanding_amount, created_by, updated_by)
   values
-    (v_tenant_id, v_budget_bo_id, 1, 'DIRECT_LABOUR',
+    (v_tenant_id, v_budget_bo_id, 1, 'DIRECT_LABOUR', v_coa_5101,
      'Back-office verifier hourly wages.',
      60000000, 8000000, 1500000, v_pm_eid, v_pm_eid),
-    (v_tenant_id, v_budget_bo_id, 2, 'INFRASTRUCTURE',
+    (v_tenant_id, v_budget_bo_id, 2, 'INFRASTRUCTURE', v_coa_5201,
      'Document scanner + workflow tool seats.',
      18000000, 2500000, 0, v_pm_eid, v_pm_eid),
     (v_tenant_id, v_budget_bo_id, 3, 'TOOLING',
+     coalesce(v_coa_5202, v_coa_5201),
      'OCR license + QA sampling suite.',
      10000000, 0, 0, v_pm_eid, v_pm_eid),
-    (v_tenant_id, v_budget_bo_id, 4, 'CONTINGENCY',
+    (v_tenant_id, v_budget_bo_id, 4, 'CONTINGENCY', v_coa_5900,
      '~7% buffer for volume spikes.',
      7000000, 0, 0, v_pm_eid, v_pm_eid)
   on conflict do nothing;
@@ -1235,19 +1283,20 @@ begin
   on conflict (id) do nothing;
 
   insert into public.budget_details
-    (tenant_id, budget_id, seq, category, description,
+    (tenant_id, budget_id, seq, category, coa_id, description,
      planned_amount, realized_amount, outstanding_amount, created_by, updated_by)
   values
-    (v_tenant_id, v_budget_help_id, 1, 'DIRECT_LABOUR',
+    (v_tenant_id, v_budget_help_id, 1, 'DIRECT_LABOUR', v_coa_5101,
      'L1/L2 agents 24/7 shift + on-call escalation.',
      140000000, 22000000, 6000000, v_pm_eid, v_pm_eid),
-    (v_tenant_id, v_budget_help_id, 2, 'INFRASTRUCTURE',
+    (v_tenant_id, v_budget_help_id, 2, 'INFRASTRUCTURE', v_coa_5201,
      'PBX + softphone + CRM concurrent seats.',
      40000000, 6500000, 0, v_pm_eid, v_pm_eid),
     (v_tenant_id, v_budget_help_id, 3, 'TOOLING',
+     coalesce(v_coa_5202, v_coa_5201),
      'Ticketing + observability + shift scheduler.',
      20000000, 0, 0, v_pm_eid, v_pm_eid),
-    (v_tenant_id, v_budget_help_id, 4, 'CONTINGENCY',
+    (v_tenant_id, v_budget_help_id, 4, 'CONTINGENCY', v_coa_5900,
      '~5% buffer for spike volume.',
      10000000, 0, 0, v_pm_eid, v_pm_eid)
   on conflict do nothing;

@@ -315,6 +315,7 @@
   },
   "topbar": {
     "breadcrumbDashboard": "Dashboard",
+    "breadcrumbDetail": "Detail",
     "notifications": {
       "label": "Notifications",
       "unread": "{count} unread",
@@ -1342,7 +1343,9 @@
       "createdAt": "Created at",
       "approvedBy": "Approved by",
       "approvedAt": "Approved at",
-      "notes": "Notes"
+      "notes": "Notes",
+      "coaMissing": "MA not set",
+      "coaMissingHelp": "This line is not linked to a Chart-of-Accounts (MA / Mata Anggaran) node yet. Finance cannot post it to the GL until an MA is chosen. Edit the row to pick a matching account."
     },
     "actions": {
       "submit": "Submit for approval",

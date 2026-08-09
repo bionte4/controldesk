@@ -399,7 +399,18 @@ export default async function BudgetDetailPage(props: {
                             </span>
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          // Empty CoA is a soft warning — the row is
+                          // legal (nullable per migration 0056), but
+                          // Finance can't post it to GL until a MA is
+                          // set. Render an amber badge so approvers
+                          // see it before the budget is locked.
+                          <Badge
+                            variant="outline"
+                            className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                            title={t("coaMissingHelp")}
+                          >
+                            {t("coaMissing")}
+                          </Badge>
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground text-xs">

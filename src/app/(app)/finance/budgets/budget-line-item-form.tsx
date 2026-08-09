@@ -79,6 +79,38 @@ function makeDefaults(nextSeq: number): FormValues {
 const COA_NONE = "__none__";
 
 /**
+ * Best-guess CoA account CODE (chart_of_accounts.code) per budget
+ * category. Kept as codes (not ids) because the postable CoA set is
+ * loaded fresh from `loadPostableAccounts()` and only the row `code`
+ * is stable across tenants (ids are per-tenant UUIDs from migration
+ * 0055). We prefer the more specific code and fall back to a broader
+ * bucket if the postable seed set does not include the primary.
+ */
+const CATEGORY_TO_COA_CODES: Record<string, readonly string[]> = {
+  DIRECT_LABOUR: ["5101"], // Beban Gaji Direct
+  INFRASTRUCTURE: ["5201"], // Beban Cloud & Hosting
+  TOOLING: ["5202", "5201"], // Software & Lisensi → Cloud & Hosting
+  TRAVEL: ["5301"], // Beban Transportasi
+  OPERATIONS: ["5900"], // Beban Operasional Lain
+  CONTINGENCY: ["5900"],
+  MARKETING: ["5501"], // Beban Digital Advertising
+  TRAINING: ["5401"], // Beban Pelatihan Teknis
+};
+
+function suggestCoaId(
+  category: string,
+  coaOptions: readonly CoaAccountOption[],
+): string | null {
+  const codes = CATEGORY_TO_COA_CODES[category];
+  if (!codes) return null;
+  for (const code of codes) {
+    const hit = coaOptions.find((c) => c.code === code);
+    if (hit) return hit.id;
+  }
+  return null;
+}
+
+/**
  * Inline "add row" form rendered under the line-items table. Locked out
  * automatically when the parent passes `readOnly` (i.e. budget is APPROVED
  * or CANCELLED). Handles category / description / planned_amount only —
@@ -229,7 +261,25 @@ export function AddBudgetLineItem({
           render={({ field }) => (
             <FormItem className="sm:col-span-2">
               <FormLabel>{t("category")}</FormLabel>
-              <Select value={field.value} onValueChange={field.onChange}>
+              <Select
+                value={field.value}
+                onValueChange={(v) => {
+                  if (v == null) return;
+                  field.onChange(v);
+                  // Auto-suggest a matching CoA when the user hasn't
+                  // manually picked one yet. Preserves any explicit
+                  // override — we only fill blanks / the default
+                  // "None" sentinel so we never overwrite a deliberate
+                  // choice mid-edit.
+                  if (coaEnabled) {
+                    const current = form.getValues("coa_id");
+                    if (!current || current === COA_NONE) {
+                      const suggested = suggestCoaId(v, coaOptions ?? []);
+                      if (suggested) form.setValue("coa_id", suggested);
+                    }
+                  }
+                }}
+              >
                 <FormControl>
                   <SelectTrigger className="w-full">
                     <SelectValue />

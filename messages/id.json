@@ -457,6 +457,7 @@
   },
   "topbar": {
     "breadcrumbDashboard": "Dashboard",
+    "breadcrumbDetail": "Detail",
     "notifications": {
       "label": "Notifikasi",
       "unread": "{count} belum dibaca",
@@ -1342,7 +1343,9 @@
       "createdAt": "Dibuat pada",
       "approvedBy": "Disetujui oleh",
       "approvedAt": "Disetujui pada",
-      "notes": "Catatan"
+      "notes": "Catatan",
+      "coaMissing": "MA belum diisi",
+      "coaMissingHelp": "Line item ini belum di-link ke akun MA (Mata Anggaran). Finance tidak bisa post ke GL sampai MA diisi. Edit baris untuk memilih akun yang sesuai."
     },
     "actions": {
       "submit": "Ajukan approval",
