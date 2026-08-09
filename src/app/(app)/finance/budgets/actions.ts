@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 
 import { moneyToDbString, parseMoneyFromDb } from "@/lib/format/money";
 import { toLegacyDbRole } from "@/lib/rbac/roles";
+import {
+  snapshotBudgetChain,
+  thresholdsFromSnapshot,
+} from "@/lib/rbac/chain-snapshot";
+import { resolveThresholds } from "@/lib/rbac/thresholds";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import { assertProjectAcceptsBudget } from "@/lib/data/projects";
@@ -391,15 +396,35 @@ export const submitBudgetAction = withCanonicalSecureAction({
       );
     }
 
+    // Per-tenant threshold override (Option B). `resolveThresholds()` returns
+    // the wide `EffectiveThresholds` union; the BUDGET branch carries only
+    // `DIRECTOR_THRESHOLD` — narrow before routing + snapshot.
+    const thresholds = await resolveThresholds(ctx.actor.tenantId, "BUDGET");
+    if (thresholds.kind !== "BUDGET") {
+      throw new Error(
+        `Unexpected threshold kind ${thresholds.kind} for BUDGET submit.`,
+      );
+    }
     const toStatus = nextBudgetStatus({
       totalPlannedIDR: totalPlanned,
       current: currentStatus,
       action: "SUBMIT",
+      thresholds,
+    });
+    // Freeze the chain at submit — future admin edits to thresholds will
+    // not retroactively re-route this budget (rules §9 / §22).
+    const chainSnapshot = snapshotBudgetChain({
+      totalPlannedIDR: totalPlanned,
+      thresholds,
     });
 
     const { error: updateErr } = await supabase
       .from("budgets")
-      .update({ status: toStatus, updated_by: ctx.actor.employeeId })
+      .update({
+        status: toStatus,
+        updated_by: ctx.actor.employeeId,
+        chain_snapshot: chainSnapshot,
+      })
       .eq("id", input.id)
       .eq("tenant_id", ctx.actor.tenantId);
     if (updateErr) throw new Error(updateErr.message);
@@ -468,10 +493,23 @@ export const approveBudgetAction = withCanonicalSecureAction({
     }
 
     const totalPlanned = Number(parseMoneyFromDb(current.total_planned_amount));
+    // Prefer the row's frozen snapshot (rules §9 / §22) so in-flight items
+    // are deterministic even if admin edits thresholds mid-flight. Legacy
+    // pre-B rows have `chain_snapshot = NULL` — fall back to live resolve.
+    const snapshotThresholds = thresholdsFromSnapshot(
+      current.chain_snapshot,
+      "BUDGET",
+    );
+    let effectiveThresholds = snapshotThresholds;
+    if (!effectiveThresholds) {
+      const live = await resolveThresholds(ctx.actor.tenantId, "BUDGET");
+      if (live.kind === "BUDGET") effectiveThresholds = live;
+    }
     const toStatus = nextBudgetStatus({
       totalPlannedIDR: totalPlanned,
       current: currentStatus,
       action: "APPROVE",
+      thresholds: effectiveThresholds ?? undefined,
     });
 
     const patch: TablesUpdate<"budgets"> = {
@@ -544,7 +582,7 @@ export const rejectBudgetAction = withCanonicalSecureAction({
 
     const { data: current, error: readErr } = await supabase
       .from("budgets")
-      .select("id, status, project_id, total_planned_amount, notes")
+      .select("id, status, project_id, total_planned_amount, notes, chain_snapshot")
       .eq("id", input.id)
       .eq("tenant_id", ctx.actor.tenantId)
       .single();
@@ -557,10 +595,18 @@ export const rejectBudgetAction = withCanonicalSecureAction({
       );
     }
 
+    // REJECT is threshold-agnostic (routes to CANCELLED regardless), but
+    // we still respect the frozen snapshot for a consistent chain view in
+    // the audit log.
+    const snapshotThresholds = thresholdsFromSnapshot(
+      current.chain_snapshot,
+      "BUDGET",
+    );
     const toStatus = nextBudgetStatus({
       totalPlannedIDR: Number(parseMoneyFromDb(current.total_planned_amount)),
       current: currentStatus,
       action: "REJECT",
+      thresholds: snapshotThresholds ?? undefined,
     });
 
     // Append the rejection reason to notes so the detail page can render the

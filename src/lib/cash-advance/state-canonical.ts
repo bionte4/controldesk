@@ -35,9 +35,21 @@ import {
   canonicalCanApprove,
   toCanonicalRole,
   type AnyDbEmployeeRole,
+  type CaFieldOpsChainThresholds,
+  type CaGeneralChainThresholds,
   type CanonicalApprovalSlot,
   type CanonicalRole,
 } from "@/lib/rbac/roles";
+
+/**
+ * Discriminated per-type CA thresholds. Callers know the CA `type` at the
+ * point they call `caCanonicalChain()` / `nextCanonicalCaStatus()` so they
+ * can pass the matching branch. Wrapping both variants under one type keeps
+ * the state-machine entry-point signature tidy.
+ */
+export type CanonicalCaThresholds =
+  | { type: "GENERAL"; thresholds?: CaGeneralChainThresholds }
+  | { type: "FIELD_OPS"; thresholds?: CaFieldOpsChainThresholds };
 import type {
   ApprovalAction,
   CashAdvanceStatus,
@@ -141,15 +153,28 @@ export function canonicalCaStatusForSlot(
 export function caCanonicalChain(input: {
   type: CashAdvanceType;
   amountIDR: number;
+  /**
+   * Per-tenant override loaded via
+   * `resolveThresholds(tenantId, "CASH_ADVANCE_GENERAL" | "CASH_ADVANCE_FIELD_OPS")`.
+   * Optional — omit for `APPROVAL_CONFIG` defaults.
+   */
+  thresholds?: CaGeneralChainThresholds | CaFieldOpsChainThresholds;
 }): CanonicalApprovalSlot[] {
   return input.type === "FIELD_OPS"
-    ? caFieldOpsApprovalChain(input.amountIDR)
-    : caGeneralApprovalChain(input.amountIDR);
+    ? caFieldOpsApprovalChain(
+        input.amountIDR,
+        input.thresholds as CaFieldOpsChainThresholds | undefined,
+      )
+    : caGeneralApprovalChain(
+        input.amountIDR,
+        input.thresholds as CaGeneralChainThresholds | undefined,
+      );
 }
 
 export function firstSlotForType(input: {
   type: CashAdvanceType;
   amountIDR: number;
+  thresholds?: CaGeneralChainThresholds | CaFieldOpsChainThresholds;
 }): CanonicalApprovalSlot {
   const chain = caCanonicalChain(input);
   const first = chain[0];
@@ -185,18 +210,26 @@ export type CanonicalCaTransition = {
   amountIDR: number;
   current: CanonicalCaStatus;
   action: ApprovalAction;
+  /**
+   * Optional per-tenant threshold override. Must match the CA `type` —
+   * pass `CaGeneralChainThresholds` for GENERAL, `CaFieldOpsChainThresholds`
+   * for FIELD_OPS. Omitted → `APPROVAL_CONFIG` defaults (backward compat).
+   */
+  thresholds?: CaGeneralChainThresholds | CaFieldOpsChainThresholds;
 };
 
 export function nextCanonicalCaStatus(
   input: CanonicalCaTransition,
 ): CanonicalCaStatus {
-  const { type, amountIDR, current, action } = input;
+  const { type, amountIDR, current, action, thresholds } = input;
 
   if (action === "SUBMIT") {
     if (current !== "DRAFT") {
       throw new Error(`SUBMIT only valid from DRAFT (current=${current}).`);
     }
-    return canonicalCaStatusForSlot(firstSlotForType({ type, amountIDR }));
+    return canonicalCaStatusForSlot(
+      firstSlotForType({ type, amountIDR, thresholds }),
+    );
   }
 
   if (action === "CANCEL") {
@@ -221,7 +254,7 @@ export function nextCanonicalCaStatus(
   // through to APPROVED when the chain is exhausted. FINANCE_APPROVE is the
   // canonical action for the Finance slot; other slots use APPROVE. We keep
   // both actions accepted symmetrically so the wrapper needn't discriminate.
-  const chain = caCanonicalChain({ type, amountIDR });
+  const chain = caCanonicalChain({ type, amountIDR, thresholds });
   const currentSlot = CANONICAL_CA_STATUS_SLOT[current];
   if (!currentSlot) {
     throw new Error(

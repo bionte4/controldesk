@@ -38,6 +38,8 @@ import { createClient } from "@/lib/supabase/server";
 import { assertPostableCoa } from "@/lib/data/coa";
 import { assertProjectOperational } from "@/lib/data/projects";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
+import { snapshotCaFieldOpsChain } from "@/lib/rbac/chain-snapshot";
+import { resolveThresholds } from "@/lib/rbac/thresholds";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import {
   CANONICAL_CA_STATUS_SLOT,
@@ -46,6 +48,7 @@ import {
 } from "@/lib/cash-advance/state-canonical";
 import type {
   AnyDbEmployeeRole,
+  CaFieldOpsChainThresholds,
   CanonicalApprovalSlot,
 } from "@/lib/rbac/roles";
 import type {
@@ -585,11 +588,27 @@ export const submitDraftFieldOpsAction = withCanonicalSecureAction({
     // 3. Compute next status via canonical state machine. amount is
     //    already sync'd by the RAB trigger; we normalise via Number().
     const amountIDR = Math.round(Number(parent.amount as unknown as number));
+    const t = await resolveThresholds(
+      ctx.actor.tenantId,
+      "CASH_ADVANCE_FIELD_OPS",
+    );
+    if (t.kind !== "CASH_ADVANCE_FIELD_OPS") {
+      throw new Error(
+        `Unexpected threshold kind ${t.kind} for CASH_ADVANCE_FIELD_OPS.`,
+      );
+    }
+    const foThresholds: CaFieldOpsChainThresholds = t;
     const nextStatus = nextCanonicalCaStatus({
       type: "FIELD_OPS",
       amountIDR,
       current: "DRAFT",
       action: "SUBMIT",
+      thresholds: foThresholds,
+    });
+    // Freeze the chain at submit (rules §9 / §22).
+    const chainSnapshot = snapshotCaFieldOpsChain({
+      amountIDR,
+      thresholds: foThresholds,
     });
 
     // 4. Transition + submit log.
@@ -598,6 +617,7 @@ export const submitDraftFieldOpsAction = withCanonicalSecureAction({
       .from("cash_advances")
       .update({
         status: nextStatus satisfies CashAdvanceStatus,
+        chain_snapshot: chainSnapshot,
         // `submitted_at` isn't a first-class column on cash_advances;
         // we log the transition instead. Keeping this comment as an
         // anchor if a future migration adds the column.

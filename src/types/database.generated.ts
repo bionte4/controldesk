@@ -643,6 +643,7 @@ export type Database = {
           budget_id: string
           cancelled_at: string | null
           cancelled_by: string | null
+          chain_snapshot: Json | null
           created_at: string
           currency: string
           director_approved_at: string | null
@@ -670,6 +671,7 @@ export type Database = {
           budget_id: string
           cancelled_at?: string | null
           cancelled_by?: string | null
+          chain_snapshot?: Json | null
           created_at?: string
           currency?: string
           director_approved_at?: string | null
@@ -697,6 +699,7 @@ export type Database = {
           budget_id?: string
           cancelled_at?: string | null
           cancelled_by?: string | null
+          chain_snapshot?: Json | null
           created_at?: string
           currency?: string
           director_approved_at?: string | null
@@ -884,6 +887,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          chain_snapshot: Json | null
           created_at: string
           created_by: string | null
           currency: string
@@ -901,6 +905,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          chain_snapshot?: Json | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -918,6 +923,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          chain_snapshot?: Json | null
           created_at?: string
           created_by?: string | null
           currency?: string
@@ -1419,6 +1425,7 @@ export type Database = {
         Row: {
           amount: number
           ca_type: Database["public"]["Enums"]["cash_advance_type"]
+          chain_snapshot: Json | null
           coa_id: string | null
           created_at: string
           currency: string
@@ -1455,6 +1462,7 @@ export type Database = {
         Insert: {
           amount: number
           ca_type?: Database["public"]["Enums"]["cash_advance_type"]
+          chain_snapshot?: Json | null
           coa_id?: string | null
           created_at?: string
           currency?: string
@@ -1491,6 +1499,7 @@ export type Database = {
         Update: {
           amount?: number
           ca_type?: Database["public"]["Enums"]["cash_advance_type"]
+          chain_snapshot?: Json | null
           coa_id?: string | null
           created_at?: string
           currency?: string
@@ -5039,6 +5048,7 @@ export type Database = {
           amount: number
           budget_detail_id: string | null
           category: string
+          chain_snapshot: Json | null
           coa_id: string | null
           created_at: string
           currency: string
@@ -5069,6 +5079,7 @@ export type Database = {
           amount: number
           budget_detail_id?: string | null
           category: string
+          chain_snapshot?: Json | null
           coa_id?: string | null
           created_at?: string
           currency?: string
@@ -5099,6 +5110,7 @@ export type Database = {
           amount?: number
           budget_detail_id?: string | null
           category?: string
+          chain_snapshot?: Json | null
           coa_id?: string | null
           created_at?: string
           currency?: string
@@ -7292,14 +7304,6 @@ export type Database = {
         Args: { p_handover_id: string }
         Returns: undefined
       }
-      get_google_credential_refresh_token: {
-        Args: { p_tenant_id: string }
-        Returns: {
-          calendar_id: string
-          client_email: string
-          refresh_token: string
-        }[]
-      }
       has_active_field_tech_assignment: {
         Args: { p_emp_id: string }
         Returns: boolean
@@ -7384,15 +7388,6 @@ export type Database = {
       seed_default_coa: { Args: { p_tenant: string }; Returns: undefined }
       seed_default_master_data: {
         Args: { p_tenant: string }
-        Returns: undefined
-      }
-      set_google_credential_refresh_token: {
-        Args: {
-          p_calendar_id?: string
-          p_client_email?: string
-          p_refresh_token: string
-          p_tenant_id: string
-        }
         Returns: undefined
       }
       set_user_ban: {

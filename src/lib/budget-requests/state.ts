@@ -22,6 +22,7 @@ import {
   canonicalCanApprove,
   toCanonicalRole,
   type AnyDbEmployeeRole,
+  type BudgetRequestChainThresholds,
   type CanonicalApprovalSlot,
   type CanonicalRole,
 } from "@/lib/rbac/roles";
@@ -98,12 +99,18 @@ export function statusForSlot(slot: CanonicalApprovalSlot): BudgetRequestStatus 
 // Chain resolution.
 // ---------------------------------------------------------------------------
 
-export function brApprovalChain(amountIDR: number): CanonicalApprovalSlot[] {
-  return budgetRequestApprovalChain(amountIDR);
+export function brApprovalChain(
+  amountIDR: number,
+  thresholds?: BudgetRequestChainThresholds,
+): CanonicalApprovalSlot[] {
+  return budgetRequestApprovalChain(amountIDR, thresholds);
 }
 
-export function brFirstSlot(amountIDR: number): CanonicalApprovalSlot {
-  const chain = brApprovalChain(amountIDR);
+export function brFirstSlot(
+  amountIDR: number,
+  thresholds?: BudgetRequestChainThresholds,
+): CanonicalApprovalSlot {
+  const chain = brApprovalChain(amountIDR, thresholds);
   const first = chain[0];
   if (!first) {
     // `budgetRequestApprovalChain` always includes FINANCE so this is
@@ -115,8 +122,11 @@ export function brFirstSlot(amountIDR: number): CanonicalApprovalSlot {
   return first;
 }
 
-export function brFirstStatus(amountIDR: number): BudgetRequestStatus {
-  return statusForSlot(brFirstSlot(amountIDR));
+export function brFirstStatus(
+  amountIDR: number,
+  thresholds?: BudgetRequestChainThresholds,
+): BudgetRequestStatus {
+  return statusForSlot(brFirstSlot(amountIDR, thresholds));
 }
 
 // ---------------------------------------------------------------------------
@@ -128,16 +138,18 @@ export type BrTransition = {
   amountIDR: number;
   current: BudgetRequestStatus;
   action: ApprovalAction;
+  /** Per-tenant override; optional. */
+  thresholds?: BudgetRequestChainThresholds;
 };
 
 export function nextBrStatus(input: BrTransition): BudgetRequestStatus {
-  const { amountIDR, current, action } = input;
+  const { amountIDR, current, action, thresholds } = input;
 
   if (action === "SUBMIT") {
     if (current !== "DRAFT") {
       throw new Error(`SUBMIT only valid from DRAFT (current=${current}).`);
     }
-    return brFirstStatus(amountIDR);
+    return brFirstStatus(amountIDR, thresholds);
   }
 
   if (action === "CANCEL") {
@@ -159,7 +171,7 @@ export function nextBrStatus(input: BrTransition): BudgetRequestStatus {
   }
 
   // APPROVE / FINANCE_APPROVE — advance one slot.
-  const chain = brApprovalChain(amountIDR);
+  const chain = brApprovalChain(amountIDR, thresholds);
   const currentSlot = BR_STATUS_SLOT[current];
   if (!currentSlot) {
     throw new Error(

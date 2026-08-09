@@ -32,6 +32,11 @@ import {
   parseMoneyFromDb,
 } from "@/lib/format/money";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
+import {
+  snapshotBudgetRequestChain,
+  thresholdsFromSnapshot,
+} from "@/lib/rbac/chain-snapshot";
+import { resolveThresholds } from "@/lib/rbac/thresholds";
 import { createClient } from "@/lib/supabase/server";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import {
@@ -43,6 +48,7 @@ import {
 } from "@/lib/validation/budget-request";
 import type {
   AnyDbEmployeeRole,
+  BudgetRequestChainThresholds,
   CanonicalApprovalSlot,
 } from "@/lib/rbac/roles";
 import type {
@@ -98,12 +104,13 @@ async function loadBudgetRequest(
   amount: number;
   status: BudgetRequestStatus;
   justification: string;
+  chain_snapshot: unknown;
 } | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("budget_requests")
     .select(
-      "id, tenant_id, budget_id, requester_employee_id, kind, amount, status, justification",
+      "id, tenant_id, budget_id, requester_employee_id, kind, amount, status, justification, chain_snapshot",
     )
     .eq("id", id)
     .eq("tenant_id", tenantId)
@@ -230,10 +237,23 @@ export const submitBudgetRequestAction = withCanonicalSecureAction({
       );
     }
 
+    const brT = await resolveThresholds(ctx.actor.tenantId, "BUDGET_REQUEST");
+    if (brT.kind !== "BUDGET_REQUEST") {
+      throw new Error(
+        `Unexpected threshold kind ${brT.kind} for BUDGET_REQUEST submit.`,
+      );
+    }
+    const brThresholds: BudgetRequestChainThresholds = brT;
     const nextStatus = nextBrStatus({
       current: "DRAFT",
       amountIDR: input.amount_idr,
       action: "SUBMIT",
+      thresholds: brThresholds,
+    });
+    // Freeze the chain at submit — rules §9 / §22.
+    const chainSnapshot = snapshotBudgetRequestChain({
+      amountIDR: input.amount_idr,
+      thresholds: brThresholds,
     });
 
     const { data: inserted, error: insertErr } = await supabase
@@ -246,6 +266,7 @@ export const submitBudgetRequestAction = withCanonicalSecureAction({
         amount: moneyToDbString(BigInt(input.amount_idr)) as unknown as number,
         justification: input.justification,
         status: nextStatus,
+        chain_snapshot: chainSnapshot,
       })
       .select("id, status")
       .single();
@@ -428,10 +449,22 @@ export const approveBudgetRequestAction = withCanonicalSecureAction({
     const currentSlot = BR_STATUS_SLOT[row.status];
     const action: ApprovalAction =
       currentSlot === "FINANCE" ? "FINANCE_APPROVE" : "APPROVE";
+    // Prefer the frozen snapshot (rules §22) — falls back to live resolve
+    // for legacy pre-B rows where `chain_snapshot` is NULL.
+    let brThresholds: BudgetRequestChainThresholds | undefined =
+      thresholdsFromSnapshot(row.chain_snapshot, "BUDGET_REQUEST") ?? undefined;
+    if (!brThresholds) {
+      const live = await resolveThresholds(
+        ctx.actor.tenantId,
+        "BUDGET_REQUEST",
+      );
+      if (live.kind === "BUDGET_REQUEST") brThresholds = live;
+    }
     const nextStatus = nextBrStatus({
       current: row.status,
       amountIDR,
       action,
+      thresholds: brThresholds,
     });
 
     const nowIso = new Date().toISOString();

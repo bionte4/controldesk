@@ -312,6 +312,112 @@ describe("rbac/roles — Petty Cash decision (GAS §10)", () => {
   });
 });
 
+describe("rbac/roles — chain builders with custom thresholds (Option B)", () => {
+  // Every builder accepts an optional 2nd argument for per-tenant tuning.
+  // Below we push each builder off the frozen APPROVAL_CONFIG defaults to
+  // prove the override lands — and that omitting the arg keeps the legacy
+  // path intact (already covered above, so we only pin the override path).
+
+  it("Expense: lowered PM threshold routes 2M into PM slot", () => {
+    // Default PM=5M — 2M is Finance-only. With override PM=1M, 2M crosses.
+    expect(
+      expenseApprovalChain(2_000_000, {
+        PM_THRESHOLD: 1_000_000,
+        DIRECTOR_THRESHOLD: 50_000_000,
+      }),
+    ).toEqual(["PM", "FINANCE"]);
+  });
+
+  it("Expense: raised Director threshold prevents escalation at default 50M", () => {
+    expect(
+      expenseApprovalChain(50_000_000, {
+        PM_THRESHOLD: 5_000_000,
+        DIRECTOR_THRESHOLD: 100_000_000,
+      }),
+    ).toEqual(["PM", "FINANCE"]);
+  });
+
+  it("Budget: custom Director threshold governs the escalation gate", () => {
+    // Push Director down to 10M — 10M inclusive now escalates.
+    expect(budgetApprovalChain(10_000_000, { DIRECTOR_THRESHOLD: 10_000_000 }))
+      .toEqual(["FINANCE", "DIRECTOR"]);
+    // Push Director up to 200M — same 10M stays Finance-only.
+    expect(budgetApprovalChain(10_000_000, { DIRECTOR_THRESHOLD: 200_000_000 }))
+      .toEqual(["FINANCE"]);
+  });
+
+  it("CA General: override lets tenant tighten the PM slot to 500K", () => {
+    expect(
+      caGeneralApprovalChain(500_000, {
+        PM_THRESHOLD: 500_000,
+        DIRECTOR_THRESHOLD: 20_000_000,
+      }),
+    ).toEqual(["PM", "FINANCE"]);
+  });
+
+  it("CA Field Ops: OM slot honours the override even when PM/Director stay default", () => {
+    const chain = caFieldOpsApprovalChain(10_000_000, {
+      PM_THRESHOLD: 5_000_000,
+      OM_THRESHOLD: 10_000_000,
+      DIRECTOR_THRESHOLD: 50_000_000,
+    });
+    // At 10M with OM=10M the OM slot must be present; PM already crossed.
+    expect(chain).toEqual(["SUPERVISOR", "PM", "OM", "FINANCE"]);
+  });
+
+  it("Budget Request: symmetric to Expense — override routes correctly", () => {
+    expect(
+      budgetRequestApprovalChain(500_000, {
+        PM_THRESHOLD: 100_000,
+        DIRECTOR_THRESHOLD: 50_000_000,
+      }),
+    ).toEqual(["PM", "FINANCE"]);
+  });
+
+  it("Petty Cash: raised HARD_CEILING extends the flow ceiling", () => {
+    // Default HARD_CEILING=2M — 2.5M would redirect to Expense flow. With
+    // override 5M, 2.5M stays within petty-cash Finance approval.
+    expect(
+      pettyCashDecision(2_500_000, {
+        AUTO_APPROVE_BELOW: 200_000,
+        RECEIPT_REQUIRED_ABOVE: 100_000,
+        HARD_CEILING: 5_000_000,
+      }),
+    ).toEqual({ kind: "FINANCE_APPROVAL_REQUIRED", requiresReceipt: true });
+  });
+
+  it("Petty Cash: lowered AUTO_APPROVE_BELOW forces approval on 100K", () => {
+    // Default 200K auto-approves 100K. With override 50K, 100K must go to
+    // Finance approval.
+    expect(
+      pettyCashDecision(100_000, {
+        AUTO_APPROVE_BELOW: 50_000,
+        RECEIPT_REQUIRED_ABOVE: 100_000,
+        HARD_CEILING: 2_000_000,
+      }),
+    ).toEqual({ kind: "FINANCE_APPROVAL_REQUIRED", requiresReceipt: true });
+  });
+
+  it("all builders remain callable without arguments (backward compat)", () => {
+    // The regression this pins: TypeScript signature change from
+    // `(amount)` to `(amount, thresholds?)` must remain compatible with
+    // every legacy call site in the codebase.
+    expect(expenseApprovalChain(5_000_000)).toEqual(["PM", "FINANCE"]);
+    expect(budgetApprovalChain(50_000_000)).toEqual(["FINANCE", "DIRECTOR"]);
+    expect(caGeneralApprovalChain(2_000_000)).toEqual(["PM", "FINANCE"]);
+    expect(caFieldOpsApprovalChain(5_000_000)).toEqual([
+      "SUPERVISOR",
+      "PM",
+      "FINANCE",
+    ]);
+    expect(budgetRequestApprovalChain(5_000_000)).toEqual(["PM", "FINANCE"]);
+    expect(pettyCashDecision(1_000_000)).toEqual({
+      kind: "FINANCE_APPROVAL_REQUIRED",
+      requiresReceipt: true,
+    });
+  });
+});
+
 describe("rbac/roles — canonicalCanApprove", () => {
   it("ADMIN short-circuits every slot", () => {
     for (const slot of ["SUPERVISOR", "PM", "OM", "FINANCE", "DIRECTOR"] as const) {

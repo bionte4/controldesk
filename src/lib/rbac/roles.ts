@@ -295,14 +295,64 @@ export const APPROVAL_CONFIG = Object.freeze({
  */
 export type CanonicalApprovalSlot = "PM" | "OM" | "FINANCE" | "DIRECTOR" | "SUPERVISOR";
 
+// ---------------------------------------------------------------------------
+// Structural threshold input types (Option B — per-tenant customization).
+//
+// Chain builders below accept an optional `thresholds` argument shaped
+// exactly like the corresponding branch of `EffectiveThresholds` from
+// `src/lib/rbac/thresholds.ts`. Defining narrow structural types here
+// (instead of importing the discriminated union) sidesteps a circular
+// dependency — `thresholds.ts` imports `APPROVAL_CONFIG` from this file
+// for its `mergeThresholds()` fallback branches. Structural typing means
+// the discriminated union in `thresholds.ts` is still assignable to
+// these narrower shapes at every call site.
+//
+// When `thresholds` is omitted, builders read `APPROVAL_CONFIG` (the
+// global default) — preserves backward compatibility with pre-B code
+// paths (chain previews in UI, tests, etc.).
+// ---------------------------------------------------------------------------
+
+export type ExpenseChainThresholds = {
+  PM_THRESHOLD: number;
+  DIRECTOR_THRESHOLD: number;
+};
+export type BudgetChainThresholds = {
+  DIRECTOR_THRESHOLD: number;
+};
+export type CaGeneralChainThresholds = {
+  PM_THRESHOLD: number;
+  DIRECTOR_THRESHOLD: number;
+};
+export type CaFieldOpsChainThresholds = {
+  PM_THRESHOLD: number;
+  OM_THRESHOLD: number;
+  DIRECTOR_THRESHOLD: number;
+};
+export type BudgetRequestChainThresholds = {
+  PM_THRESHOLD: number;
+  DIRECTOR_THRESHOLD: number;
+};
+export type PettyCashChainThresholds = {
+  AUTO_APPROVE_BELOW: number;
+  RECEIPT_REQUIRED_ABOVE: number;
+  HARD_CEILING: number;
+};
+
 /**
  * Chain for a plain `Expense` (rules §9.1).
  *   <  5M           → [FINANCE]
  *   ≥  5M, < 50M    → [PM, FINANCE]
  *   ≥ 50M           → [PM, FINANCE, DIRECTOR]
+ *
+ * `thresholds` — optional per-tenant override loaded via
+ * `resolveThresholds(tenantId, "EXPENSE")`. Omit for defaults.
  */
-export function expenseApprovalChain(amountIDR: number): CanonicalApprovalSlot[] {
-  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } = APPROVAL_CONFIG.EXPENSE;
+export function expenseApprovalChain(
+  amountIDR: number,
+  thresholds?: ExpenseChainThresholds,
+): CanonicalApprovalSlot[] {
+  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } =
+    thresholds ?? APPROVAL_CONFIG.EXPENSE;
   const chain: CanonicalApprovalSlot[] = [];
   if (amountIDR >= PM_THRESHOLD) chain.push("PM");
   chain.push("FINANCE");
@@ -311,15 +361,23 @@ export function expenseApprovalChain(amountIDR: number): CanonicalApprovalSlot[]
 }
 
 /** Chain for a `Budget` submission (rules §9.2). */
-export function budgetApprovalChain(totalPlannedIDR: number): CanonicalApprovalSlot[] {
+export function budgetApprovalChain(
+  totalPlannedIDR: number,
+  thresholds?: BudgetChainThresholds,
+): CanonicalApprovalSlot[] {
+  const { DIRECTOR_THRESHOLD } = thresholds ?? APPROVAL_CONFIG.BUDGET;
   const chain: CanonicalApprovalSlot[] = ["FINANCE"];
-  if (totalPlannedIDR >= APPROVAL_CONFIG.BUDGET.DIRECTOR_THRESHOLD) chain.push("DIRECTOR");
+  if (totalPlannedIDR >= DIRECTOR_THRESHOLD) chain.push("DIRECTOR");
   return chain;
 }
 
 /** Chain for Cash Advance `type='General'` (rules §9.3). */
-export function caGeneralApprovalChain(amountIDR: number): CanonicalApprovalSlot[] {
-  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } = APPROVAL_CONFIG.CASH_ADVANCE_GENERAL;
+export function caGeneralApprovalChain(
+  amountIDR: number,
+  thresholds?: CaGeneralChainThresholds,
+): CanonicalApprovalSlot[] {
+  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } =
+    thresholds ?? APPROVAL_CONFIG.CASH_ADVANCE_GENERAL;
   const chain: CanonicalApprovalSlot[] = [];
   if (amountIDR >= PM_THRESHOLD) chain.push("PM");
   chain.push("FINANCE");
@@ -331,9 +389,12 @@ export function caGeneralApprovalChain(amountIDR: number): CanonicalApprovalSlot
  * Chain for Cash Advance `type='FieldOps'` (rules §9.4 / §27). Supervisor
  * always at rung 0 because field visits are Supervisor-initiated by design.
  */
-export function caFieldOpsApprovalChain(amountIDR: number): CanonicalApprovalSlot[] {
+export function caFieldOpsApprovalChain(
+  amountIDR: number,
+  thresholds?: CaFieldOpsChainThresholds,
+): CanonicalApprovalSlot[] {
   const { PM_THRESHOLD, OM_THRESHOLD, DIRECTOR_THRESHOLD } =
-    APPROVAL_CONFIG.CASH_ADVANCE_FIELD_OPS;
+    thresholds ?? APPROVAL_CONFIG.CASH_ADVANCE_FIELD_OPS;
   const chain: CanonicalApprovalSlot[] = ["SUPERVISOR"];
   if (amountIDR >= PM_THRESHOLD) chain.push("PM");
   if (amountIDR >= OM_THRESHOLD) chain.push("OM");
@@ -343,8 +404,12 @@ export function caFieldOpsApprovalChain(amountIDR: number): CanonicalApprovalSlo
 }
 
 /** Chain for a Budget Request Increase/Decrease/Transfer (rules §9.6). */
-export function budgetRequestApprovalChain(amountIDR: number): CanonicalApprovalSlot[] {
-  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } = APPROVAL_CONFIG.BUDGET_REQUEST;
+export function budgetRequestApprovalChain(
+  amountIDR: number,
+  thresholds?: BudgetRequestChainThresholds,
+): CanonicalApprovalSlot[] {
+  const { PM_THRESHOLD, DIRECTOR_THRESHOLD } =
+    thresholds ?? APPROVAL_CONFIG.BUDGET_REQUEST;
   const chain: CanonicalApprovalSlot[] = [];
   if (amountIDR >= PM_THRESHOLD) chain.push("PM");
   chain.push("FINANCE");
@@ -361,9 +426,12 @@ export type PettyCashDecision =
   | { kind: "FINANCE_APPROVAL_REQUIRED"; requiresReceipt: boolean }
   | { kind: "ABOVE_CEILING"; useExpenseFlowInstead: true };
 
-export function pettyCashDecision(amountIDR: number): PettyCashDecision {
+export function pettyCashDecision(
+  amountIDR: number,
+  thresholds?: PettyCashChainThresholds,
+): PettyCashDecision {
   const { AUTO_APPROVE_BELOW, RECEIPT_REQUIRED_ABOVE, HARD_CEILING } =
-    APPROVAL_CONFIG.PETTY_CASH;
+    thresholds ?? APPROVAL_CONFIG.PETTY_CASH;
   if (amountIDR > HARD_CEILING) {
     return { kind: "ABOVE_CEILING", useExpenseFlowInstead: true };
   }

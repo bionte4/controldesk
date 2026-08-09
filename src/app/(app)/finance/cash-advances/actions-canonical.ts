@@ -32,6 +32,12 @@ import { assertPostableCoa } from "@/lib/data/coa";
 import { assertProjectOperational } from "@/lib/data/projects";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import { translatorFor } from "@/lib/notifications/localize";
+import {
+  snapshotCaFieldOpsChain,
+  snapshotCaGeneralChain,
+  thresholdsFromSnapshot,
+} from "@/lib/rbac/chain-snapshot";
+import { resolveThresholds } from "@/lib/rbac/thresholds";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import {
   CANONICAL_CA_STATUS_SLOT,
@@ -40,6 +46,10 @@ import {
   nextCanonicalCaStatus,
   type CanonicalCaStatus,
 } from "@/lib/cash-advance/state-canonical";
+import type {
+  CaFieldOpsChainThresholds,
+  CaGeneralChainThresholds,
+} from "@/lib/rbac/roles";
 import {
   acceptCanonicalSettlementSchema,
   approveCanonicalCashAdvanceSchema,
@@ -136,12 +146,33 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
     const amountDb = moneyToDbString(BigInt(input.amount_idr));
     const validCoaId = await assertPostableCoa(input.coa_id);
 
+    const caThresholds = await loadCaThresholds(
+      ctx.actor.tenantId,
+      input.ca_type,
+    );
+    if (!caThresholds) {
+      throw new Error(
+        `Could not resolve thresholds for CA type=${input.ca_type}.`,
+      );
+    }
     const nextStatus = nextCanonicalCaStatus({
       type: input.ca_type,
       amountIDR: input.amount_idr,
       current: "DRAFT",
       action: "SUBMIT",
+      thresholds: caThresholds,
     });
+    // Freeze the chain at submit (rules §9 / §22).
+    const chainSnapshot =
+      input.ca_type === "FIELD_OPS"
+        ? snapshotCaFieldOpsChain({
+            amountIDR: input.amount_idr,
+            thresholds: caThresholds as CaFieldOpsChainThresholds,
+          })
+        : snapshotCaGeneralChain({
+            amountIDR: input.amount_idr,
+            thresholds: caThresholds as CaGeneralChainThresholds,
+          });
 
     const { data: inserted, error: insertErr } = await supabase
       .from("cash_advances")
@@ -155,6 +186,7 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
         needed_by: input.needed_by ?? null,
         coa_id: validCoaId,
         status: nextStatus satisfies CashAdvanceStatus,
+        chain_snapshot: chainSnapshot,
       })
       .select("id, status, ca_type")
       .single();
@@ -221,7 +253,7 @@ async function loadCanonicalCa(input: { id: string; tenantId: string }) {
   const { data, error } = await supabase
     .from("cash_advances")
     .select(
-      "id, tenant_id, ca_type, status, amount, project_id, requester_employee_id",
+      "id, tenant_id, ca_type, status, amount, project_id, requester_employee_id, chain_snapshot",
     )
     .eq("id", input.id)
     .eq("tenant_id", input.tenantId)
@@ -241,6 +273,24 @@ function caResourceForType(caType: CashAdvanceType | null | undefined) {
   return caType === "FIELD_OPS"
     ? ("cash_advance_field_ops" as const)
     : ("cash_advance_general" as const);
+}
+
+/**
+ * Load the effective per-tenant threshold override for a CA row (Option B).
+ * Returns the properly-typed branch of `EffectiveThresholds` matching the
+ * given CA `type`, or `undefined` if the tenant hasn't customised anything
+ * yet (so state machines fall back to `APPROVAL_CONFIG`).
+ */
+async function loadCaThresholds(
+  tenantId: string,
+  type: CashAdvanceType,
+): Promise<CaGeneralChainThresholds | CaFieldOpsChainThresholds | undefined> {
+  if (type === "FIELD_OPS") {
+    const t = await resolveThresholds(tenantId, "CASH_ADVANCE_FIELD_OPS");
+    return t.kind === "CASH_ADVANCE_FIELD_OPS" ? t : undefined;
+  }
+  const t = await resolveThresholds(tenantId, "CASH_ADVANCE_GENERAL");
+  return t.kind === "CASH_ADVANCE_GENERAL" ? t : undefined;
 }
 
 export const approveCanonicalCashAdvanceAction = withCanonicalSecureAction({
@@ -295,11 +345,31 @@ export const approveCanonicalCashAdvanceAction = withCanonicalSecureAction({
     const currentSlot = CANONICAL_CA_STATUS_SLOT[currentStatus];
     const action: ApprovalAction =
       currentSlot === "FINANCE" ? "FINANCE_APPROVE" : "APPROVE";
+    const caType = current.ca_type as CashAdvanceType;
+    // Prefer the frozen snapshot (rules §22) — falls back to live resolve
+    // for legacy pre-B rows.
+    let caThresholds:
+      | CaGeneralChainThresholds
+      | CaFieldOpsChainThresholds
+      | undefined =
+      (caType === "FIELD_OPS"
+        ? thresholdsFromSnapshot(
+            current.chain_snapshot,
+            "CASH_ADVANCE_FIELD_OPS",
+          )
+        : thresholdsFromSnapshot(
+            current.chain_snapshot,
+            "CASH_ADVANCE_GENERAL",
+          )) ?? undefined;
+    if (!caThresholds) {
+      caThresholds = await loadCaThresholds(ctx.actor.tenantId, caType);
+    }
     const nextStatus = nextCanonicalCaStatus({
-      type: current.ca_type as CashAdvanceType,
+      type: caType,
       amountIDR,
       current: currentStatus,
       action,
+      thresholds: caThresholds,
     });
 
     const nowIso = new Date().toISOString();

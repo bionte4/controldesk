@@ -17,6 +17,7 @@ import {
   APPROVAL_CONFIG,
   budgetApprovalChain,
   canonicalCanApprove,
+  type BudgetChainThresholds,
   type CanonicalApprovalSlot,
   type CanonicalRole,
 } from "@/lib/rbac/roles";
@@ -61,13 +62,18 @@ export function budgetSlotForStatus(status: BudgetStatus): CanonicalApprovalSlot
  * Given `total_planned_amount + current status + transition`, return the
  * next status. Throws on invalid transitions so callers fail loudly during
  * tests and in server actions.
+ *
+ * `thresholds` — optional per-tenant override loaded via
+ * `resolveThresholds(tenantId, "BUDGET")`. Omitted → uses `APPROVAL_CONFIG`
+ * defaults (backward compat for legacy call sites + tests).
  */
 export function nextBudgetStatus(input: {
   totalPlannedIDR: number;
   current: BudgetStatus;
   action: BudgetTransition;
+  thresholds?: BudgetChainThresholds;
 }): BudgetStatus {
-  const { totalPlannedIDR, current, action } = input;
+  const { totalPlannedIDR, current, action, thresholds } = input;
 
   if (action === "SUBMIT") {
     if (current !== "DRAFT" && current !== "REVISED") {
@@ -108,7 +114,7 @@ export function nextBudgetStatus(input: {
     );
   }
 
-  const chain = budgetApprovalChain(totalPlannedIDR);
+  const chain = budgetApprovalChain(totalPlannedIDR, thresholds);
 
   if (current === "PENDING_FINANCE") {
     // If director threshold applies, advance to PENDING_DIRECTOR; otherwise
