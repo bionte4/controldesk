@@ -149,6 +149,60 @@ Usually a migration syntax error or an earlier migration that depends
 on the `pgcrypto` extension. Check `supabase logs db` and confirm the
 first migration (`0001_extensions.sql`) landed.
 
+### Login returns "Invalid login credentials" after a Docker restart
+
+Symptom: you can reach `demo.localhost:3000/login`, the form renders,
+but every seeded account (`admin@demo.controldesk.app` /
+`ControlDesk#2026`) is rejected as **Invalid login credentials**.
+
+Root cause: the `supabase_db_controldesk` container was recycled
+(Docker Desktop update, `supabase stop && start`, laptop restart, or a
+manual `docker compose down`) and re-initialised with an empty volume.
+Migrations replay automatically, but **`supabase/seed.sql` does not** —
+so `auth.users` and `public.employees` come back at 0 rows.
+
+Verify with:
+
+```bash
+docker exec supabase_db_controldesk psql -U postgres -d postgres -tAc \
+  "select count(*) from auth.users; select count(*) from public.employees;"
+```
+
+Both should be `14` after seeding. If they're `0`, run one of:
+
+```bash
+# Preferred — replays every migration and re-seeds (~5-10 s).
+pnpm db:reset
+
+# Or, when migrations are already applied and you only need the seed
+# (much faster, ~1 s, does not touch schema):
+docker exec -i supabase_db_controldesk psql -U postgres -d postgres \
+  < supabase/seed.sql
+```
+
+Then re-test the auth endpoint before opening the browser:
+
+```bash
+curl -s -X POST 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
+  -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@demo.controldesk.app","password":"ControlDesk#2026"}' \
+  -o /dev/null -w "http: %{http_code}\n"
+# Expect: http: 200. A 400 with error_code=invalid_credentials means the
+# seed has not landed yet.
+```
+
+**Recovery credentials (all seeded accounts share this password):**
+
+| Field    | Value                                        |
+| -------- | -------------------------------------------- |
+| Email    | `admin@demo.controldesk.app` (Tenant Admin)  |
+| Password | `ControlDesk#2026`                           |
+| Tenant   | `demo` → open `http://demo.localhost:3000`   |
+
+See the [Seeded demo users](#seeded-demo-users) table above for the
+full role → email mapping.
+
 ### The subdomain doesn't resolve
 
 Windows without WSL is the common culprit. Add:
