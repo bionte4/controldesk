@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/sheet";
 import { formatIDR } from "@/lib/format/money";
 import { caFieldOpsApprovalChain } from "@/lib/rbac/roles";
+import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 
 import { saveDraftFieldOpsAction } from "./field-ops-actions";
 import { uploadCashAdvanceAttachmentsAction } from "./upload-actions";
@@ -944,25 +945,19 @@ export function NewFieldOpsSheet({
                 </div>
               </div>
 
-              {/* Chain preview — mirrors the mockup's colored dots. */}
               {rabTotal > 0 ? (
                 <div className="rounded-md border border-white/10 bg-white/5 p-3">
                   <div className="mb-2 text-[11px] uppercase text-muted-foreground">
                     {tf("chainPreview")}
                   </div>
-                  <ol className="flex flex-wrap items-center gap-2 text-xs">
-                    {chainSlots.map((slot, i) => (
-                      <li
-                        key={slot}
-                        className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-2 py-1"
-                      >
-                        <span className="grid size-5 place-items-center rounded-full bg-primary/20 text-[10px] font-semibold text-primary">
-                          {i + 1}
-                        </span>
-                        {slotLabelMap[slot] ?? slot}
-                      </li>
-                    ))}
-                  </ol>
+                  <ApprovalChainProgress
+                    slots={chainSlots}
+                    variant="preview"
+                    size="sm"
+                    renderSlot={(slot) => slotLabelMap[slot] ?? slot}
+                    data-testid="ca-fieldops-chain-preview"
+                    ariaLabel="Cash advance field-ops approval chain preview"
+                  />
                 </div>
               ) : null}
             </section>

@@ -9,7 +9,10 @@ import { toast } from "sonner";
 
 import { ALLOWED_MIME_TYPES, DEFAULT_MAX_BYTES } from "@/lib/attachments/constants";
 import { businessDaysUntil } from "@/lib/format/business-days";
+import { expenseApprovalChain } from "@/lib/rbac/roles";
 
+import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
+import type { CanonicalApprovalSlot } from "@/lib/rbac/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -118,6 +121,11 @@ export function NewExpenseSheet({
   const tf = useTranslations("expenses.form");
   const tPm = useTranslations("expenses.paymentMethods");
   const tCommon = useTranslations("common");
+  // Approval-chain slot labels housed under `cashAdvances.chainSlot` — the
+  // values are canonical role names (PM/FINANCE/DIRECTOR) with no CA-
+  // specific wording, so reusing them cross-module is safe. Rename planned
+  // in Slice 3 (`<FinanceStatusBadge>` refactor) → `approvals.chainSlot`.
+  const tSlots = useTranslations("cashAdvances.chainSlot");
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
   const [budgetLines, setBudgetLines] = React.useState<BudgetLine[]>([]);
@@ -161,6 +169,21 @@ export function NewExpenseSheet({
   });
 
   const projectId = form.watch("project_id");
+  const amountRaw = form.watch("amount_idr");
+
+  // Live-computed approval chain preview from the current amount input.
+  // Uses the same threshold logic as the Server Action (rules §9.1) so
+  // submitters see exactly the chain their submission will follow.
+  const amountForChain = React.useMemo(() => {
+    const cleaned = amountRaw.replaceAll(".", "").replaceAll(",", "").trim();
+    if (!cleaned) return 0;
+    const n = Number(cleaned);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [amountRaw]);
+  const expenseChain = React.useMemo(
+    () => (amountForChain > 0 ? expenseApprovalChain(amountForChain) : []),
+    [amountForChain],
+  );
 
   // Lookup budget lines whenever the project changes. Reset the previously
   // chosen line so the form isn't left with a stale reference. Skipped
@@ -594,6 +617,34 @@ export function NewExpenseSheet({
                   )}
                 />
               </div>
+
+              {/* Row 2b: live approval-chain preview. Renders only when the
+                  submitter has typed a positive amount so the empty form
+                  stays uncluttered. Mirrors the CA-general sheet convention
+                  (rules §9.1 — PM ≥ 5M, Director ≥ 50M). */}
+              {amountForChain > 0 && expenseChain.length > 0 ? (
+                <section
+                  aria-labelledby="expense-chain-preview"
+                  className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3"
+                >
+                  <p
+                    id="expense-chain-preview"
+                    className="label-meta text-[10px] uppercase text-muted-foreground"
+                  >
+                    {tf("chainPreviewTitle")}
+                  </p>
+                  <ApprovalChainProgress
+                    slots={expenseChain}
+                    variant="preview"
+                    size="sm"
+                    renderSlot={(slot) =>
+                      tSlots(slot as CanonicalApprovalSlot)
+                    }
+                    data-testid="expense-chain-preview"
+                    ariaLabel="Expense approval chain preview"
+                  />
+                </section>
+              ) : null}
 
               {/* Row 3: Payment method, full width so the label never wraps. */}
               <FormField

@@ -6,6 +6,8 @@ import { useTranslations } from "next-intl";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
+import type { CanonicalApprovalSlot } from "@/lib/rbac/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +73,12 @@ export function NewBudgetRequestSheet({
   const tf = useTranslations("budgetRequests.form");
   const tKind = useTranslations("budgetRequests.kind");
   const tCommon = useTranslations("common");
+  // Approval-chain slot labels live under `cashAdvances.chainSlot` but hold
+  // canonical role names (SUPERVISOR/PM/OM/FINANCE/DIRECTOR) with no CA-
+  // specific wording, so it is safe to reuse cross-module. See Slice 3
+  // (`<FinanceStatusBadge>` refactor) for the planned rename to
+  // `approvals.chainSlot`.
+  const tSlots = useTranslations("cashAdvances.chainSlot");
 
   const [open, setOpen] = React.useState(false);
   const [isPending, startTransition] = React.useTransition();
@@ -239,9 +247,21 @@ export function NewBudgetRequestSheet({
                     />
                   </FormControl>
                   {chain.length > 0 ? (
-                    <FormDescription>
-                      {tf("chainPreview", { chain: chain.join(" → ") })}
-                    </FormDescription>
+                    <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-muted-foreground">
+                      <span className="label-meta text-[10px] uppercase">
+                        {tf("chainPreviewLabel")}
+                      </span>
+                      <ApprovalChainProgress
+                        slots={chain}
+                        variant="preview"
+                        size="xs"
+                        renderSlot={(slot) =>
+                          tSlots(slot as CanonicalApprovalSlot)
+                        }
+                        data-testid="budget-request-chain-preview"
+                        ariaLabel="Budget request approval chain preview"
+                      />
+                    </div>
                   ) : null}
                   <FormMessage />
                 </FormItem>

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, Clock, Wallet } from "lucide-react";
+import { ArrowLeft, Clock, Wallet } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,10 +31,12 @@ import {
 } from "@/lib/cash-advance/state";
 import {
   CANONICAL_CA_STATUS_LABEL,
+  CANONICAL_CA_STATUS_SLOT,
   CANONICAL_CA_STATUS_TONE,
   caCanonicalChain,
   canonicalCaCanApprove,
   isCanonicalCaStatus,
+  type CanonicalCaStatus,
 } from "@/lib/cash-advance/state-canonical";
 import type { EmployeeRole } from "@/lib/rbac/roles";
 import type {
@@ -417,27 +420,17 @@ export default async function CashAdvanceDetailPage(props: {
                 {t("chainEmpty")}
               </p>
             ) : (
-              <ol
-                className="flex flex-wrap items-center gap-2"
+              <ApprovalChainProgress
+                slots={canonicalChain}
+                active={
+                  CANONICAL_CA_STATUS_SLOT[status as CanonicalCaStatus] ?? null
+                }
+                variant="preview"
+                size="sm"
+                renderSlot={(slot) => tSlots(slot as CanonicalApprovalSlot)}
                 data-testid="ca-detail-chain"
-              >
-                {canonicalChain.map((slot, idx) => (
-                  <li
-                    key={`${slot}-${idx}`}
-                    className="flex items-center gap-2"
-                  >
-                    <Badge
-                      variant="outline"
-                      className="border-primary/30 bg-primary/5 text-primary"
-                    >
-                      {tSlots(slot)}
-                    </Badge>
-                    {idx < canonicalChain.length - 1 ? (
-                      <ArrowRight className="size-3 text-muted-foreground" />
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
+                ariaLabel="Cash advance approval chain"
+              />
             )}
           </CardContent>
         </Card>
