@@ -1,9 +1,11 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Command, ArrowUpRight, Sparkles, ShieldCheck, LineChart } from "lucide-react";
+import { ArrowUpRight, Sparkles, ShieldCheck, LineChart } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { LanguageToggle } from "@/components/i18n/language-toggle";
 import { getTenantContext } from "@/lib/tenant/context";
@@ -47,9 +49,7 @@ export default async function Home() {
           href="/"
           className="flex items-center gap-2 font-display text-lg font-semibold"
         >
-          <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <Command className="size-4" />
-          </div>
+          <Logo size={32} />
           ControlDesk
         </Link>
         <div className="flex items-center gap-2">
@@ -121,7 +121,25 @@ export default async function Home() {
           </Button>
         </div>
 
-        <div className="mt-6 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="relative mt-4 w-full max-w-4xl">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 -z-10 mx-auto h-full w-full max-w-2xl rounded-full bg-primary/20 blur-3xl"
+          />
+          <div className="overflow-hidden rounded-2xl border border-border/60 shadow-2xl ring-1 ring-border/40">
+            <Image
+              src="/brand/controldesk-hero-dashboard.png"
+              alt=""
+              width={1536}
+              height={1024}
+              priority
+              sizes="(min-width: 1024px) 896px, 100vw"
+              className="w-full h-auto select-none"
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
           {cards.map(({ icon: Icon, title, body }) => (
             <div key={title} className="glass rounded-2xl p-5 text-left">
               <div className="mb-3 grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">

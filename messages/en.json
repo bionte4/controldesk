@@ -249,9 +249,16 @@
     }
   },
   "authLayout": {
-    "sideKicker": "Enterprise BPO Operations",
-    "sideHeadline": "One workspace for projects, people, cash, and clients.",
-    "sideBody": "Multi-tenant approvals · Cash advance & petty cash · HRIS · SLA analytics · AI-assisted forecasting."
+    "sideKicker": "ENTERPRISE OPERATIONS PLATFORM",
+    "sideHeadline": "Run projects, cash flow, and teams from a single workspace.",
+    "sideBody": "Multi-tier approvals on autopilot, real-time budget realisation, and AI-assisted SLA forecasting — purpose-built for complex BPO & Managed Services operations.",
+    "features": {
+      "approvals": "Auto-routed multi-tier approvals with audit trail",
+      "cash": "Field cash advances & petty cash under control",
+      "hris": "Multi-branch HRIS + payroll",
+      "ai": "AI-forecasted SLA & budget risk"
+    },
+    "trust": "Trusted by BPO & Managed Services operations teams"
   },
   "nav": {
     "openUserMenu": "Open user menu",

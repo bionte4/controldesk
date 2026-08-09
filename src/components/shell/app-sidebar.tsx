@@ -4,7 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Command, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
+
+import { Logo } from "@/components/brand/logo";
 
 import {
   Sidebar,
@@ -75,9 +77,7 @@ export function AppSidebar({
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader>
         <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-          <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/25">
-            <Command className="size-4" />
-          </div>
+          <Logo size={32} className="shrink-0" />
           <div className="flex flex-col overflow-hidden group-data-[collapsible=icon]:hidden">
             <span className="truncate font-display text-sm font-semibold">
               {tenantName}

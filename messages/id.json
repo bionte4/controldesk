@@ -249,9 +249,16 @@
     }
   },
   "authLayout": {
-    "sideKicker": "Operasional BPO Enterprise",
-    "sideHeadline": "Satu ruang kerja untuk proyek, karyawan, kas, dan klien.",
-    "sideBody": "Approval multi-tenant · Kas bon & kas kecil · HRIS · Analitik SLA · Prediksi berbantuan AI."
+    "sideKicker": "PLATFORM OPERASIONAL ENTERPRISE",
+    "sideHeadline": "Kendalikan proyek, arus kas, dan tim dari satu ruang kerja.",
+    "sideBody": "Approval berjenjang otomatis, realisasi anggaran real-time, dan prediksi risiko SLA berbantuan AI — dirancang untuk operasional BPO & Managed Services yang kompleks.",
+    "features": {
+      "approvals": "Approval berjenjang otomatis dengan audit trail",
+      "cash": "Kas bon lapangan & kas kecil terkendali",
+      "hris": "HRIS + payroll multi-cabang",
+      "ai": "Prediksi risiko SLA & anggaran dengan AI"
+    },
+    "trust": "Dipercaya tim operasional BPO & Managed Services"
   },
   "nav": {
     "openUserMenu": "Buka menu pengguna",

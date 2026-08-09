@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Command } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
+import { Logo } from "@/components/brand/logo";
 import { LanguageToggle } from "@/components/i18n/language-toggle";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { getTenantContext } from "@/lib/tenant/context";
@@ -31,9 +31,7 @@ export default async function PortalLayout({
             className="inline-flex items-center gap-2 font-display font-semibold"
             aria-label="ControlDesk client portal home"
           >
-            <div className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-              <Command className="size-4" />
-            </div>
+            <Logo size={32} />
             <span>{t("brand")}</span>
           </Link>
           {slug ? (
