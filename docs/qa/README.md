@@ -20,7 +20,9 @@ berfokus pada:
 | ---------------------------------- | ----------------------------------------------------------------------------------- |
 | **QA Lead / Test Manager**         | [`testing-strategy.md`](testing-strategy.md) → [`test-catalog.md`](test-catalog.md) → [`manual-smoke-scripts.md#release-checklist--staging`](manual-smoke-scripts.md#release-checklist--staging) |
 | **QA Engineer (hands-on)**         | [`e2e-playbook.md`](e2e-playbook.md) → [`test-data.md`](test-data.md) → [`flake-triage.md`](flake-triage.md) |
-| **Manual Tester**                  | [`manual-smoke-scripts.md`](manual-smoke-scripts.md) → [`bug-reporting.md`](bug-reporting.md) |
+| **Manual Tester**                  | [`e2e-roleplay.md`](e2e-roleplay.md) → [`manual-smoke-scripts.md`](manual-smoke-scripts.md) → [`bug-reporting.md`](bug-reporting.md) |
+| **PM / Product Owner (walkthrough demo)** | [`e2e-roleplay.md`](e2e-roleplay.md) → [`../product/approval-workflows.md`](../product/approval-workflows.md) |
+| **Onboarding QA / dev baru**       | [`e2e-roleplay.md`](e2e-roleplay.md) → [`test-data.md`](test-data.md) |
 | **Accessibility Auditor**          | [`accessibility-testing.md`](accessibility-testing.md)                             |
 | **Developer nulis test baru**      | [`../testing.md`](../testing.md) + [`e2e-playbook.md#extending-tests`](e2e-playbook.md#extending-tests) |
 | **Release Manager**                | [`manual-smoke-scripts.md#release-checklist--production`](manual-smoke-scripts.md#release-checklist--production) |
@@ -31,6 +33,7 @@ berfokus pada:
 | ------------------------------------------------------ | -------------------------------------------------------------------------- |
 | [`testing-strategy.md`](testing-strategy.md)           | Test pyramid, quality gates, risk-based testing philosophy, coverage targets. |
 | [`e2e-playbook.md`](e2e-playbook.md)                   | Setup, run, debug, extend Playwright suites; selector best practices; parallel vs serial. |
+| [`e2e-roleplay.md`](e2e-roleplay.md)                   | Persona-driven E2E walkthroughs — 11 internal + 3 portal user acted out, cross-role chain scripts, denial matrix. |
 | [`test-catalog.md`](test-catalog.md)                   | Test matrix — setiap Vitest + Playwright suite dan apa yang di-cover.     |
 | [`test-data.md`](test-data.md)                         | Seed data structure, demo users, fixture patterns, tenant isolation contract. |
 | [`manual-smoke-scripts.md`](manual-smoke-scripts.md)   | Manual smoke test per module + release checklist per environment.          |
