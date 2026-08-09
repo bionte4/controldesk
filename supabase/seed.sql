@@ -31,6 +31,13 @@ end $$;
 insert into public.tenants (id, slug, name)
 values ('11111111-1111-1111-1111-111111111111', 'demo', 'ControlDesk Demo BPO');
 
+-- Migration 0055 seeds Chart of Accounts only for tenants that already exist
+-- at migration time. `supabase db reset` runs migrations before this seed
+-- script, so the demo tenant we just created has an empty CoA. Invoke the
+-- helper explicitly so the ~45 standard accounts (1000/2000/…/5900) are in
+-- place before any downstream block tries to look them up by `code`.
+select public.seed_default_coa('11111111-1111-1111-1111-111111111111'::uuid);
+
 -- ---------------------------------------------------------------------------
 -- 2. Helper: create a confirmed auth user + return its id.
 -- ---------------------------------------------------------------------------
