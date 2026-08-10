@@ -400,25 +400,39 @@ export function toCanonicalRole(dbRole: AnyDbEmployeeRole): CanonicalRole {
  * pages they should legitimately see (`/hr/shifts`, `/hr/performance`,
  * `/reports`, `/settings/coa`).
  *
- * `roleInGate` collapses both sides through `toCanonicalRole()` and
- * compares in canonical space — so `roleInGate('PM', [...])` matches
- * any gate list that contains `'PROJECT_MANAGER'` or `'PM'`, and
- * vice versa. Direct-string equality is still checked first as a
- * fast-path so the helper stays cheap in hot loops.
+ * `roleInGate` uses a ONE-DIRECTIONAL canonical fold:
+ *   1. Direct string equality — works for both legacy and canonical.
+ *   2. If (and only if) the actor's DB role is itself a canonical
+ *      value, check whether ANY gate entry folds to the same
+ *      canonical slot. This admits demo/prod users seeded as
+ *      `role='FINANCE'` onto a gate declared with `LEAD_FINANCE`
+ *      without also opening it to `PETTY_CASH_CUSTODIAN` — which is
+ *      what a naive two-way fold would do (both PCC and LEAD_FINANCE
+ *      fold to canonical `FINANCE`, so a symmetric fold LEAKED PCC
+ *      onto the contracts page during the initial rollout).
+ *   3. Legacy actors that don't match directly are rejected — never
+ *      folded through canonical. This means `HR_ADMIN` stays out of
+ *      a gate expressed as `TENANT_ADMIN` even though both fold to
+ *      canonical `ADMIN`.
  *
- * NOTE: gate lists MUST contain values whose canonical form is the
- * one you want to allow. E.g. don't put `TENANT_ADMIN` in a gate
- * expecting to admit `HR_ADMIN` too — both fold to `ADMIN` so the
- * canonical fold WILL admit HR_ADMIN. If you want to distinguish
- * TENANT_ADMIN from HR_ADMIN you must gate at the DB layer (RLS) or
- * split the gate before it reaches this helper.
+ * The trade-off: canonical values are treated as "the primary role
+ * of that slot" — canonical `FINANCE` acts as Lead Finance semantics
+ * (not PCC), canonical `ADMIN` acts as Tenant Admin (not HR Admin).
+ * Callers wanting to reserve a gate for a specific legacy variant
+ * simply omit the canonical from the gate.
  */
+export function isCanonicalRole(role: AnyDbEmployeeRole): boolean {
+  return (CANONICAL_ROLES as readonly string[]).includes(role);
+}
+
 export function roleInGate(
   role: AnyDbEmployeeRole,
   gate: readonly AnyDbEmployeeRole[],
 ): boolean {
   if (gate.some((g) => g === role)) return true;
-  const actorCanonical = toCanonicalRole(role);
+  if (!isCanonicalRole(role)) return false;
+  // Actor is canonical; admit onto any gate entry that folds here.
+  const actorCanonical = role as CanonicalRole;
   return gate.some((g) => toCanonicalRole(g) === actorCanonical);
 }
 

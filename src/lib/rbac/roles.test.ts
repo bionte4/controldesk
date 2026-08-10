@@ -633,13 +633,31 @@ describe("rbac/roles — roleInGate canonical fold", () => {
     expect(roleInGate("ADMIN", CONTRACT_VIEWER_ROLES)).toBe(true);
   });
 
-  it("admits a legacy actor onto a canonical-declared gate", () => {
-    // The symmetric case: gate expressed in canonical values, actor
-    // arrives as legacy DB value. Should still match.
-    const canonicalGate = ["PM", "FINANCE", "ADMIN"] as const;
+  it("DOES NOT fold a legacy actor through canonical", () => {
+    // Critical regression pin: an earlier two-way fold LEAKED
+    // PETTY_CASH_CUSTODIAN and HR_ADMIN onto gates expressed as
+    // LEAD_FINANCE / TENANT_ADMIN respectively (both pairs share a
+    // canonical slot — FINANCE and ADMIN — so a symmetric fold
+    // admits the wrong role). The one-way fold below keeps them out.
+    expect(roleInGate("PETTY_CASH_CUSTODIAN", CONTRACT_VIEWER_ROLES)).toBe(
+      false,
+    );
+    // HR_ADMIN → gate that only wants TENANT_ADMIN legacy — must reject.
+    const adminOnlyGate = ["TENANT_ADMIN"] as const;
+    expect(roleInGate("HR_ADMIN", adminOnlyGate)).toBe(false);
+  });
+
+  it("admits a legacy actor onto a canonical-declared gate directly", () => {
+    // Direct string match still works when the gate contains a
+    // canonical value the actor happens to match on. This is the
+    // path used by the reports registry (which enumerates both
+    // flavours explicitly).
+    const canonicalGate = ["PROJECT_MANAGER", "PM"] as const;
     expect(roleInGate("PROJECT_MANAGER", canonicalGate)).toBe(true);
-    expect(roleInGate("LEAD_FINANCE", canonicalGate)).toBe(true);
-    expect(roleInGate("TENANT_ADMIN", canonicalGate)).toBe(true);
+    expect(roleInGate("PM", canonicalGate)).toBe(true);
+    // A different legacy that shares canonical slot is NOT admitted.
+    const canonicalGate2 = ["LEAD_FINANCE", "FINANCE"] as const;
+    expect(roleInGate("PETTY_CASH_CUSTODIAN", canonicalGate2)).toBe(false);
   });
 
   it("rejects when neither direct nor canonical fold matches", () => {
