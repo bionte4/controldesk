@@ -15,7 +15,7 @@ import {
 export type ActionState =
   | { status: "idle" }
   | { status: "error"; message: string }
-  | { status: "success"; message?: string };
+  | { status: "success"; message?: string; redirectTo?: string };
 
 export async function signInWithPassword(input: LoginInput): Promise<ActionState> {
   const parsed = loginSchema.safeParse(input);
@@ -30,8 +30,22 @@ export async function signInWithPassword(input: LoginInput): Promise<ActionState
     return { status: "error", message: error.message };
   }
 
-  revalidatePath("/", "layout");
-  redirect("/dashboard");
+  // NOTE: We deliberately do NOT call `redirect("/dashboard")` here.
+  //
+  // In Next.js 16 (App Router + Turbopack), `redirect()` from inside a
+  // Server Action inlines the RSC payload of the CURRENT surface (the
+  // `/login` route) in the response body while the `x-action-redirect`
+  // header points at `/dashboard`. On a tenant subdomain the client
+  // then commits the inlined marketing-shell RSC ("Ruang operasional
+  // untuk Managed Services") under the `/dashboard` URL, producing
+  // exactly the "cannot log in after login" loop the user reports
+  // (dashboard URL, marketing content — one refresh fixes it).
+  //
+  // Returning `status: "success"` with a `redirectTo` lets the client
+  // component perform a `router.push("/dashboard")`, which triggers a
+  // fresh RSC fetch scoped to the destination route and honors the
+  // just-issued auth cookies correctly.
+  return { status: "success", redirectTo: "/dashboard" };
 }
 
 export async function sendMagicLink(input: MagicLinkInput): Promise<ActionState> {

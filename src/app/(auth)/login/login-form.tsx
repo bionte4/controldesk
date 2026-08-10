@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, useReducedMotion } from "framer-motion";
@@ -29,10 +30,22 @@ import {
 import { sendMagicLink, signInWithPassword } from "../actions";
 
 export function LoginForm({ initialError }: { initialError?: string }) {
+  const router = useRouter();
   const [error, setError] = React.useState<string | undefined>(initialError);
   const [isPending, startTransition] = React.useTransition();
   const t = useTranslations("auth");
   const reduceMotion = useReducedMotion();
+
+  // Guard against clicks that fire before React attaches the form's
+  // `onSubmit` handler. Without this, an autofilled password manager or a
+  // fast-typing user can trigger a native `<form>` submit that either
+  // navigates the browser to the current URL with credentials in the
+  // query string, or is a silent no-op — either way the sign-in never
+  // runs and the user perceives a stuck / "cannot log in" state.
+  const [hydrated, setHydrated] = React.useState(false);
+  React.useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const passwordForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -48,7 +61,18 @@ export function LoginForm({ initialError }: { initialError?: string }) {
     setError(undefined);
     startTransition(async () => {
       const result = await signInWithPassword(values);
-      if (result?.status === "error") setError(result.message);
+      if (result?.status === "error") {
+        setError(result.message);
+        return;
+      }
+      // Client-driven navigation avoids a Next.js 16 bug where a Server
+      // Action `redirect()` under Turbopack inlines the wrong RSC (the
+      // marketing shell) and commits it under the destination URL, which
+      // manifests as "dashboard URL but marketing content" until reload.
+      if (result?.status === "success" && result.redirectTo) {
+        router.replace(result.redirectTo);
+        router.refresh();
+      }
     });
   }
 
@@ -88,6 +112,10 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           <Form {...passwordForm}>
             <form
               onSubmit={passwordForm.handleSubmit(onPasswordSubmit)}
+              // `method="post"` on the plain <form> so if a native submit
+              // fires before React hydrates (e.g. browser autofill flow),
+              // credentials aren't leaked in the URL as query params.
+              method="post"
               className="space-y-4"
             >
               <FormField
@@ -140,9 +168,10 @@ export function LoginForm({ initialError }: { initialError?: string }) {
                 type="submit"
                 size="lg"
                 className="w-full"
-                disabled={isPending}
+                disabled={isPending || !hydrated}
+                aria-busy={isPending || !hydrated}
               >
-                {isPending ? (
+                {isPending || !hydrated ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 {t("signIn")}
@@ -155,6 +184,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
           <Form {...magicForm}>
             <form
               onSubmit={magicForm.handleSubmit(onMagicSubmit)}
+              method="post"
               className="space-y-4"
             >
               <FormField
@@ -184,9 +214,10 @@ export function LoginForm({ initialError }: { initialError?: string }) {
                 type="submit"
                 size="lg"
                 className="w-full"
-                disabled={isPending}
+                disabled={isPending || !hydrated}
+                aria-busy={isPending || !hydrated}
               >
-                {isPending ? (
+                {isPending || !hydrated ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 {t("sendMagicLink")}
