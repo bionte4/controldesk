@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BadgeDollarSign, ListChecks } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,6 +15,10 @@ import {
 } from "@/components/ui/card";
 import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import {
+  PERFORMANCE_VIEWER_ROLES,
+  type EmployeeRole,
+} from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ContractRecommendation,
@@ -35,8 +40,16 @@ const STATUS_TONE: Record<EvaluationStatus, string> = {
 };
 
 export default async function PerformanceEvaluationsPage() {
-  const [employee, t, tStatus, tRec] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+
+  // RLS filters rows to HR/Mgmt OR "I am SPV/PM/OM of this row" —
+  // EMPLOYEE without those relationships would land on an empty page.
+  // Redirect them to the dashboard for a clearer signal.
+  if (!PERFORMANCE_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [t, tStatus, tRec] = await Promise.all([
     getTranslations("performance"),
     getTranslations("performance.status"),
     getTranslations("performance.recommendation"),

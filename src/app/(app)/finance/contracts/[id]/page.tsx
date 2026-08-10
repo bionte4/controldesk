@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
   Building2,
@@ -22,7 +22,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { CONTRACT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus, ProjectStatus } from "@/types/database";
@@ -53,8 +53,16 @@ export default async function ContractDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, t, tStatus, tProjectStatus] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+
+  // Mirrors the list-page guard: RLS on `bpo_contracts` is tenant-only,
+  // so we role-gate contract detail (MRR, client industry, linked
+  // projects) at the app layer.
+  if (!CONTRACT_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [t, tStatus, tProjectStatus] = await Promise.all([
     getTranslations("contracts.detail"),
     getTranslations("contracts.status"),
     getTranslations("projects.status"),

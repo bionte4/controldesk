@@ -39,6 +39,8 @@ export default async function DashboardPage() {
         return tKpis("milestoneDone");
       case "pending_approvals":
         return tKpis("pendingApprovals");
+      case "issues_at_risk":
+        return tKpis("issuesAtRisk");
       default:
         return fallback;
     }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { FileText } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -15,7 +16,7 @@ import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { CONTRACT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus } from "@/types/database";
 
@@ -44,8 +45,18 @@ type ContractRow = {
 };
 
 export default async function ContractsPage() {
-  const [employee, t, tCols, tStatus] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+
+  // Contract MRR / value / SLA terms are commercially sensitive. The DB
+  // `bpo_contracts_tenant_read` policy is tenant-only (no role filter),
+  // so the guard has to live here in addition to the sidebar role gate.
+  // Redirect with `error=forbidden` so the shell can surface a toast
+  // (same pattern as `/reports`).
+  if (!CONTRACT_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [t, tCols, tStatus] = await Promise.all([
     getTranslations("contracts"),
     getTranslations("contracts.columns"),
     getTranslations("contracts.status"),

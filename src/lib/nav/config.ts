@@ -32,7 +32,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
+import {
+  CONTRACT_VIEWER_ROLES,
+  PERFORMANCE_VIEWER_ROLES,
+  type AnyDbEmployeeRole,
+  type EmployeeRole,
+} from "@/lib/rbac/roles";
 import type idMessages from "../../../messages/id.json";
 
 /**
@@ -152,6 +157,15 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "contracts",
         href: "/finance/contracts",
         icon: FileText,
+        // Contract data (MRR, contract value, SLA commercial terms) is
+        // commercially sensitive. Mirrors the DB update policy
+        // `bpo_contracts_finance_update` so the sidebar link is only
+        // visible to roles that can also meaningfully act on contracts.
+        // The `/finance/contracts` page + `/finance/contracts/[id]`
+        // page both enforce the same list at the page layer because
+        // the DB read policy is tenant-only (see
+        // `CONTRACT_VIEWER_ROLES` in `src/lib/rbac/roles.ts`).
+        roles: CONTRACT_VIEWER_ROLES,
       },
       { titleKey: "approvals", href: "/approvals", icon: ShieldCheck },
     ],
@@ -188,6 +202,12 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "performance",
         href: "/hr/performance",
         icon: BadgeDollarSign,
+        // HR performance evaluations. RLS on `performance_evaluations`
+        // already limits rows to HR/Mgmt OR the SPV/PM/OM who own the
+        // row (see migration 0059), so an EMPLOYEE hitting this page
+        // would see an empty list. Gate the sidebar entry (and add a
+        // page-level redirect) so we don't tease a dead-end link.
+        roles: PERFORMANCE_VIEWER_ROLES,
       },
       {
         titleKey: "upk",

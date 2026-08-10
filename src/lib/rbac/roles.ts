@@ -44,6 +44,41 @@ export const STAFF_ROLES: readonly EmployeeRole[] = [
 ] as const;
 
 /**
+ * Roles allowed to read BPO contracts (MRR, contract value, SLA
+ * commercial terms). Mirrors the sidebar `contracts` role gate in
+ * `src/lib/nav/config.ts` and is used as an in-page redirect guard
+ * because the DB policy `bpo_contracts_tenant_read` is tenant-only
+ * (no role filter). Keeping this constant in `roles.ts` lets both
+ * sides import the same source of truth.
+ */
+export const CONTRACT_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "LEAD_FINANCE",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Roles allowed to read HR performance evaluations. Kept alongside
+ * `CONTRACT_VIEWER_ROLES` because both mirror sidebar-item role
+ * gates that also need an app-layer redirect guard when the target
+ * page's RLS policy is broader than the desired UI surface.
+ * SUPERVISOR is included because line managers legitimately need
+ * to see their direct reports' evaluations; RLS on
+ * `performance_reviews` should further restrict rows to
+ * `reviewer_id / employee_id` scope.
+ */
+export const PERFORMANCE_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "SUPERVISOR",
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+] as const;
+
+/**
  * Numeric rank on the operational ladder. Returns -1 for staff/functional
  * roles (finance, HR, custodian) which live outside the chain.
  */

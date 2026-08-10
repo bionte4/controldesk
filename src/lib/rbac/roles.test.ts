@@ -10,6 +10,7 @@ import {
   caGeneralApprovalChain,
   canApproveThreshold,
   canonicalCanApprove,
+  CONTRACT_VIEWER_ROLES,
   EMPLOYEE_ROLES,
   expenseApprovalChain,
   formatRole,
@@ -17,6 +18,7 @@ import {
   isStaffRole,
   MULTI_PROJECT_CANONICAL_ROLES,
   OPERATIONAL_LADDER,
+  PERFORMANCE_VIEWER_ROLES,
   pettyCashDecision,
   requiredApprovalChain,
   requiresFinanceApproval,
@@ -449,5 +451,44 @@ describe("rbac/roles — canonicalCanApprove", () => {
     expect(canonicalCanApprove("SUPERVISOR", "SUPERVISOR")).toBe(true);
     expect(canonicalCanApprove("EMPLOYEE", "SUPERVISOR")).toBe(false);
     expect(canonicalCanApprove("PM", "SUPERVISOR")).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Read-guard role lists used by the sidebar + page redirects. These
+// constants are the single source of truth used both by
+// `src/lib/nav/config.ts` (sidebar visibility) and by the page-level
+// redirect guards in `/finance/contracts/**` and `/hr/performance/**`.
+// The tests below pin the intent so a well-meaning refactor doesn't
+// silently re-open the sidebar to EMPLOYEE.
+// ---------------------------------------------------------------------------
+describe("rbac/roles — read-guard role lists", () => {
+  it("CONTRACT_VIEWER_ROLES excludes EMPLOYEE / SUPERVISOR / PM / OM", () => {
+    // Commercial contract data (MRR, contract value, SLA commitments)
+    // must stay out of the operational chain's reach.
+    expect(CONTRACT_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(CONTRACT_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(CONTRACT_VIEWER_ROLES).not.toContain("PROJECT_MANAGER");
+    expect(CONTRACT_VIEWER_ROLES).not.toContain("OPERATIONS_MANAGER");
+  });
+
+  it("CONTRACT_VIEWER_ROLES includes LEAD_FINANCE + HEAD_MANAGER + GM + admin", () => {
+    // Mirrors the DB `bpo_contracts_finance_update` write policy so
+    // we don't tease a view the user has no reason to inspect.
+    expect(CONTRACT_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(CONTRACT_VIEWER_ROLES).toContain("HEAD_MANAGER");
+    expect(CONTRACT_VIEWER_ROLES).toContain("GENERAL_MANAGER");
+    expect(CONTRACT_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("PERFORMANCE_VIEWER_ROLES excludes EMPLOYEE but includes SUPERVISOR", () => {
+    // RLS on `performance_evaluations` already limits rows to HR/Mgmt
+    // OR the SPV/PM/OM who own the row (migration 0059). The nav gate
+    // mirrors that so a plain EMPLOYEE doesn't land on an empty page.
+    expect(PERFORMANCE_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(PERFORMANCE_VIEWER_ROLES).toContain("SUPERVISOR");
+    expect(PERFORMANCE_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(PERFORMANCE_VIEWER_ROLES).toContain("HR_ADMIN");
+    expect(PERFORMANCE_VIEWER_ROLES).toContain("TENANT_ADMIN");
   });
 });
