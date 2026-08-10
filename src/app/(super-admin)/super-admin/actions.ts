@@ -594,6 +594,175 @@ export async function getCurrentPlatformAdminIdAction() {
   return admin?.user_id ?? null;
 }
 
+// ---------------------------------------------------------------------------
+// Bulk feature-flag toggle (Fase 6.2). Applies one feature flag to a
+// selection of tenants in a single audit event. Selection modes:
+//
+//   - "all": every tenant (regardless of current status).
+//   - "active": every tenant where status='active'. Recommended default.
+//   - "tenant_ids": explicit list of tenant UUIDs (bulk-select UI).
+//
+// This is intentionally not exposed as a percentage rollout — that's
+// a distinct product decision (canary → progressive rollout ordering)
+// and would need per-tenant seed selection. The `tenant_ids` mode is
+// the escape hatch: the operator picks who gets the flag first (e.g.
+// friendly tenants for canary).
+//
+// Audit: writes ONE row per affected tenant so the log stays queryable
+// per-tenant. The metadata field carries a `bulk_run_id` so operators
+// can reconcile all rows of a single bulk operation.
+// ---------------------------------------------------------------------------
+const bulkToggleFeatureFlagSchema = z
+  .object({
+    feature_key: z.string().refine(isKnownFeatureKey, {
+      message: `feature_key harus salah satu dari: ${FEATURE_KEYS.join(", ")}`,
+    }),
+    enabled: z.boolean(),
+    mode: z.enum(["all", "active", "tenant_ids"]),
+    tenant_ids: z.array(z.string().uuid()).max(1000).optional(),
+    notes: z.string().trim().max(500).optional(),
+  })
+  .strict()
+  .refine(
+    (v) => v.mode !== "tenant_ids" || (v.tenant_ids && v.tenant_ids.length > 0),
+    { message: "tenant_ids wajib diisi bila mode='tenant_ids'." },
+  );
+
+export async function bulkToggleFeatureFlagAction(rawInput: unknown) {
+  const admin = await getCurrentPlatformAdmin();
+  if (!admin) {
+    return {
+      ok: false as const,
+      code: "UNAUTHENTICATED" as const,
+      reason: "Not signed in as a platform admin.",
+    };
+  }
+  const parsed = bulkToggleFeatureFlagSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      code: "VALIDATION" as const,
+      reason: parsed.error.issues.map((i) => i.message).join("; "),
+    };
+  }
+  const input = parsed.data;
+  const supa = createServiceRoleClient();
+
+  // Resolve the target tenant list.
+  let targetIds: string[] = [];
+  if (input.mode === "tenant_ids") {
+    targetIds = input.tenant_ids ?? [];
+  } else {
+    const q = supa.from("tenants").select("id");
+    const q2 = input.mode === "active" ? q.eq("status", "active") : q;
+    const list = await q2;
+    if (list.error) {
+      return {
+        ok: false as const,
+        code: "INTERNAL" as const,
+        reason: list.error.message,
+      };
+    }
+    targetIds = (list.data ?? []).map((r) => r.id);
+  }
+  if (targetIds.length === 0) {
+    return {
+      ok: false as const,
+      code: "NO_TARGETS" as const,
+      reason: "Tidak ada tenant yang cocok dengan mode dipilih.",
+    };
+  }
+
+  // Load existing rows in one shot so we can produce accurate old→new
+  // audit values. Missing rows imply the DEFAULT (see FEATURE_REGISTRY);
+  // we still record old=null so the audit doesn't lie about "was the
+  // effective value X or the default?".
+  const existingRes = await supa
+    .from("tenant_feature_flags")
+    .select("tenant_id, enabled")
+    .eq("feature_key", input.feature_key)
+    .in("tenant_id", targetIds);
+  if (existingRes.error) {
+    return {
+      ok: false as const,
+      code: "INTERNAL" as const,
+      reason: existingRes.error.message,
+    };
+  }
+  const existingMap = new Map(
+    (existingRes.data ?? []).map((r) => [r.tenant_id, r.enabled]),
+  );
+
+  // Upsert all rows in one transaction.
+  const now = new Date().toISOString();
+  const upserts = targetIds.map((tid) => ({
+    tenant_id: tid,
+    feature_key: input.feature_key,
+    enabled: input.enabled,
+    notes: input.notes ?? null,
+    updated_by: admin.user_id,
+    updated_at: now,
+  }));
+  const upsertRes = await supa
+    .from("tenant_feature_flags")
+    .upsert(upserts, { onConflict: "tenant_id,feature_key" });
+  if (upsertRes.error) {
+    return {
+      ok: false as const,
+      code: "INTERNAL" as const,
+      reason: upsertRes.error.message,
+    };
+  }
+
+  // Audit one row per tenant. Best-effort — a failure here does NOT
+  // roll back the toggle because doing so would half-flip a canary.
+  // Log loudly instead.
+  const bulkRunId = crypto.randomUUID();
+  let auditedCount = 0;
+  for (const tid of targetIds) {
+    const before = existingMap.has(tid) ? existingMap.get(tid) : null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const auditRes = await (supa as any).rpc("record_platform_admin_audit", {
+      p_action_type: "UPDATE",
+      p_resource_name: "tenant_feature_flags",
+      p_resource_id: `${tid}:${input.feature_key}`,
+      p_target_tenant: tid,
+      p_old_values: { enabled: before },
+      p_new_values: { enabled: input.enabled },
+      p_metadata: {
+        bulk_run_id: bulkRunId,
+        feature_key: input.feature_key,
+        mode: input.mode,
+        total_targets: targetIds.length,
+        notes: input.notes ?? null,
+      },
+    });
+    if (!auditRes.error) auditedCount += 1;
+  }
+  if (auditedCount < targetIds.length) {
+    log.warn("bulkToggleFeatureFlag: partial audit failure", {
+      bulk_run_id: bulkRunId,
+      total: targetIds.length,
+      audited: auditedCount,
+    });
+  }
+
+  revalidatePath("/super-admin/features");
+  revalidatePath("/super-admin/tenants");
+
+  return {
+    ok: true as const,
+    data: {
+      feature_key: input.feature_key,
+      enabled: input.enabled,
+      mode: input.mode,
+      affected_tenants: targetIds.length,
+      audited_rows: auditedCount,
+      bulk_run_id: bulkRunId,
+    },
+  };
+}
+
 export const toggleFeatureFlagAction = withPlatformAdminAction({
   schema: toggleFeatureFlagSchema,
   auditAction: "UPDATE",

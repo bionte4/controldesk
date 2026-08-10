@@ -58,21 +58,22 @@ ulang**, **tidak butuh migrasi baru**, **tidak butuh restart container**.
 Cukup 6 langkah SQL + DNS di bawah, atau **1 command CLI** untuk
 langkah 1–4.
 
-## Cara cepat — 3 pintu masuk (CLI · Super-Admin UI · SQL manual)
+## Cara cepat — 4 pintu masuk (CLI · Super-Admin UI · Self-signup · SQL manual)
 
-Sejak Fase 2 landed (migration 0077), Anda punya **3 cara** provision
+Sejak Fase 6 landed (migration 0078), Anda punya **4 cara** provision
 tenant baru — pilih sesuai konteks:
 
 | Metode                            | Kapan pakai                                                                         |
 | --------------------------------- | ----------------------------------------------------------------------------------- |
 | **A. `pnpm tenant:create` CLI**   | Batch onboarding, scripting, offline / disaster recovery, environment tanpa browser |
 | **B. Super-Admin UI di `/super-admin/tenants/new`** | Onboarding satu-satu dari komputer operator, ada form + copy-paste helper           |
+| **D. Public self-signup di `/register-org` (apex)** | **Fase 6 (Aug 2026)** — customer serve their own workspace via public form. Otomatis 14-day trial, tanpa keterlibatan ops. |
 | **C. Raw SQL templates**          | Debug, edge cases, ketika CLI + UI tidak available (misal Node.js belum di-install) |
 
-**Yang terbaik untuk mayoritas kasus**: **B (UI)** — karena welcome
-email + password langsung dirender di layar dengan tombol copy, dan
-form validation langsung visual. **A (CLI)** untuk automation. **C
-(SQL)** hanya sebagai fallback.
+**Yang terbaik untuk mayoritas kasus**: **D (self-signup)** untuk
+prospek baru dari marketing (ops tidak diblokir), **B (UI)** untuk
+onboarding managed customer (ops perlu handhold + custom name),
+**A (CLI)** untuk automation, **C (SQL)** hanya sebagai fallback.
 
 Ketiga cara menggunakan **RPC yang sama** (`public.provision_tenant()`
 di migration 0076), jadi hasilnya identik:
@@ -257,6 +258,79 @@ if (canUseGcal) {
 `isFeatureEnabled()` cached per-request (React `cache()`) — panggil
 sebanyak yang perlu di RSC tree tanpa hit DB berulang.
 
+**Bulk toggle (Fase 6.2, sejak Aug 2026)**: platform admin bisa
+flip feature flag ke banyak tenant sekaligus via
+`/super-admin/features`. Tiga mode:
+
+- **All** — set flag untuk semua tenant regardless of status.
+  Nuclear option — pakai hanya untuk feature yang benar-benar
+  general availability.
+- **Active** — set flag hanya untuk tenant `status='active'`.
+  Recommended default; skip suspended/terminated agar tidak
+  waste update pada baris yang toh tidak akan pakai.
+- **Canary (tenant_ids)** — set flag untuk list slug spesifik
+  (comma / spasi separated). Recommended untuk rollout awal — pilih
+  2–3 friendly tenant untuk canary sebelum mass-enable.
+
+Setiap operasi bulk tercatat sebagai **satu audit row per tenant**
+di `platform_admin_audit_logs`, dengan `metadata->bulk_run_id`
+sebagai reconciliation key. Query untuk audit satu bulk operation:
+
+```sql
+select target_tenant_id, old_values, new_values, created_at
+from public.platform_admin_audit_logs
+where resource_name = 'tenant_feature_flags'
+  and metadata->>'bulk_run_id' = 'YOUR-BULK-RUN-UUID'
+order by created_at;
+```
+
+**Behavior khusus**: bulk toggle **overrides** tenant-level override.
+Kalau tenant sudah punya row `tenant_feature_flags` dengan `enabled=false`
+(explicit opt-out), bulk operation TETAP overwrite. Ini disengaja —
+platform admin adalah authority tertinggi. Kalau customer request
+opt-out, dokumentasikan alasannya di kolom `notes` (di-persist ke
+`platform_admin_audit_logs.metadata.notes`).
+
+### Fase 6.1 — Tenant plan + trial expiry
+
+Migration 0078 menambah tiga kolom baru di `public.tenants`:
+
+| Kolom              | Type          | Default   | Purpose                                                              |
+| ------------------ | ------------- | --------- | -------------------------------------------------------------------- |
+| `plan`             | text (check)  | `'trial'` | Billing tier. Value: `trial` / `starter` / `pro` / `enterprise`. Aspirational — billing integration deferred to Fase 6.3. |
+| `trial_ends_at`    | timestamptz   | NULL      | Kapan trial berakhir. NULL = tidak on trial (paid / perpetual).      |
+| `provisioned_via`  | text (check)  | `'unknown'` | Audit label: `super-admin-ui` / `ops-cli` / `self-signup` / `seed` / `unknown`. |
+
+**Enforcement saat ini**: banner-only. `TrialBanner`
+(`src/components/shell/trial-banner.tsx`) dirender di app shell
+(`src/app/(app)/layout.tsx`), auto-refresh tiap request. Kalau
+customer masih pakai app setelah `trial_ends_at`, banner berubah
+menjadi warning rose dan mengarahkan ke `sales@controldesk.app`.
+
+**Fase 6.3 (planned)**: cron / scheduled function untuk auto-suspend
+tenant `plan='trial'` dengan `trial_ends_at < now() - interval '7 days'`
+(7-day grace period). Untuk sekarang ops manual suspend via
+Super-Admin UI.
+
+**Query trial status semua tenant**:
+
+```sql
+select
+  slug,
+  name,
+  plan,
+  trial_ends_at,
+  case
+    when trial_ends_at is null then 'not_on_trial'
+    when trial_ends_at > now() then 'active'
+    else 'expired'
+  end as trial_status,
+  provisioned_via
+from public.tenants
+where plan = 'trial'
+order by trial_ends_at nulls last;
+```
+
 ### Fase 2 — Tenant status (active / suspended / terminated)
 
 Migration 0077 menambah kolom `tenants.status public.tenant_status`
@@ -277,6 +351,93 @@ Migration 0077 menambah kolom `tenants.status public.tenant_status`
   `platform_admin_audit_logs`.
 - **Terminate**: **TIDAK ADA** UI. Terminate hanya via SQL langsung —
   by design supaya tidak accidental. Ikuti section Rollback di bawah.
+
+### Cara D — Public self-signup (Fase 6, sejak migration 0078)
+
+Public form di `/register-org` (apex domain, no auth required) —
+customer registrasi workspace sendiri. Rate-limited, email-verified,
+otomatis 14-day trial. Alur dua fase:
+
+**Fase 1: Request signup**
+1. Customer buka `https://controldesk.app/register-org`.
+2. Isi form (nama org, slug, email admin, nama admin).
+3. Server action `requestSignupAction`:
+   - Rate-limit: 5 request per IP per jam + 50 request global per jam
+     via `src/lib/security/rate-limit.ts` (Redis + memory fallback).
+   - Validasi slug (regex, reserved list, uniqueness pre-flight).
+   - Persist row di `tenant_signup_requests` (hash SHA-256 dari token
+     random 32-byte — raw token tidak pernah disimpan di DB).
+   - Kirim email verifikasi dengan link `/register-org/verify/{raw_token}`.
+   - **Belum** membuat auth.users atau tenants — masih pending state.
+
+**Fase 2: Verify + provision**
+1. Customer klik link di email (valid 24 jam).
+2. RSC di `/register-org/verify/[token]/page.tsx` panggil
+   `verifySignupAction(rawToken)`:
+   - Hash raw token → cari row `tenant_signup_requests`.
+   - Reject kalau expired, sudah verified, atau slug keburu dipakai.
+   - Buat `auth.users` via `auth.admin.createUser` (password
+     auto-generated).
+   - Panggil RPC `complete_tenant_signup(raw_token, admin_user_id)`
+     yang wrap `provision_tenant()` + set `plan='trial'` +
+     `trial_ends_at = now() + 14 days` + `provisioned_via='self-signup'`.
+   - Kirim confirmation email dengan credential.
+   - Redirect (URL rewrite) ke confirmation page dengan token di-scrub
+     dari history.
+3. Customer login ke `{slug}.controldesk.app/login` — trial banner
+   otomatis muncul di app shell menunjukkan sisa hari.
+
+**Yang dilihat customer**:
+- Banner di aplikasi: "Uji coba **X hari lagi** (berakhir DD Month YYYY)".
+  Styled amber warning kalau ≤ 3 hari, indigo kalau > 3 hari, rose alert
+  kalau sudah expired.
+
+**Yang dilihat ops**:
+- Tenant baru muncul di `/super-admin/tenants` dengan `plan=trial` +
+  `provisioned_via=self-signup`.
+- Audit trail di `security_audit_logs` sebagai `CREATE tenants` (dari
+  `provision_tenant()`, tidak ada row `platform_admin_audit_logs` —
+  self-signup bukan aksi platform admin).
+
+**Enforcement expired trial (belum di-automate)**:
+- Trial expiry saat ini **banner-only**. App tetap fungsional.
+- Ops perlu manual suspend tenant expired via
+  `/super-admin/tenants/{id}` panel Suspend/Reactivate.
+- Roadmap 6.3: auto-suspend via cron + integration Stripe untuk
+  konversi trial → paid.
+
+**Rate limits (tune di `src/lib/ops/tenant-signup.ts`)**:
+```ts
+SIGNUP_RATE_LIMIT_PER_IP = { max: 5, windowSeconds: 3600 }   // 5/jam/IP
+SIGNUP_RATE_LIMIT_GLOBAL = { max: 50, windowSeconds: 3600 }  // 50/jam total
+```
+
+**Env prasyarat**:
+- `NEXT_PUBLIC_ROOT_DOMAIN=controldesk.app` — untuk URL verifikasi + login.
+- `SMTP_HOST` + kredensial — kalau tidak ada, email verifikasi
+  di-skip (`sendEmail` returns `SKIPPED`) tapi verifikasi tetap
+  bisa berjalan kalau customer punya URL (untuk local dev).
+- `REDIS_URL` — opsional; kalau tidak ada, rate-limit fall back ke
+  in-memory Map (aman untuk single-node prod, tidak untuk multi-replica).
+
+**Testing lokal**:
+```bash
+# Buka /register-org di apex host (localhost:3000).
+# Isi form, dev-mailer tangkap email di mailpit (http://localhost:8025).
+# Klik link → tenant provisioned + credential displayed.
+```
+
+**Deprovisioning self-signup tenant**:
+- Sama seperti tenant lain — lihat section Rollback.
+- Row `tenant_signup_requests` tetap ada (verified_at + verified_tenant_id
+  ter-stamp) untuk audit history.
+
+**Cleanup pending requests**:
+```sql
+-- Jalankan berkala (cron pg_cron atau manual) untuk purge request
+-- lama yang tidak pernah di-verify.
+select public.purge_expired_signup_requests();
+```
 
 ## Prasyarat
 
@@ -734,8 +895,10 @@ Status roadmap tenant lifecycle:
 | 4    | **Automated welcome email** — `--send-email` flag di CLI, env-scoped SMTP (bypass server-only mailer)                                    | ✅ Shipped — CLI `scripts/tenant/create.ts` upgrade    |
 | 5    | **Read-only feature-flag view untuk tenant admin** — panel "Fitur aktif untuk tenant Anda" di Settings                                   | ✅ Shipped — `src/app/(app)/settings/features/`      |
 | 5    | **Platform admin management UI** — tambah / promote / nonaktifkan platform admin. Self-demote di-block. Chicken-egg: admin pertama tetap SQL. | ✅ Shipped — `src/app/(super-admin)/super-admin/admins/`  |
-| 6+   | **Tenant self-signup** — marketing page apex → `/register-org` → auto-provision + Stripe billing                                          | ⏳ Planned                                          |
-| 6+   | **Bulk feature-flag toggle** — set flag ke ON/OFF untuk semua tenant sekaligus (canary rollout ke 10% tenant, dsb.)                       | ⏳ Planned                                          |
+| 6.1  | **Tenant self-signup** — public form di `/register-org` (apex) → email verification → auto-provision + 14-day trial. Rate-limited (5/IP/jam + 50 global/jam) | ✅ Shipped — migration 0078 + `src/app/register-org/` |
+| 6.2  | **Bulk feature-flag toggle** — panel `/super-admin/features` untuk flip ON/OFF ke semua/aktif/canary list per feature key                 | ✅ Shipped — `bulkToggleFeatureFlagAction` + `/super-admin/features` |
+| 6.3  | **Stripe billing integration** — convert trial → paid, subscription webhook, dunning saat trial expired                                    | ⏳ Planned                                          |
+| 6.3  | **Auto-suspend expired trials** — cron/scheduler yang men-suspend tenant `plan=trial` dengan `trial_ends_at < now() − grace_period`         | ⏳ Planned                                          |
 
 Rekomendasi pattern:
 

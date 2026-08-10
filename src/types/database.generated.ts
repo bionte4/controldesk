@@ -6547,6 +6547,59 @@ export type Database = {
           },
         ]
       }
+      tenant_signup_requests: {
+        Row: {
+          admin_email: string
+          admin_name: string
+          created_at: string
+          expires_at: string
+          id: string
+          ip_address: unknown
+          name: string
+          slug: string
+          token_hash: string
+          user_agent: string | null
+          verified_at: string | null
+          verified_tenant_id: string | null
+        }
+        Insert: {
+          admin_email: string
+          admin_name: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          ip_address?: unknown
+          name: string
+          slug: string
+          token_hash: string
+          user_agent?: string | null
+          verified_at?: string | null
+          verified_tenant_id?: string | null
+        }
+        Update: {
+          admin_email?: string
+          admin_name?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          ip_address?: unknown
+          name?: string
+          slug?: string
+          token_hash?: string
+          user_agent?: string | null
+          verified_at?: string | null
+          verified_tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_signup_requests_verified_tenant_id_fkey"
+            columns: ["verified_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_smtp_configs: {
         Row: {
           created_at: string
@@ -6699,28 +6752,37 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          plan: string
+          provisioned_via: string
           retirement_age: number
           slug: string
           status: Database["public"]["Enums"]["tenant_status"]
           timezone: string
+          trial_ends_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
+          plan?: string
+          provisioned_via?: string
           retirement_age?: number
           slug: string
           status?: Database["public"]["Enums"]["tenant_status"]
           timezone?: string
+          trial_ends_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
+          plan?: string
+          provisioned_via?: string
           retirement_age?: number
           slug?: string
           status?: Database["public"]["Enums"]["tenant_status"]
           timezone?: string
+          trial_ends_at?: string | null
         }
         Relationships: []
       }
@@ -7656,6 +7718,17 @@ export type Database = {
       }
       can_admin_target_user: { Args: { p_target: string }; Returns: boolean }
       canonical_employee_role: { Args: never; Returns: string }
+      complete_tenant_signup: {
+        Args: { p_admin_user_id: string; p_raw_token: string }
+        Returns: {
+          admin_email: string
+          admin_name: string
+          employee_id: string
+          name: string
+          slug: string
+          tenant_id: string
+        }[]
+      }
       compute_project_direct_labour: {
         Args: { p_from_date: string; p_project_id: string; p_to_date: string }
         Returns: number
@@ -7757,6 +7830,7 @@ export type Database = {
         }
         Returns: number
       }
+      purge_expired_signup_requests: { Args: never; Returns: number }
       record_audit_log: {
         Args: {
           p_action_type: Database["public"]["Enums"]["audit_action_type"]
@@ -7789,6 +7863,14 @@ export type Database = {
         Returns: string
       }
       resolve_tenant_id_by_slug: { Args: { p_slug: string }; Returns: string }
+      resolve_tenant_plan_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          plan: string
+          status: string
+          trial_ends_at: string
+        }[]
+      }
       resolve_tenant_status_by_slug: {
         Args: { p_slug: string }
         Returns: string

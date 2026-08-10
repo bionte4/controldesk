@@ -48,6 +48,12 @@ export default async function SuperAdminLayout({
                 + New tenant
               </Link>
               <Link
+                href="/super-admin/features"
+                className="hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                Bulk features
+              </Link>
+              <Link
                 href="/super-admin/admins"
                 className="hover:text-zinc-900 dark:hover:text-zinc-100"
               >

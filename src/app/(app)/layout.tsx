@@ -8,6 +8,7 @@ import type { NotificationItem } from "@/components/shell/notifications-bell";
 import type { InsightPreview } from "@/components/shell/ai-insights-badge";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { PageTransition } from "@/components/shell/page-transition";
+import { TrialBanner } from "@/components/shell/trial-banner";
 import { isLocale } from "@/lib/i18n/config";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -105,6 +106,7 @@ export default async function AppLayout({
             aiInsights={aiInsightItems}
             locale={locale}
           />
+          <TrialBanner tenantId={employee.tenant_id} />
           <main className="flex-1 flex flex-col p-6 md:p-8">
             <PageTransition>{children}</PageTransition>
           </main>

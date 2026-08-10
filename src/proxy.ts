@@ -90,6 +90,7 @@ export async function proxy(request: NextRequest) {
       pathname === "/" ||
       pathname.startsWith("/marketing") ||
       pathname.startsWith("/super-admin") ||
+      pathname.startsWith("/register-org") ||
       pathname === "/login" ||
       pathname === "/forgot-password" ||
       pathname.startsWith("/auth") ||
