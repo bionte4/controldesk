@@ -21,9 +21,8 @@ import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadPostableAccounts } from "@/lib/data/coa";
 import { loadLookupOptions } from "@/lib/data/lookups";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import {
-  BUDGET_VIEWER_ROLES,
-  roleInGate,
   toCanonicalRole,
   type AnyDbEmployeeRole,
 } from "@/lib/rbac/roles";
@@ -197,7 +196,8 @@ export default async function BudgetDetailPage(props: {
   const { id } = await props.params;
 
   const employee = await requireCurrentEmployee();
-  if (!roleInGate(employee.role, BUDGET_VIEWER_ROLES)) {
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_budget")) {
     redirect("/dashboard?error=forbidden");
   }
 

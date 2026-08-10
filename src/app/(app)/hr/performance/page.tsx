@@ -15,11 +15,8 @@ import {
 } from "@/components/ui/card";
 import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import {
-  PERFORMANCE_VIEWER_ROLES,
-  roleInGate,
-  type EmployeeRole,
-} from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ContractRecommendation,
@@ -45,8 +42,11 @@ export default async function PerformanceEvaluationsPage() {
 
   // RLS filters rows to HR/Mgmt OR "I am SPV/PM/OM of this row" —
   // EMPLOYEE without those relationships would land on an empty page.
-  // Redirect them to the dashboard for a clearer signal.
-  if (!roleInGate(employee.role, PERFORMANCE_VIEWER_ROLES)) {
+  // Redirect them to the dashboard for a clearer signal. The
+  // `view_performance` capability rolls up the same list plus any
+  // per-tenant admin overrides.
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_performance")) {
     redirect("/dashboard?error=forbidden");
   }
 

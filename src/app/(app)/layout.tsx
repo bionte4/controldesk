@@ -11,6 +11,8 @@ import { PageTransition } from "@/components/shell/page-transition";
 import { TrialBanner } from "@/components/shell/trial-banner";
 import { isLocale } from "@/lib/i18n/config";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { CAPABILITY_IDS } from "@/lib/rbac/capabilities";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
 import type {
   AiInsightKind,
@@ -36,6 +38,20 @@ export default async function AppLayout({
   const employee = await requireCurrentEmployee();
 
   const supabase = await createClient();
+  // Resolve the tenant-aware capability set ONCE at the layout root.
+  // Every page under `(app)/*` re-reads the same in-memory cache
+  // (React.cache) so this is effectively free after the first hit;
+  // page guards share the exact same view.
+  //
+  // For the client-side sidebar we can't pass the full `CapabilitySet`
+  // (its methods are functions, non-serialisable across the RSC ↔
+  // Client boundary). Instead we compute a plain `string[]` of the
+  // capability IDs this caller currently has, and let the sidebar
+  // filter against that. Same source of truth, serialisation-safe.
+  const capabilities = await resolveCapabilitiesFor();
+  const allowedCapabilities = CAPABILITY_IDS.filter((id) =>
+    capabilities.can(id),
+  );
   const canReadAiInsights = AI_INSIGHT_ROLES.includes(employee.role);
   const [{ data: tenant }, { data: notifications }, { data: aiInsightsRaw }] =
     await Promise.all([
@@ -91,6 +107,7 @@ export default async function AppLayout({
       <CommandPalette>
         <AppSidebar
           role={employee.role}
+          allowedCapabilities={allowedCapabilities}
           tenantName={tenant?.name ?? "ControlDesk"}
           tenantSlug={employee.tenant_slug}
         />

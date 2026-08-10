@@ -65,7 +65,8 @@ export type CanonicalResource =
   | "project_issue"
   | "weekly_timesheet"
   | "client_portal_view"
-  | "approval_threshold";
+  | "approval_threshold"
+  | "capability_override";
 
 export type CanonicalActor = {
   userId: string;
@@ -225,6 +226,8 @@ export function authorizeCanonical(input: {
       return decideClientPortalView(actor, action);
     case "approval_threshold":
       return decideApprovalThreshold(actor, action);
+    case "capability_override":
+      return decideCapabilityOverride(actor, action);
     default: {
       const _never: never = resource;
       return DENY(`unknown canonical resource: ${String(_never)}`);
@@ -257,7 +260,8 @@ function decideCanonicalApproval(
     resource !== "project_milestone" &&
     resource !== "project_task" &&
     resource !== "client_portal_view" &&
-    resource !== "approval_threshold"
+    resource !== "approval_threshold" &&
+    resource !== "capability_override"
   ) {
     const isOverEscalated = detectOverEscalation(actor.role, slot, attrs);
     if (isOverEscalated) {
@@ -728,4 +732,26 @@ function decideApprovalThreshold(actor: CanonicalActor, action: CanonicalActionV
       : DENY("only ADMIN may remove threshold override");
   }
   return DENY(`unsupported action on approval_threshold: ${action}`);
+}
+
+// ---------------------------------------------------------------------------
+// Capability override matrix (rules §3 Fase 2, migration 0081).
+// ---------------------------------------------------------------------------
+
+function decideCapabilityOverride(actor: CanonicalActor, action: CanonicalActionVerb): Decision {
+  // Same policy shape as `approval_threshold`: create/update require
+  // ADMIN or DIRECTOR (`GENERAL_MANAGER` folds to DIRECTOR post-Fase 0),
+  // delete requires ADMIN. RLS on `tenant_capability_overrides`
+  // (migration 0081) enforces the same restriction at the row layer.
+  if (action === "create" || action === "update") {
+    return actor.role === "ADMIN" || actor.role === "DIRECTOR"
+      ? ALLOW("admin/director tunes capability matrix")
+      : DENY("only ADMIN / DIRECTOR may tune capability matrix");
+  }
+  if (action === "delete") {
+    return actor.role === "ADMIN"
+      ? ALLOW("admin removes capability override")
+      : DENY("only ADMIN may remove capability override");
+  }
+  return DENY(`unsupported action on capability_override: ${action}`);
 }

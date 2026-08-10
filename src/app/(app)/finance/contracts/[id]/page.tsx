@@ -22,7 +22,8 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CONTRACT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { EmployeeRole } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus, ProjectStatus } from "@/types/database";
@@ -55,10 +56,11 @@ export default async function ContractDetailPage(props: {
 
   const employee = await requireCurrentEmployee();
 
-  // Mirrors the list-page guard: RLS on `bpo_contracts` is tenant-only,
-  // so we role-gate contract detail (MRR, client industry, linked
-  // projects) at the app layer.
-  if (!roleInGate(employee.role, CONTRACT_VIEWER_ROLES)) {
+  // Mirrors the list-page capability gate: RLS on `bpo_contracts` is
+  // tenant-only, so `view_contract` guards contract detail (MRR,
+  // client industry, linked projects) at the app layer too.
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_contract")) {
     redirect("/dashboard?error=forbidden");
   }
 

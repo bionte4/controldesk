@@ -16,6 +16,64 @@
     "edit": "Edit",
     "confirm": "Confirm"
   },
+  "roles": {
+    "EMPLOYEE": "Employee",
+    "SUPERVISOR": "Supervisor",
+    "PROJECT_MANAGER": "Project Manager",
+    "OPERATIONS_MANAGER": "Operations Manager",
+    "HEAD_MANAGER": "Head Manager",
+    "GENERAL_MANAGER": "General Manager",
+    "PETTY_CASH_CUSTODIAN": "Petty Cash Custodian",
+    "LEAD_FINANCE": "Lead Finance",
+    "HR_ADMIN": "HR Admin",
+    "TENANT_ADMIN": "Admin"
+  },
+  "capabilities": {
+    "view_budget": {
+      "title": "View budgets",
+      "description": "Budget figures across dashboard, project list, and project detail."
+    },
+    "view_contract": {
+      "title": "View BPO contracts",
+      "description": "MRR, contract value, and commercial SLA terms."
+    },
+    "view_petty_cash": {
+      "title": "View petty cash",
+      "description": "Fund balances, vouchers, and petty cash reconciliations."
+    },
+    "view_payroll": {
+      "title": "View payroll",
+      "description": "Pay periods, base salary, and per-employee payslips."
+    },
+    "view_performance": {
+      "title": "View performance evaluations",
+      "description": "Draft and finalized performance reviews."
+    },
+    "view_employee_directory": {
+      "title": "View employee directory",
+      "description": "Staff directory, contacts, and team structure."
+    },
+    "view_upk": {
+      "title": "View termination severance",
+      "description": "Termination severance drafts (UPK) and approval trail."
+    },
+    "view_client": {
+      "title": "View client directory",
+      "description": "Client directory, PIC contacts, and commercial history."
+    },
+    "view_assignment": {
+      "title": "View assignment matrix",
+      "description": "PM and employee allocation across projects."
+    },
+    "view_handover": {
+      "title": "View PM handovers",
+      "description": "Project handover briefs between PMs."
+    },
+    "view_insights": {
+      "title": "View AI insights",
+      "description": "AI insights: expense impact, utilization, client health, SLA breach risk."
+    }
+  },
   "brand": {
     "name": "ControlDesk",
     "tagline": "One workspace for projects, people, cash, and clients."
@@ -307,6 +365,7 @@
       "preferences": "Preferences",
       "integrations": "Integrations",
       "approvalThresholds": "Approval thresholds",
+      "capabilities": "Capabilities",
       "features": "Active features"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
@@ -1951,6 +2010,10 @@
           "title": "Approval Thresholds",
           "description": "Tune the IDR amounts that drive PM / Finance / Director routing per tenant."
         },
+        "capabilities": {
+          "title": "Capabilities",
+          "description": "Choose who can see finance, HR, and operations modules through a per-role toggle matrix."
+        },
         "features": {
           "title": "Active features",
           "description": "See which features are enabled by the platform team for your tenant (read-only)."
@@ -2580,6 +2643,48 @@
         "reset": "{kind} threshold reset to default.",
         "resetFailed": "Failed to reset threshold."
       }
+    },
+    "capabilities": {
+      "backToSettings": "Back to Settings",
+      "kicker": "Admin · Capabilities",
+      "title": "Capability matrix",
+      "subtitle": "Choose which roles can see each module. Click a cell to grant / revoke / reset to default. Changes take effect on the next navigation for every user in your tenant.",
+      "overrideCount": "{count} custom active",
+      "overrideCountShort": "{count} custom",
+      "noOverrides": "Using catalog defaults",
+      "hint": {
+        "title": "How it works",
+        "body": "Catalog defaults are chosen for the standard role hierarchy. Toggles here override the default per role in your tenant; the reset button clears the override and reverts to default."
+      },
+      "category": {
+        "finance": "Finance",
+        "hr": "Human Resources",
+        "operations": "Operations",
+        "strategy": "Strategy & Analytics"
+      },
+      "sensitivity": {
+        "low": "Low sensitivity",
+        "medium": "Medium sensitivity",
+        "high": "High sensitivity"
+      },
+      "cellState": {
+        "default-allow": "Default: allowed",
+        "default-deny": "Default: denied",
+        "override-allow": "Custom: allowed",
+        "override-deny": "Custom: denied"
+      },
+      "cellHint": {
+        "default-allow": "Click to block this role.",
+        "default-deny": "Click to allow this role.",
+        "override-allow": "Click to reset to default.",
+        "override-deny": "Click to reset to default."
+      },
+      "resetCapability": "Reset all",
+      "resetDone": "{count} overrides cleared.",
+      "saved": "Change saved.",
+      "errorSave": "Failed to save change.",
+      "confirmGrantHigh": "This capability is high sensitivity. Grant access to {role}?",
+      "confirmResetCapability": "Reset all overrides for this capability to catalog defaults?"
     },
     "lookups": {
       "backToSettings": "Back to Settings",

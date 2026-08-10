@@ -32,19 +32,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { defaultRolesFor, type CapabilityId } from "@/lib/rbac/capabilities";
+import type { CapabilitySet } from "@/lib/rbac/capability-resolver";
 import {
-  ASSIGNMENT_VIEWER_ROLES,
-  BUDGET_VIEWER_ROLES,
-  CLIENT_VIEWER_ROLES,
-  CONTRACT_VIEWER_ROLES,
-  EMPLOYEE_DIRECTORY_VIEWER_ROLES,
-  HANDOVER_VIEWER_ROLES,
-  INSIGHTS_VIEWER_ROLES,
-  PAYROLL_VIEWER_ROLES,
-  PERFORMANCE_VIEWER_ROLES,
-  PETTY_CASH_VIEWER_ROLES,
   roleInGate,
-  UPK_VIEWER_ROLES,
   type AnyDbEmployeeRole,
   type EmployeeRole,
 } from "@/lib/rbac/roles";
@@ -67,8 +58,26 @@ export type NavItem = {
   titleKey: NavItemKey;
   href: string;
   icon: LucideIcon;
-  /** If set, the item is only shown when the current role is in the list. */
+  /**
+   * Legacy role gate — plain list of roles that see the item. Kept
+   * for entries that don't map to a capability (e.g. `settings/users`,
+   * `settings/lookups`). When `capabilityId` is also set,
+   * `capabilityId` wins.
+   */
   roles?: readonly EmployeeRole[];
+  /**
+   * Fase 2 capability-based gate. When set, the sidebar filter
+   * consults `CapabilitySet.can(id)` — which folds catalog defaults
+   * with per-tenant overrides from `tenant_capability_overrides`.
+   * This is the preferred gate for anything that maps 1:1 to a
+   * capability in `src/lib/rbac/capabilities.ts`; the admin toggle
+   * UI at `/settings/capabilities` mutates the same set.
+   *
+   * When BOTH `capabilityId` and `roles` are set, `capabilityId`
+   * takes precedence (allows a graceful migration path for items
+   * we haven't converted yet).
+   */
+  capabilityId?: CapabilityId;
   /**
    * Pin this item to the top of its section, above the alphabetized
    * rest. Used for section entry-point items like "Overview" under
@@ -95,10 +104,11 @@ export const NAV_SECTIONS: NavSection[] = [
         href: "/insights",
         icon: BrainCircuit,
         // AI insight cards synthesize cross-project data — mirrors
-        // `INSIGHTS_VIEWER_ROLES` in `src/lib/rbac/roles.ts`. The
-        // `/insights` page also enforces the same list as a redirect
-        // guard because RLS on `ai_insights` is tenant-only.
-        roles: INSIGHTS_VIEWER_ROLES,
+        // catalog capability `view_insights`. Both the sidebar and
+        // the `/insights` page consume `CapabilitySet.can()` so a
+        // tenant override at `/settings/capabilities` applies to
+        // both surfaces simultaneously.
+        capabilityId: "view_insights",
       },
     ],
   },
@@ -109,20 +119,20 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "clients",
         href: "/clients",
         icon: Briefcase,
-        // Client directory + commercial history. Sidebar + page
-        // redirect both source from `CLIENT_VIEWER_ROLES` so EMPLOYEE
-        // / SUPERVISOR see clients only via their own project detail
-        // pages (rules §8 delivery-layer scoping).
-        roles: CLIENT_VIEWER_ROLES,
+        // Client directory + commercial history — capability
+        // `view_client`. EMPLOYEE / SUPERVISOR see clients only via
+        // their own project detail pages (rules §8 delivery-layer
+        // scoping); page redirect enforces the same capability.
+        capabilityId: "view_client",
       },
       { titleKey: "projects", href: "/projects", icon: ClipboardList },
       {
         titleKey: "assignments",
         href: "/assignments",
         icon: UserPlus,
-        // Cross-project PM + employee allocation matrix — management
-        // + HR (utilization planning). Mirrors `ASSIGNMENT_VIEWER_ROLES`.
-        roles: ASSIGNMENT_VIEWER_ROLES,
+        // Cross-project PM + employee allocation matrix — capability
+        // `view_assignment` (management + HR utilization planning).
+        capabilityId: "view_assignment",
       },
       // NOTE: "Team" nav entry retired — the staff directory lives at
       // /hr/employees (People > Karyawan) as of the Employees module. The
@@ -132,10 +142,8 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "handovers",
         href: "/handovers",
         icon: ArrowLeftRight,
-        // PM handover notes. Mirrors `HANDOVER_VIEWER_ROLES` — the
-        // list now includes PROJECT_MANAGER (they own the outgoing +
-        // incoming perspective) so the link isn't a dead-end for PMs.
-        roles: HANDOVER_VIEWER_ROLES,
+        // PM handover notes — capability `view_handover`.
+        capabilityId: "view_handover",
       },
     ],
   },
@@ -152,37 +160,28 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "pettyCash",
         href: "/finance/petty-cash",
         icon: Coins,
-        // Petty cash operators + management oversight. Mirrors
-        // `PETTY_CASH_VIEWER_ROLES` in `src/lib/rbac/roles.ts` — the
-        // `/finance/petty-cash` + `[id]` pages enforce the same list
-        // as a redirect guard because RLS on petty cash tables is
-        // tenant-only.
-        roles: PETTY_CASH_VIEWER_ROLES,
+        // Petty cash operators + management oversight — capability
+        // `view_petty_cash`. RLS on petty cash tables is tenant-only,
+        // so both list and detail pages consume the same capability.
+        capabilityId: "view_petty_cash",
       },
       {
         titleKey: "budgets",
         href: "/finance/budgets",
         icon: BadgeDollarSign,
-        // Budget planning (total_planned per project, budget_details
-        // line items) is a finance/management concern. RLS on
-        // `budgets` + `budget_details` is tenant-only, so both the
-        // list and detail pages enforce `BUDGET_VIEWER_ROLES` as a
-        // redirect guard. Sidebar gate mirrors the same list.
-        roles: BUDGET_VIEWER_ROLES,
+        // Budget planning — capability `view_budget`. Same capability
+        // hides the Dashboard KPI + Projects Budget column + project
+        // detail Budget/Expenses cards.
+        capabilityId: "view_budget",
       },
       {
         titleKey: "contracts",
         href: "/finance/contracts",
         icon: FileText,
-        // Contract data (MRR, contract value, SLA commercial terms) is
-        // commercially sensitive. Mirrors the DB update policy
-        // `bpo_contracts_finance_update` so the sidebar link is only
-        // visible to roles that can also meaningfully act on contracts.
-        // The `/finance/contracts` page + `/finance/contracts/[id]`
-        // page both enforce the same list at the page layer because
-        // the DB read policy is tenant-only (see
-        // `CONTRACT_VIEWER_ROLES` in `src/lib/rbac/roles.ts`).
-        roles: CONTRACT_VIEWER_ROLES,
+        // Commercial contracts (MRR, contract value, SLA terms) —
+        // capability `view_contract`. High-sensitivity: admin
+        // toggle at `/settings/capabilities` warns before grants.
+        capabilityId: "view_contract",
       },
       { titleKey: "approvals", href: "/approvals", icon: ShieldCheck },
     ],
@@ -190,17 +189,16 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     labelKey: "people",
     items: [
-      // Staff directory is HR/mgmt only — plain EMPLOYEE and PCC
-      // have no operational need for the org chart. Scoping
-      // (SPV/PM see teammates, OM portfolio, HR/Finance/Admin
-      // everyone) is enforced inside the page by
-      // `resolveEmployeeScope()`; this gate just controls the
-      // sidebar link so a denied role never sees a dead link.
+      // Staff directory — capability `view_employee_directory`.
+      // Row-level scoping (SPV/PM see teammates, OM portfolio,
+      // HR/Finance/Admin everyone) is enforced inside the page by
+      // `resolveEmployeeScope()`; this gate just controls whether
+      // the sidebar link renders at all.
       {
         titleKey: "employees",
         href: "/hr/employees",
         icon: Users,
-        roles: EMPLOYEE_DIRECTORY_VIEWER_ROLES,
+        capabilityId: "view_employee_directory",
       },
       { titleKey: "roster", href: "/hr/roster", icon: CalendarDays },
       {
@@ -230,31 +228,28 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "performance",
         href: "/hr/performance",
         icon: BadgeDollarSign,
-        // HR performance evaluations. RLS on `performance_evaluations`
-        // already limits rows to HR/Mgmt OR the SPV/PM/OM who own the
-        // row (see migration 0059), so an EMPLOYEE hitting this page
-        // would see an empty list. Gate the sidebar entry (and add a
-        // page-level redirect) so we don't tease a dead-end link.
-        roles: PERFORMANCE_VIEWER_ROLES,
+        // HR performance evaluations — capability `view_performance`.
+        // Row-level RLS on `performance_evaluations` (migration 0059)
+        // is complementary.
+        capabilityId: "view_performance",
       },
       {
         titleKey: "upk",
         href: "/hr/upk",
         icon: Banknote,
-        // Termination severance (UPK) notes. RLS on `upk_notes`
-        // limits rows to HR/Mgmt or drafter, but the page shell
-        // still exposes sensitive terminology. Sidebar + page
-        // redirect both mirror `UPK_VIEWER_ROLES`.
-        roles: UPK_VIEWER_ROLES,
+        // Termination severance (UPK) notes — capability `view_upk`.
+        // High-sensitivity: admin toggle at `/settings/capabilities`
+        // warns before non-default grants.
+        capabilityId: "view_upk",
       },
       {
         titleKey: "payroll",
         href: "/hr/payroll",
         icon: Banknote,
-        // Rules §3 salary confidentiality. Payroll periods + line
-        // items now RLS-gated to `is_payroll_operator()` (see
-        // migration 0080). Sidebar gate matches `PAYROLL_VIEWER_ROLES`.
-        roles: PAYROLL_VIEWER_ROLES,
+        // Payroll periods + line items — capability `view_payroll`.
+        // Migration 0080 RLS-gates the tables to
+        // `is_payroll_operator()` as a second line of defence.
+        capabilityId: "view_payroll",
       },
     ],
   },
@@ -338,6 +333,16 @@ export const NAV_SECTIONS: NavSection[] = [
         roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
       },
       {
+        titleKey: "capabilities",
+        href: "/settings/capabilities",
+        icon: ShieldCheck,
+        // Fase 2 capability toggle matrix. Same admin gate as the
+        // approval thresholds surface — RLS on
+        // `tenant_capability_overrides` (migration 0081) enforces
+        // ADMIN + DIRECTOR write policy at the row layer.
+        roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+      },
+      {
         titleKey: "features",
         href: "/settings/features",
         icon: ToggleRight,
@@ -376,15 +381,83 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+/**
+ * Filter the nav config for a caller with a resolved
+ * `CapabilitySet` in hand. Server-side entry point — used by
+ * anywhere that already has the resolver instance (server actions,
+ * page-level RSCs). Client components cannot use this directly
+ * because `CapabilitySet` methods can't cross the RSC ↔ Client
+ * boundary; those consumers should call
+ * `filterNavByAllowedCapabilities` with a plain string array
+ * instead.
+ *
+ * When both `capabilityId` and `roles` are present on an item,
+ * `capabilityId` wins so a tenant override at
+ * `/settings/capabilities` always has the final say.
+ */
+export function filterNavForCaller(
+  role: AnyDbEmployeeRole,
+  caps: CapabilitySet,
+): NavSection[] {
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.capabilityId) return caps.can(item.capabilityId);
+      if (item.roles) return roleInGate(role, item.roles);
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
+}
+
+/**
+ * Serialisation-safe filter for client components. Takes the
+ * caller's list of allowed capability IDs (a plain string array,
+ * as computed by the RSC layout) and returns only the sections /
+ * items they can see. Legacy `roles` gates fall through to the
+ * client-side role check.
+ */
+export function filterNavByAllowedCapabilities(
+  role: AnyDbEmployeeRole,
+  allowed: readonly CapabilityId[],
+): NavSection[] {
+  const allowedSet = new Set<string>(allowed);
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.capabilityId) return allowedSet.has(item.capabilityId);
+      if (item.roles) return roleInGate(role, item.roles);
+      return true;
+    }),
+  })).filter((section) => section.items.length > 0);
+}
+
+/**
+ * Legacy sync filter — no capability awareness. Retained for
+ * consumers that legitimately can't await (unit tests, non-server
+ * code). App-shell consumers should call `filterNavForCaller` from
+ * an RSC layout with the resolved `CapabilitySet`.
+ *
+ * `roleInGate` folds canonical + legacy on both sides so a user
+ * seeded with `role='PM'` sees every item declared with
+ * `PROJECT_MANAGER` (and vice versa). Keeps the sidebar drift-free
+ * during the Fase 0 legacy/canonical dual-mode.
+ *
+ * @deprecated Prefer `filterNavForCaller` — this variant cannot see
+ * per-tenant capability overrides. Kept only for isomorphic use
+ * cases.
+ */
 export function filterNavForRole(role: AnyDbEmployeeRole): NavSection[] {
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    // `roleInGate` folds canonical + legacy on both sides so a user
-    // seeded with `role='PM'` sees every item declared with
-    // `PROJECT_MANAGER` (and vice versa). Keeps the sidebar drift-free
-    // during the Fase 0 legacy/canonical dual-mode.
-    items: section.items.filter(
-      (item) => !item.roles || roleInGate(role, item.roles),
-    ),
+    items: section.items.filter((item) => {
+      if (item.capabilityId) {
+        // No capability set available in sync context — fall back
+        // to catalog defaults so items don't disappear from tests
+        // just because they migrated to capabilityId.
+        return roleInGate(role, defaultRolesFor(item.capabilityId));
+      }
+      if (item.roles) return roleInGate(role, item.roles);
+      return true;
+    }),
   })).filter((section) => section.items.length > 0);
 }

@@ -3,8 +3,8 @@
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { formatIDR, parseMoneyFromDb, type Money } from "@/lib/format/money";
 import { budgetPendingForRole } from "@/lib/budgets/state";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import {
-  canViewBudget,
   toCanonicalRole,
   type AnyDbEmployeeRole,
 } from "@/lib/rbac/roles";
@@ -147,7 +147,8 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
     id: employee.id,
     role: dbRole,
   });
-  const showBudget = canViewBudget(dbRole);
+  const capabilities = await resolveCapabilitiesFor();
+  const showBudget = capabilities.can("view_budget");
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {
@@ -262,7 +263,8 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     id: employee.id,
     role: dbRole,
   });
-  const showBudget = canViewBudget(dbRole);
+  const capabilities = await resolveCapabilitiesFor();
+  const showBudget = capabilities.can("view_budget");
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {

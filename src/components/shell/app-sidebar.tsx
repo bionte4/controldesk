@@ -21,15 +21,25 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { filterNavForRole, type NavItem } from "@/lib/nav/config";
+import { filterNavForRole, filterNavByAllowedCapabilities, type NavItem } from "@/lib/nav/config";
+import type { CapabilityId } from "@/lib/rbac/capabilities";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 
 export function AppSidebar({
   role,
+  allowedCapabilities,
   tenantName,
   tenantSlug,
 }: {
   role: AnyDbEmployeeRole;
+  /**
+   * Capability IDs the caller currently has access to, computed on
+   * the server via `resolveCapabilitiesFor().can(id)` and passed
+   * down as a plain string array (serialisable across the RSC ↔
+   * Client boundary). When absent (legacy call sites), we fall
+   * back to the sync catalog-default filter.
+   */
+  allowedCapabilities?: readonly CapabilityId[];
   tenantName: string;
   tenantSlug: string;
 }) {
@@ -38,7 +48,13 @@ export function AppSidebar({
   const tSections = useTranslations("nav.sections");
   const tItems = useTranslations("nav.items");
   const tNav = useTranslations("nav");
-  const sections = React.useMemo(() => filterNavForRole(role), [role]);
+  const sections = React.useMemo(
+    () =>
+      allowedCapabilities
+        ? filterNavByAllowedCapabilities(role, allowedCapabilities)
+        : filterNavForRole(role),
+    [allowedCapabilities, role],
+  );
 
   /**
    * Per-section sort: `pinned` items first (preserving their

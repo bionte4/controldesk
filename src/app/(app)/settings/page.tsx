@@ -9,6 +9,7 @@ import {
   Plug,
   Scale,
   Settings as SettingsIcon,
+  ShieldCheck,
   Sparkles,
   ToggleRight,
   Upload,
@@ -45,6 +46,7 @@ type TileKey =
   | "coa"
   | "lookups"
   | "approvalThresholds"
+  | "capabilities"
   | "features"
   | "bulkImport"
   | "integrations"
@@ -85,6 +87,16 @@ const ADMIN_TILES: readonly AdminTile[] = [
     // per-tenant thresholds. RLS policy on `approval_thresholds` also
     // gates writes to canonical ADMIN/DIRECTOR — this list only decides
     // whether the tile renders in the hub.
+    allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+  },
+  {
+    key: "capabilities",
+    href: "/settings/capabilities",
+    icon: ShieldCheck,
+    // Capability toggle matrix (rules §3 Fase 2). Same gate as
+    // approval thresholds — DB RLS on `tenant_capability_overrides`
+    // (migration 0081) locks writes to ADMIN + DIRECTOR too, so the
+    // tile just decides visibility here.
     allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
   },
   {
@@ -158,6 +170,10 @@ export default async function SettingsHubPage() {
     approvalThresholds: {
       title: t("admin.tiles.approvalThresholds.title"),
       description: t("admin.tiles.approvalThresholds.description"),
+    },
+    capabilities: {
+      title: t("admin.tiles.capabilities.title"),
+      description: t("admin.tiles.capabilities.description"),
     },
     features: {
       title: t("admin.tiles.features.title"),

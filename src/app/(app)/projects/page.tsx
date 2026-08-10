@@ -16,11 +16,8 @@ import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import {
-  canViewBudget,
-  type AnyDbEmployeeRole,
-  type EmployeeRole,
-} from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ProjectPriority,
@@ -211,7 +208,8 @@ export default async function ProjectsPage() {
   // first so we can parallelise the rest against that scope.
   const employee = await requireCurrentEmployee();
   const dbRole = employee.role as AnyDbEmployeeRole;
-  const showBudget = canViewBudget(dbRole);
+  const capabilities = await resolveCapabilitiesFor();
+  const showBudget = capabilities.can("view_budget");
   const [
     projects,
     clientOptions,

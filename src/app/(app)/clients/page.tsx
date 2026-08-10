@@ -15,7 +15,8 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CLIENT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus } from "@/types/database";
 
@@ -133,7 +134,8 @@ const STATUS_TONE: Record<ClientStatus, string> = {
 
 export default async function ClientsPage() {
   const employee = await requireCurrentEmployee();
-  if (!roleInGate(employee.role, CLIENT_VIEWER_ROLES)) {
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_client")) {
     redirect("/dashboard?error=forbidden");
   }
 

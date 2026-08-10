@@ -6509,6 +6509,65 @@ export type Database = {
           },
         ]
       }
+      tenant_capability_overrides: {
+        Row: {
+          capability_id: string
+          granted: boolean
+          id: string
+          role: Database["public"]["Enums"]["employee_role"]
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          capability_id: string
+          granted: boolean
+          id?: string
+          role: Database["public"]["Enums"]["employee_role"]
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          capability_id?: string
+          granted?: boolean
+          id?: string
+          role?: Database["public"]["Enums"]["employee_role"]
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_capability_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_capability_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_capability_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_capability_overrides_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+        ]
+      }
       tenant_feature_flags: {
         Row: {
           enabled: boolean
@@ -7776,6 +7835,7 @@ export type Database = {
       }
       is_current_user_platform_admin: { Args: never; Returns: boolean }
       is_hr_or_management: { Args: never; Returns: boolean }
+      is_payroll_operator: { Args: never; Returns: boolean }
       next_ba_number: {
         Args: { v_tenant_id: string; v_year: number }
         Returns: string

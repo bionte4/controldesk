@@ -17,7 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { PETTY_CASH_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
 import type {
   PettyCashReplenishmentStatus,
@@ -54,7 +54,8 @@ export default async function PettyCashFundDetailPage(props: {
 }) {
   const { id } = await props.params;
   const employee = await requireCurrentEmployee();
-  if (!roleInGate(employee.role, PETTY_CASH_VIEWER_ROLES)) {
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_petty_cash")) {
     redirect("/dashboard?error=forbidden");
   }
   const t = await getTranslations("pettyCash.detail");

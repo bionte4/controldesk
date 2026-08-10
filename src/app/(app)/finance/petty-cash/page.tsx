@@ -15,7 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { PETTY_CASH_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
 
 import { NewFundSheet, type CustodianOption } from "./new-fund-sheet";
@@ -83,8 +83,9 @@ async function loadCustodianOptions(): Promise<CustodianOption[]> {
 }
 
 export default async function PettyCashPage() {
-  const employee = await requireCurrentEmployee();
-  if (!roleInGate(employee.role, PETTY_CASH_VIEWER_ROLES)) {
+  await requireCurrentEmployee();
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_petty_cash")) {
     redirect("/dashboard?error=forbidden");
   }
 

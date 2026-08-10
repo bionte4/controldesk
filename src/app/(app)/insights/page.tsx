@@ -14,7 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { INSIGHTS_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
 import { AI_INSIGHT_KINDS } from "@/lib/ai/schemas";
 import type {
@@ -66,8 +66,9 @@ async function loadLatestByKind(): Promise<Map<AiInsightKind, InsightRow>> {
 }
 
 export default async function InsightsPage() {
-  const employee = await requireCurrentEmployee();
-  if (!roleInGate(employee.role, INSIGHTS_VIEWER_ROLES)) {
+  await requireCurrentEmployee();
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_insights")) {
     redirect("/dashboard?error=forbidden");
   }
 

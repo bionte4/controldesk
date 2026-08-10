@@ -15,11 +15,8 @@ import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadLookupOptions } from "@/lib/data/lookups";
 import { authorize } from "@/lib/security/pdp";
-import {
-  canViewEmployeeDirectory,
-  type AnyDbEmployeeRole,
-  type EmployeeRole,
-} from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import { resolveEmployeeScope } from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -123,8 +120,12 @@ export default async function EmployeesPage() {
   // Rules §3 — plain EMPLOYEE and PETTY_CASH_CUSTODIAN have no
   // reason to browse the org chart. `notFound()` (not 403) so
   // the URL stays undiscoverable — same pattern as the finance /
-  // payroll / contracts guards.
-  if (!canViewEmployeeDirectory(dbRole)) {
+  // payroll / contracts guards. `view_employee_directory`
+  // consults the tenant-aware capability set, so an admin can
+  // legitimately grant Supervisor visibility via
+  // `/settings/capabilities` without redeploying.
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_employee_directory")) {
     notFound();
   }
 

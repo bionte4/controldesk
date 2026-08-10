@@ -23,8 +23,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import {
-  canViewBudget,
   formatRole,
   toCanonicalRole,
   type AnyDbEmployeeRole,
@@ -110,8 +110,11 @@ export default async function ProjectDetailPage(props: {
   // are gated on the `view_budget` capability. When the caller
   // cannot see budgets, we (1) skip both queries entirely so the RSC
   // payload never carries amounts, and (2) suppress the two cards
-  // that render them.
-  const showBudget = canViewBudget(employee.role as AnyDbEmployeeRole);
+  // that render them. Resolved via `resolveCapabilitiesFor()` so
+  // any per-tenant admin override at `/settings/capabilities` takes
+  // effect here too.
+  const capabilities = await resolveCapabilitiesFor();
+  const showBudget = capabilities.can("view_budget");
 
   const supabase = await createClient();
 

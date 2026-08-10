@@ -16,7 +16,8 @@ import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CONTRACT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
+import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import type { EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus } from "@/types/database";
 
@@ -49,10 +50,12 @@ export default async function ContractsPage() {
 
   // Contract MRR / value / SLA terms are commercially sensitive. The DB
   // `bpo_contracts_tenant_read` policy is tenant-only (no role filter),
-  // so the guard has to live here in addition to the sidebar role gate.
-  // Redirect with `error=forbidden` so the shell can surface a toast
-  // (same pattern as `/reports`).
-  if (!roleInGate(employee.role, CONTRACT_VIEWER_ROLES)) {
+  // so the guard has to live here in addition to the sidebar capability
+  // gate. `view_contract` folds catalog defaults with per-tenant admin
+  // overrides — a single toggle at `/settings/capabilities` swings both
+  // the sidebar entry and this redirect.
+  const capabilities = await resolveCapabilitiesFor();
+  if (!capabilities.can("view_contract")) {
     redirect("/dashboard?error=forbidden");
   }
 
