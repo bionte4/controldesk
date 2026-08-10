@@ -25,6 +25,7 @@
     "docker:rebuild": "docker compose --env-file .env.local --profile prod build app",
     "docker:app": "docker compose --env-file .env.local --profile prod up -d app",
     "docker:app:down": "docker compose --env-file .env.local --profile prod stop app",
+    "docker:refresh": "docker compose --env-file .env.local build app && docker compose --env-file .env.local up -d app && echo '\\n✓ Prod container refreshed at http://localhost:3001\\n  Tenant demo:    http://demo.localhost:3001\\n  Super-admin:    http://localhost:3001/super-admin\\n  Self-signup:    http://localhost:3001/register-org'",
     "docker:logs": "docker compose --env-file .env.local logs -f",
     "test:wa": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/test-whatsapp-fonnte.ts",
     "fonnte:device": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/fonnte-device-status.ts",
