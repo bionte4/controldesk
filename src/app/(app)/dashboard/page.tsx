@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { format } from "date-fns";
 import { getTranslations } from "next-intl/server";
 
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -19,6 +20,22 @@ import { PortfolioSnapshotSection } from "./portfolio-snapshot";
 export const metadata: Metadata = {
   title: "Dashboard",
 };
+
+/**
+ * Small visual hint so a user immediately understands *why* their
+ * KPI cards look scoped. `org` shows nothing (tenant-wide is the
+ * implicit expectation), `portfolio`/`assigned` render an outline
+ * badge with the scope name.
+ */
+function ScopeBadge({ scope }: { scope: "org" | "portfolio" | "assigned" }) {
+  if (scope === "org") return null;
+  const label = scope === "portfolio" ? "Portfolio scope" : "Assigned scope";
+  return (
+    <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+      {label}
+    </Badge>
+  );
+}
 
 export default async function DashboardPage() {
   const [employee, metrics, snapshot, t, tKpis] = await Promise.all([
@@ -54,11 +71,14 @@ export default async function DashboardPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight">
             {t("welcome", { firstName: employee.full_name.split(" ")[0] })}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {t("signedInAs", {
-              role: formatRole(employee.role),
-              tenant: employee.tenant_slug,
-            })}
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              {t("signedInAs", {
+                role: formatRole(employee.role),
+                tenant: employee.tenant_slug,
+              })}
+            </span>
+            <ScopeBadge scope={metrics.scope} />
           </p>
         </div>
         <p className="text-xs text-muted-foreground">
