@@ -14,8 +14,9 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
+import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ProjectPriority,
@@ -113,15 +114,29 @@ async function loadSponsorOptions(): Promise<SponsorOption[]> {
   });
 }
 
-async function loadProjects(): Promise<ProjectRow[]> {
+async function loadProjects(
+  employee: { id: string; role: AnyDbEmployeeRole },
+): Promise<ProjectRow[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const scope = await resolveProjectScope(employee);
+
+  // Scoped caller with no active project assignment → return empty
+  // list directly. `supabase-js` interprets `.in("id", [])` as an
+  // unfiltered SELECT (returns every tenant-scoped project), which
+  // was the exact leak fixed on the Dashboard.
+  if (scope.kind !== "org" && scope.empty) return [];
+
+  let query = supabase
     .from("projects")
     .select(
       "id, code, project_number, name, status, priority, project_type, start_date, end_date, client_id, clients(id, name, project_code), project_budgets(budget_amount)",
     )
     .order("start_date", { ascending: false, nullsFirst: false })
     .limit(200);
+  if (scope.kind !== "org") {
+    query = query.in("id", scope.projectIds);
+  }
+  const { data, error } = await query;
 
   if (error) return [];
 
@@ -166,8 +181,11 @@ const PRIORITY_TONE: Record<ProjectPriority, string> = {
 };
 
 export default async function ProjectsPage() {
+  // `loadProjects` needs the caller identity to resolve their
+  // project-visibility scope (rules §3 ABAC). Fetch the employee
+  // first so we can parallelise the rest against that scope.
+  const employee = await requireCurrentEmployee();
   const [
-    employee,
     projects,
     clientOptions,
     pmOptions,
@@ -178,8 +196,10 @@ export default async function ProjectsPage() {
     tType,
     tCols,
   ] = await Promise.all([
-    requireCurrentEmployee(),
-    loadProjects(),
+    loadProjects({
+      id: employee.id,
+      role: employee.role as AnyDbEmployeeRole,
+    }),
     loadClientOptions(),
     loadPmOptions(),
     loadSponsorOptions(),

@@ -21,9 +21,9 @@ import {
 } from "@/lib/portfolio/snapshot";
 import {
   isApproverRole,
-  resolveDashboardScope,
-  type DashboardScope,
-} from "@/lib/dashboard/scope";
+  resolveProjectScope,
+  type ProjectScope,
+} from "@/lib/security/project-scope";
 import type { MilestoneStatus } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.generated";
@@ -45,12 +45,12 @@ export type Kpi = {
 export type DashboardMetrics = {
   kpis: Kpi[];
   updatedAt: string;
-  scope: DashboardScope["kind"];
+  scope: ProjectScope["kind"];
 };
 
 export type PortfolioSnapshot = CorePortfolioSnapshot & {
   tenantId: string;
-  scope: DashboardScope["kind"];
+  scope: ProjectScope["kind"];
 };
 
 export type { PortfolioTile };
@@ -67,7 +67,7 @@ function flatSparkline(): KpiPoint[] {
  * `supabase-js` gotcha where `.in("col", [])` behaves as an
  * unfiltered query and would silently leak tenant-wide rows.
  */
-function emptyMetrics(scope: DashboardScope["kind"]): DashboardMetrics {
+function emptyMetrics(scope: ProjectScope["kind"]): DashboardMetrics {
   const zeroKpi = (id: string, label: string, formatted = "0"): Kpi => ({
     id,
     label,
@@ -114,7 +114,7 @@ async function loadScopedBudgetIds(
  */
 export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   const employee = await requireCurrentEmployee();
-  const scope = await resolveDashboardScope({
+  const scope = await resolveProjectScope({
     id: employee.id,
     role: employee.role as AnyDbEmployeeRole,
   });
@@ -198,7 +198,7 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
 /**
  * Live KPI aggregator (rules §3 ABAC + rules §12 partial).
  *
- * Scoping rules (canonical values via `resolveDashboardScope`):
+ * Scoping rules (canonical values via `resolveProjectScope`):
  *   - `org`       → tenant-wide aggregates (no project filter).
  *   - `portfolio` → filter by projects handled by any employee
  *                   reporting (transitively) to the caller.
@@ -213,7 +213,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const employee = await requireCurrentEmployee();
   const dbRole = employee.role as AnyDbEmployeeRole;
   const canonicalRole = toCanonicalRole(dbRole);
-  const scope = await resolveDashboardScope({
+  const scope = await resolveProjectScope({
     id: employee.id,
     role: dbRole,
   });

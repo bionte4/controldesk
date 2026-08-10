@@ -6,14 +6,21 @@ import { createClient } from "@/lib/supabase/server";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 
 /**
- * Dashboard visibility scope (rules §3 ABAC, rules §6 role hierarchy).
+ * Project visibility scope (rules §3 ABAC, rules §6 role hierarchy).
+ *
+ * Single source of truth for "which projects can the current user
+ * see?" — used by:
+ *   - `getDashboardMetrics` / `getPortfolioSnapshot` (KPI cards +
+ *     portfolio tiles on `/dashboard`)
+ *   - `loadProjects` (`/projects` list)
+ *   - future list surfaces: `/finance/expenses`,
+ *     `/finance/cash-advances`, `/finance/budgets`, `/hr/upk`, …
  *
  * Fixes the audit finding where every role — including a plain
- * `EMPLOYEE` field technician — saw tenant-wide KPI aggregates on
- * `/dashboard` because the Server Actions in `dashboard/actions.ts`
- * only relied on RLS `tenant_id` scoping. Personal / project-level
- * scoping is a policy decision that must be enforced in the app
- * layer as well, so this helper is the single source of truth.
+ * `EMPLOYEE` field technician — saw tenant-wide aggregates because
+ * app-layer code only relied on RLS `tenant_id` scoping. Personal /
+ * project-level scoping is a policy decision that must be enforced
+ * in the app layer as well, so this helper centralises it.
  *
  * Three shapes:
  *   - `org`       — see everything in the tenant (executives,
@@ -34,9 +41,9 @@ import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
  * `src/lib/rbac/roles.ts`.
  */
 
-export type DashboardScopeKind = "org" | "portfolio" | "assigned";
+export type ProjectScopeKind = "org" | "portfolio" | "assigned";
 
-export type DashboardScope =
+export type ProjectScope =
   | { kind: "org" }
   | {
       kind: "portfolio" | "assigned";
@@ -77,9 +84,9 @@ const PORTFOLIO_DB_ROLES: readonly AnyDbEmployeeRole[] = [
  * Pure classifier. Extracted so tests can pin the role→kind
  * mapping without hitting Supabase.
  */
-export function classifyDashboardScope(
+export function classifyProjectScope(
   role: AnyDbEmployeeRole,
-): DashboardScopeKind {
+): ProjectScopeKind {
   if ((ORG_DB_ROLES as readonly string[]).includes(role)) return "org";
   if ((PORTFOLIO_DB_ROLES as readonly string[]).includes(role))
     return "portfolio";
@@ -195,11 +202,11 @@ async function loadPortfolioProjectIds(
 // only pays for the assignment lookup once.
 // ---------------------------------------------------------------------------
 
-export const resolveDashboardScope = cache(
+export const resolveProjectScope = cache(
   async (
     employee: { id: string; role: AnyDbEmployeeRole },
-  ): Promise<DashboardScope> => {
-    const kind = classifyDashboardScope(employee.role);
+  ): Promise<ProjectScope> => {
+    const kind = classifyProjectScope(employee.role);
     if (kind === "org") return { kind: "org" };
 
     const projectIds =

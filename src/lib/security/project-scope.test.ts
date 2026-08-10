@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyDashboardScope, isApproverRole } from "./scope";
+import { classifyProjectScope, isApproverRole } from "./project-scope";
 
-describe("classifyDashboardScope", () => {
+describe("classifyProjectScope", () => {
   it("classifies executive + finance + HR roles as org-wide", () => {
     for (const role of [
       "TENANT_ADMIN",
@@ -13,7 +13,7 @@ describe("classifyDashboardScope", () => {
       "FINANCE",
       "HR_ADMIN",
     ] as const) {
-      expect(classifyDashboardScope(role)).toBe("org");
+      expect(classifyProjectScope(role)).toBe("org");
     }
   });
 
@@ -23,7 +23,7 @@ describe("classifyDashboardScope", () => {
       "OPERATIONS_MANAGER",
       "OM",
     ] as const) {
-      expect(classifyDashboardScope(role)).toBe("portfolio");
+      expect(classifyProjectScope(role)).toBe("portfolio");
     }
   });
 
@@ -35,7 +35,7 @@ describe("classifyDashboardScope", () => {
       "EMPLOYEE",
       "PETTY_CASH_CUSTODIAN",
     ] as const) {
-      expect(classifyDashboardScope(role)).toBe("assigned");
+      expect(classifyProjectScope(role)).toBe("assigned");
     }
   });
 
@@ -45,8 +45,8 @@ describe("classifyDashboardScope", () => {
     // classifier to key off canonical roles instead of DB values,
     // HM would incorrectly get org-wide visibility. This test
     // makes that regression fail fast.
-    expect(classifyDashboardScope("HEAD_MANAGER")).toBe("portfolio");
-    expect(classifyDashboardScope("HEAD_MANAGER")).not.toBe("org");
+    expect(classifyProjectScope("HEAD_MANAGER")).toBe("portfolio");
+    expect(classifyProjectScope("HEAD_MANAGER")).not.toBe("org");
   });
 
   it("does NOT downgrade PETTY_CASH_CUSTODIAN to org even though it canonical-folds to FINANCE", () => {
@@ -54,7 +54,7 @@ describe("classifyDashboardScope", () => {
     // into `FINANCE`. Custodians must remain project-scoped —
     // the `FINANCE` bucket for org visibility is reserved for
     // LEAD_FINANCE canonical FINANCE seat.
-    expect(classifyDashboardScope("PETTY_CASH_CUSTODIAN")).toBe("assigned");
+    expect(classifyProjectScope("PETTY_CASH_CUSTODIAN")).toBe("assigned");
   });
 });
 

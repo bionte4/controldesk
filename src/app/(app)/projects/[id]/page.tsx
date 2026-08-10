@@ -27,9 +27,10 @@ import {
   formatRole,
   toCanonicalRole,
   type AnyDbEmployeeRole,
+  type EmployeeRole,
 } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { loadWorkload } from "@/lib/data/assignments";
@@ -89,6 +90,21 @@ export default async function ProjectDetailPage(props: {
       getTranslations("milestones"),
       getTranslations("milestones.status"),
     ]);
+
+  // ABAC guard (rules §3, §7): Employees / Supervisors / PMs / OM
+  // may only open detail pages for projects they are assigned to
+  // (directly or, for OM/HM, via a report-chain subordinate).
+  // A URL-pasted UUID for someone else's project must render as
+  // `notFound()` rather than 403 — keeps the address undiscoverable
+  // per the same rationale as the shifts/CoA pages.
+  const scope = await resolveProjectScope({
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  });
+  if (scope.kind !== "org" && !scope.projectIds.includes(id)) {
+    notFound();
+  }
+
   const supabase = await createClient();
 
   type PmRow = {
