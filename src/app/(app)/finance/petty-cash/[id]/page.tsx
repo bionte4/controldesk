@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Coins } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -17,6 +17,7 @@ import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { PETTY_CASH_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   PettyCashReplenishmentStatus,
@@ -52,10 +53,11 @@ export default async function PettyCashFundDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const [employee, t] = await Promise.all([
-    requireCurrentEmployee(),
-    getTranslations("pettyCash.detail"),
-  ]);
+  const employee = await requireCurrentEmployee();
+  if (!PETTY_CASH_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+  const t = await getTranslations("pettyCash.detail");
 
   const supabase = await createClient();
 

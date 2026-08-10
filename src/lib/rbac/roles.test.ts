@@ -10,6 +10,7 @@ import {
   caGeneralApprovalChain,
   canApproveThreshold,
   canonicalCanApprove,
+  BUDGET_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
   EMPLOYEE_ROLES,
   expenseApprovalChain,
@@ -20,6 +21,8 @@ import {
   OPERATIONAL_LADDER,
   PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
+  PETTY_CASH_VIEWER_ROLES,
+  UPK_VIEWER_ROLES,
   pettyCashDecision,
   requiredApprovalChain,
   requiresFinanceApproval,
@@ -514,5 +517,45 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(PAYROLL_VIEWER_ROLES).toContain("HR_ADMIN");
     expect(PAYROLL_VIEWER_ROLES).toContain("GENERAL_MANAGER");
     expect(PAYROLL_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("BUDGET_VIEWER_ROLES excludes EMPLOYEE / SUPERVISOR / HR / custodian", () => {
+    // Budget planning is a PM+ / finance concern. Sidebar `budgets`
+    // entry now gates the same list so a plain EMPLOYEE never sees
+    // the link, and the page redirect guard blocks URL-paste access.
+    expect(BUDGET_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(BUDGET_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(BUDGET_VIEWER_ROLES).not.toContain("HR_ADMIN");
+    expect(BUDGET_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+  });
+
+  it("BUDGET_VIEWER_ROLES includes PM+, LEAD_FINANCE, and admin tiers", () => {
+    expect(BUDGET_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(BUDGET_VIEWER_ROLES).toContain("OPERATIONS_MANAGER");
+    expect(BUDGET_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(BUDGET_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("PETTY_CASH_VIEWER_ROLES centers on custodian + finance + management", () => {
+    expect(PETTY_CASH_VIEWER_ROLES).toContain("PETTY_CASH_CUSTODIAN");
+    expect(PETTY_CASH_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(PETTY_CASH_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(PETTY_CASH_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(PETTY_CASH_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(PETTY_CASH_VIEWER_ROLES).not.toContain("HR_ADMIN");
+  });
+
+  it("UPK_VIEWER_ROLES stays HR + finance + PM/OM/HM/GM + admin", () => {
+    // UPK notes are termination severance drafts (uang pesangon
+    // karyawan). RLS on `upk_notes` further restricts row visibility
+    // to HR/mgmt or drafter, but the page shell exposes sensitive
+    // terminology — so we still redirect non-viewers away.
+    expect(UPK_VIEWER_ROLES).toContain("HR_ADMIN");
+    expect(UPK_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(UPK_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(UPK_VIEWER_ROLES).toContain("TENANT_ADMIN");
+    expect(UPK_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(UPK_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(UPK_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
   });
 });

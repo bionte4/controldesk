@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { formatDateOnly } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
-import { toCanonicalRole } from "@/lib/rbac/roles";
+import { toCanonicalRole, UPK_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { UpkStatus } from "@/lib/validation/upk";
@@ -39,8 +39,11 @@ export default async function UpkDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const [employee, t, tStatus] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!UPK_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+  const [t, tStatus] = await Promise.all([
     getTranslations("upk"),
     getTranslations("upk.status"),
   ]);

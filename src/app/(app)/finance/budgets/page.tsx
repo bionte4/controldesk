@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { BadgeDollarSign } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,6 +15,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { BUDGET_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_STATUS_LABEL, BUDGET_STATUS_TONE } from "@/lib/budgets/state";
 import type { BudgetStatus } from "@/types/database";
@@ -78,13 +80,16 @@ async function loadProjectOptions(): Promise<ProjectOption[]> {
 }
 
 export default async function BudgetsPage() {
-  const [employee, budgets, projectOptions, t] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!BUDGET_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [budgets, projectOptions, t] = await Promise.all([
     loadBudgets(),
     loadProjectOptions(),
     getTranslations("budgets"),
   ]);
-  void employee;
 
   return (
     <div className="flex flex-col gap-6">

@@ -33,8 +33,12 @@ import {
 } from "lucide-react";
 
 import {
+  BUDGET_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
+  PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
+  PETTY_CASH_VIEWER_ROLES,
+  UPK_VIEWER_ROLES,
   type AnyDbEmployeeRole,
   type EmployeeRole,
 } from "@/lib/rbac/roles";
@@ -142,17 +146,24 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "pettyCash",
         href: "/finance/petty-cash",
         icon: Coins,
-        roles: [
-          "PETTY_CASH_CUSTODIAN",
-          "LEAD_FINANCE",
-          "TENANT_ADMIN",
-          "GENERAL_MANAGER",
-          "HEAD_MANAGER",
-          "OPERATIONS_MANAGER",
-          "PROJECT_MANAGER",
-        ],
+        // Petty cash operators + management oversight. Mirrors
+        // `PETTY_CASH_VIEWER_ROLES` in `src/lib/rbac/roles.ts` — the
+        // `/finance/petty-cash` + `[id]` pages enforce the same list
+        // as a redirect guard because RLS on petty cash tables is
+        // tenant-only.
+        roles: PETTY_CASH_VIEWER_ROLES,
       },
-      { titleKey: "budgets", href: "/finance/budgets", icon: BadgeDollarSign },
+      {
+        titleKey: "budgets",
+        href: "/finance/budgets",
+        icon: BadgeDollarSign,
+        // Budget planning (total_planned per project, budget_details
+        // line items) is a finance/management concern. RLS on
+        // `budgets` + `budget_details` is tenant-only, so both the
+        // list and detail pages enforce `BUDGET_VIEWER_ROLES` as a
+        // redirect guard. Sidebar gate mirrors the same list.
+        roles: BUDGET_VIEWER_ROLES,
+      },
       {
         titleKey: "contracts",
         href: "/finance/contracts",
@@ -213,21 +224,20 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "upk",
         href: "/hr/upk",
         icon: Banknote,
-        roles: [
-          "PROJECT_MANAGER",
-          "OPERATIONS_MANAGER",
-          "HEAD_MANAGER",
-          "HR_ADMIN",
-          "LEAD_FINANCE",
-          "GENERAL_MANAGER",
-          "TENANT_ADMIN",
-        ],
+        // Termination severance (UPK) notes. RLS on `upk_notes`
+        // limits rows to HR/Mgmt or drafter, but the page shell
+        // still exposes sensitive terminology. Sidebar + page
+        // redirect both mirror `UPK_VIEWER_ROLES`.
+        roles: UPK_VIEWER_ROLES,
       },
       {
         titleKey: "payroll",
         href: "/hr/payroll",
         icon: Banknote,
-        roles: ["LEAD_FINANCE", "HR_ADMIN", "TENANT_ADMIN", "GENERAL_MANAGER"],
+        // Rules §3 salary confidentiality. Payroll periods + line
+        // items now RLS-gated to `is_payroll_operator()` (see
+        // migration 0080). Sidebar gate matches `PAYROLL_VIEWER_ROLES`.
+        roles: PAYROLL_VIEWER_ROLES,
       },
     ],
   },

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Banknote } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,6 +15,7 @@ import {
 import { formatDateOnly } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { UPK_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { UpkStatus } from "@/lib/validation/upk";
 
@@ -31,8 +33,12 @@ const STATUS_TONE: Record<UpkStatus, string> = {
 };
 
 export default async function UpkListPage() {
-  const [, t, tStatus] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!UPK_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [t, tStatus] = await Promise.all([
     getTranslations("upk"),
     getTranslations("upk.status"),
   ]);

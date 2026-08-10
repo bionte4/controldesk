@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, BadgeDollarSign } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -21,7 +21,11 @@ import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadPostableAccounts } from "@/lib/data/coa";
 import { loadLookupOptions } from "@/lib/data/lookups";
-import { toCanonicalRole, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  BUDGET_VIEWER_ROLES,
+  toCanonicalRole,
+  type AnyDbEmployeeRole,
+} from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import {
   BUDGET_STATUS_LABEL,
@@ -191,8 +195,12 @@ export default async function BudgetDetailPage(props: {
 }) {
   const { id } = await props.params;
 
+  const employee = await requireCurrentEmployee();
+  if (!BUDGET_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
   const [
-    employee,
     budget,
     lines,
     t,
@@ -202,7 +210,6 @@ export default async function BudgetDetailPage(props: {
     budgetCategoryLookup,
     coaAccounts,
   ] = await Promise.all([
-    requireCurrentEmployee(),
     loadBudget(id),
     loadLines(id),
     getTranslations("budgets.detail"),

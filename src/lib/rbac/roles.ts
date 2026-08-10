@@ -94,6 +94,57 @@ export const PAYROLL_VIEWER_ROLES: readonly EmployeeRole[] = [
 ] as const;
 
 /**
+ * Roles allowed to read `/finance/budgets` (total_planned by
+ * project, budget_details line items, budget vs actuals). RLS on
+ * `budgets` and `budget_details` is tenant-only; without an app
+ * guard, EMPLOYEE / SUPERVISOR could paste the URL and see every
+ * project's financial planning. Keep in sync with the sidebar
+ * `budgets` entry (which we tighten in the same commit).
+ */
+export const BUDGET_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Roles allowed to read `/finance/petty-cash` (fund balances,
+ * custodian assignments, voucher ledger). Sidebar entry already
+ * gates the same list; the page redirect guard mirrors it so a
+ * pasted URL can't bypass. LEAD_FINANCE + custodians are the
+ * primary operators; PM/OM/HM/GM+ receive oversight visibility.
+ */
+export const PETTY_CASH_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PETTY_CASH_CUSTODIAN",
+  "LEAD_FINANCE",
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+  "HEAD_MANAGER",
+  "OPERATIONS_MANAGER",
+  "PROJECT_MANAGER",
+] as const;
+
+/**
+ * Roles allowed to read `/hr/upk` (Uang Pesangon Karyawan notes —
+ * termination severance drafts + approval log). RLS on `upk_notes`
+ * further restricts rows to HR/Mgmt or the drafter, but we still
+ * add a page redirect guard so EMPLOYEE / SUPERVISOR / custodians
+ * don't land on an empty shell with sensitive terminology.
+ */
+export const UPK_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "HR_ADMIN",
+  "LEAD_FINANCE",
+  "GENERAL_MANAGER",
+  "TENANT_ADMIN",
+] as const;
+
+/**
  * Numeric rank on the operational ladder. Returns -1 for staff/functional
  * roles (finance, HR, custodian) which live outside the chain.
  */
