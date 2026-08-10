@@ -124,10 +124,17 @@ try {
     .waitForLoadState("networkidle", { timeout: NAV_TIMEOUT })
     .catch(() => {});
   const lookupsText = (await page.textContent("body")) ?? "";
+  // Every entry here proves one seed helper block landed on the fresh tenant.
+  // The department/position/budget_category trio comes from migration 0082
+  // (which wired seed_default_master_data into provision_tenant), and the
+  // transport_need/rab_category pair comes from migration 0083 (which
+  // promoted the universal legacy lookups into that same helper).
   const expectedDomains = [
     ["Department", "department"],
     ["Position", "position"],
     ["Budget", "budget_category"],
+    ["Transport", "transport_need"],
+    ["RAB", "rab_category"],
   ];
   for (const [label] of expectedDomains) {
     if (new RegExp(label, "i").test(lookupsText)) {
