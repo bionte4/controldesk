@@ -420,11 +420,18 @@ SIGNUP_RATE_LIMIT_GLOBAL = { max: 50, windowSeconds: 3600 }  // 50/jam total
 - `REDIS_URL` — opsional; kalau tidak ada, rate-limit fall back ke
   in-memory Map (aman untuk single-node prod, tidak untuk multi-replica).
 
-**Testing lokal**:
+**Testing lokal**: lihat runbook lengkap di
+[`../qa/local-multitenant-testing.md`](../qa/local-multitenant-testing.md)
+— cover full flow manual + Playwright E2E automation di
+`e2e/tenant-self-signup.spec.ts`. TL;DR:
+
 ```bash
-# Buka /register-org di apex host (localhost:3000).
-# Isi form, dev-mailer tangkap email di mailpit (http://localhost:8025).
-# Klik link → tenant provisioned + credential displayed.
+# 1. Buka /register-org di apex host (localhost:3000).
+# 2. Isi form, dev-mailer tangkap email di mailpit (http://localhost:8025).
+# 3. Klik verify link → tenant provisioned + credential displayed.
+
+# Atau automated:
+pnpm exec playwright test e2e/tenant-self-signup.spec.ts
 ```
 
 **Deprovisioning self-signup tenant**:
