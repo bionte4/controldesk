@@ -23,6 +23,11 @@ import {
   type AnyDbEmployeeRole,
   type CanonicalRole,
 } from "@/lib/rbac/roles";
+import {
+  buildApproverOrSelfClause,
+  isApproverRole,
+  resolveProjectScope,
+} from "@/lib/security/project-scope";
 import { CA_STATUS_LABEL, CA_STATUS_TONE } from "@/lib/cash-advance/state";
 import {
   CANONICAL_CA_STATUS_LABEL,
@@ -66,15 +71,40 @@ type RawRow = {
   requester: { full_name: string } | null;
 };
 
-async function loadRequests(): Promise<Row[]> {
+async function loadRequests(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<Row[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Rules §3 — approver-OR-self scope. `org` roles (Finance /
+  // Director / Admin) see every request in the tenant. Approver
+  // roles with a project scope (PM / OM / SPV) see items on
+  // scoped projects plus anything they filed themselves. Non-
+  // approvers (EMPLOYEE / PCC) see only their own submissions —
+  // never someone else's queue.
+  const scope = await resolveProjectScope(caller);
+  const clause = buildApproverOrSelfClause(
+    scope,
+    caller.id,
+    "requester_employee_id",
+    { treatAsApprover: isApproverRole(caller.role) },
+  );
+
+  let query = supabase
     .from("cash_advances")
     .select(
       "id, amount, purpose, status, ca_type, needed_by, created_at, settlement_due_at, projects(code), requester:requester_employee_id(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
+
+  if (clause === "self") {
+    query = query.eq("requester_employee_id", caller.id);
+  } else if (clause !== null) {
+    query = query.or(clause);
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
 
   const rows = data as unknown as RawRow[];
@@ -224,7 +254,10 @@ async function loadProjectOptions(
 export default async function CashAdvancesPage() {
   const employee = await requireCurrentEmployee();
   const [rows, projectOptions, lookups, t, tTypes] = await Promise.all([
-    loadRequests(),
+    loadRequests({
+      id: employee.id,
+      role: employee.role as AnyDbEmployeeRole,
+    }),
     loadProjectOptions({ id: employee.id, role: employee.role }),
     loadFieldOpsFormLookups(),
     getTranslations("cashAdvances"),

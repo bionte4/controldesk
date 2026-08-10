@@ -13,6 +13,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  isApproverRole,
+  resolveEmployeeScope,
+} from "@/lib/security/project-scope";
 import { listWeeklyTimesheets } from "@/lib/timesheets/week-data";
 import {
   TW_STATUS_TONE,
@@ -33,10 +38,27 @@ const STATUS_LABEL: Record<TimesheetStatus, string> = {
 };
 
 export default async function WeeklyTimesheetsPage() {
-  const [employee, t, weeks] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  const caller = {
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  };
+
+  // Same visibility ladder as `/hr/timesheets` (daily view) — org
+  // roles see the full tenant, approvers see their scoped colleagues,
+  // non-approvers only see their own weekly packets. Rules §3.
+  const scope = await resolveEmployeeScope(caller);
+  const approver = isApproverRole(caller.role);
+  const employeeIds =
+    scope.kind === "org"
+      ? undefined
+      : !approver || scope.ids.length === 0
+        ? [caller.id]
+        : scope.ids;
+
+  const [t, weeks] = await Promise.all([
     getTranslations("timesheets"),
-    listWeeklyTimesheets({ limit: 100 }),
+    listWeeklyTimesheets({ limit: 100, employeeIds }),
   ]);
 
   const todayWeek = weekStartFromDate(new Date());

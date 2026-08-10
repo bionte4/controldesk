@@ -13,7 +13,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
+import {
+  isApproverRole,
+  resolveEmployeeScope,
+  resolveProjectScope,
+} from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
 import {
   TS_STATUS_LABEL,
@@ -51,15 +56,35 @@ type RawRow = {
   project: { code: string; name: string } | null;
 };
 
-async function loadTimesheets(): Promise<Row[]> {
+async function loadTimesheets(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<Row[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Rules §3 — timesheet hours + overtime are payroll-adjacent data.
+  // Non-approvers only see their own submissions; approvers see the
+  // set derived from `resolveEmployeeScope` (self + assignee
+  // colleagues on scoped projects); org roles see the full tenant.
+  const scope = await resolveEmployeeScope(caller);
+  const approver = isApproverRole(caller.role);
+
+  let query = supabase
     .from("timesheets")
     .select(
       "id, work_date, employee_id, hours_worked, hours_overtime, status, employee:employee_id(full_name), project:project_id(code, name)",
     )
     .order("work_date", { ascending: false })
     .limit(200);
+
+  if (scope.kind !== "org") {
+    if (!approver || scope.ids.length === 0) {
+      query = query.eq("employee_id", caller.id);
+    } else {
+      query = query.in("employee_id", scope.ids);
+    }
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
   const rows = data as unknown as RawRow[];
   return rows.map((row) => ({
@@ -74,21 +99,47 @@ async function loadTimesheets(): Promise<Row[]> {
   }));
 }
 
-async function loadOptions() {
+async function loadOptions(caller: { id: string; role: AnyDbEmployeeRole }) {
   const supabase = await createClient();
-  const [emps, projects] = await Promise.all([
-    supabase
+  const [empScope, projScope] = await Promise.all([
+    resolveEmployeeScope(caller),
+    resolveProjectScope(caller),
+  ]);
+
+  const empQuery = (() => {
+    let q = supabase
       .from("employees")
       .select("id, full_name, role")
       .eq("is_active", true)
       .order("full_name", { ascending: true })
-      .limit(200),
-    supabase
+      .limit(200);
+    if (empScope.kind !== "org") {
+      if (empScope.ids.length === 0) {
+        q = q.eq("id", caller.id);
+      } else {
+        q = q.in("id", empScope.ids);
+      }
+    }
+    return q;
+  })();
+
+  const projQuery = (() => {
+    let q = supabase
       .from("projects")
       .select("id, code, name")
       .order("code", { ascending: true })
-      .limit(200),
-  ]);
+      .limit(200);
+    if (projScope.kind !== "org") {
+      if (projScope.empty) {
+        q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+      } else {
+        q = q.in("id", projScope.projectIds);
+      }
+    }
+    return q;
+  })();
+
+  const [emps, projects] = await Promise.all([empQuery, projQuery]);
   return {
     employees: (emps.data ?? []).map((e) => ({
       value: e.id,
@@ -102,10 +153,14 @@ async function loadOptions() {
 }
 
 export default async function TimesheetsPage() {
-  const [employee, rows, options, t] = await Promise.all([
-    requireCurrentEmployee(),
-    loadTimesheets(),
-    loadOptions(),
+  const employee = await requireCurrentEmployee();
+  const caller = {
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  };
+  const [rows, options, t] = await Promise.all([
+    loadTimesheets(caller),
+    loadOptions(caller),
     getTranslations("timesheets"),
   ]);
 

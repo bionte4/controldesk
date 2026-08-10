@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { HANDOVER_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
+import {
+  HANDOVER_VIEWER_ROLES,
+  roleInGate,
+  type AnyDbEmployeeRole,
+} from "@/lib/rbac/roles";
+import { resolveProjectScope } from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
 import { PMH_STATUS_LABEL, PMH_STATUS_TONE } from "@/lib/handover/state";
 import type { PmHandoverStatus } from "@/types/database";
@@ -50,15 +55,41 @@ type RawRow = {
   to_pm: { full_name: string } | null;
 };
 
-async function loadHandovers(): Promise<Row[]> {
+async function loadHandovers(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<Row[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // Rules §3 — org tiers (OM+/GM/Admin) see the full handover
+  // register; a PM should only see handovers touching *their*
+  // projects (either because they own one of the involved
+  // projects, or because they are the outgoing/incoming PM).
+  const scope = await resolveProjectScope(caller);
+
+  let query = supabase
     .from("pm_handovers")
     .select(
       "id, status, effective_at, reason, created_at, project:project_id(code, name), from_pm:from_pm_employee_id(full_name), to_pm:to_pm_employee_id(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
+
+  if (scope.kind !== "org") {
+    if (scope.empty) {
+      // Nothing they own — only handovers where they are
+      // personally on the from/to side.
+      query = query.or(
+        `from_pm_employee_id.eq.${caller.id},to_pm_employee_id.eq.${caller.id}`,
+      );
+    } else {
+      // Union: (a) project in scope, or (b) I am from/to PM.
+      query = query.or(
+        `project_id.in.(${scope.projectIds.join(",")}),from_pm_employee_id.eq.${caller.id},to_pm_employee_id.eq.${caller.id}`,
+      );
+    }
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
 
   const rows = data as unknown as RawRow[];
@@ -142,7 +173,10 @@ export default async function HandoversPage() {
   }
 
   const [rows, projects, pms, t] = await Promise.all([
-    loadHandovers(),
+    loadHandovers({
+      id: employee.id,
+      role: employee.role as AnyDbEmployeeRole,
+    }),
     loadProjectOptions(),
     loadPmOptions(),
     getTranslations("handovers"),

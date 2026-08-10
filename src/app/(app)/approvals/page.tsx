@@ -28,6 +28,11 @@ import {
   type AnyDbEmployeeRole,
 } from "@/lib/rbac/roles";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import {
+  isApproverRole,
+  resolveEmployeeScope,
+  resolveProjectScope,
+} from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
 import {
   PENDING_STATUSES,
@@ -228,49 +233,106 @@ export default async function ApprovalsPage() {
 
   const legacyRole = employee.role as EmployeeRole;
   const dbRole = employee.role as AnyDbEmployeeRole;
-  const expenseStatuses = expensePendingForRole(legacyRole);
-  const caStatuses = mergedCaPendingForRole(dbRole);
-  const hrStatuses = hrPendingForRole(legacyRole);
+  // Rules §6 — `toCanonicalRole` folds `PETTY_CASH_CUSTODIAN` into
+  // canonical `FINANCE`. Left uncontrolled, that fold gives PCC a
+  // seat in every finance-tier approval queue (expenses in
+  // PENDING_L2_5_FINANCE, cash advances in PENDING_FINANCE, budget
+  // + budget-request finance slots). PCC is expressly not a
+  // financial approver — they only reconcile petty-cash
+  // replenishments, gated below via `PETTY_CASH_APPROVER_ROLES`.
+  //
+  // The `isApproverRole` gate is our authoritative "does this
+  // role sit in ANY approval chain outside their own submissions?"
+  // predicate. Applying it here folds the PCC leak closed in a
+  // single spot instead of chasing every downstream role helper.
+  const isApprover = isApproverRole(dbRole);
+  const expenseStatuses = isApprover ? expensePendingForRole(legacyRole) : [];
+  const caStatuses = isApprover ? mergedCaPendingForRole(dbRole) : [];
+  const hrStatuses = isApprover ? hrPendingForRole(legacyRole) : [];
   const canReviewReplenishment = (
     PETTY_CASH_APPROVER_ROLES as readonly string[]
   ).includes(employee.role);
-  const canonicalRole = toCanonicalRole(employee.role as AnyDbEmployeeRole);
-  const budgetStatuses = budgetPendingForRole(canonicalRole);
-  const brStatuses = brPendingForRole(canonicalRole);
-  const canReviewWeeklyTimesheets = canApproveWeek(legacyRole, "SUBMITTED");
+  const canonicalRole = toCanonicalRole(dbRole);
+  const budgetStatuses = isApprover ? budgetPendingForRole(canonicalRole) : [];
+  const brStatuses = isApprover ? brPendingForRole(canonicalRole) : [];
+  const canReviewWeeklyTimesheets =
+    isApprover && canApproveWeek(legacyRole, "SUBMITTED");
 
   const supabase = await createClient();
 
+  // Rules §3 — even for approvers we intersect each queue with
+  // the actor's project/employee scope. A PM getting L2 items for
+  // *every* project in the tenant is a portfolio leak; they should
+  // only see items on projects they lead. Org roles
+  // (Finance/Director/HR-Admin/GM/Admin) skip the intersection.
+  const caller = {
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  };
+  const [projScope, empScope] = await Promise.all([
+    resolveProjectScope(caller),
+    resolveEmployeeScope(caller),
+  ]);
+  // A scoped caller with zero visible projects/employees must
+  // never fall through to a tenant-wide fetch — pin to an
+  // impossible UUID so `.in()` returns 0 rows deterministically.
+  const IMPOSSIBLE_UUID = "00000000-0000-0000-0000-000000000000";
+  const projectFilterIds =
+    projScope.kind === "org"
+      ? null
+      : projScope.empty
+        ? [IMPOSSIBLE_UUID]
+        : projScope.projectIds;
+  const employeeFilterIds =
+    empScope.kind === "org"
+      ? null
+      : empScope.ids.length === 0
+        ? [IMPOSSIBLE_UUID]
+        : empScope.ids;
+
   const [expenseRes, caRes, hrRes, pcRes, budgetRes, brRes, twRes] = await Promise.all([
     expenseStatuses.length
-      ? supabase
-          .from("project_expenses")
-          .select(
-            "id, amount, description, status, incurred_on, created_at, projects(id, code, name), submitter:submitter_employee_id(full_name, role)",
-          )
-          .in("status", expenseStatuses)
-          .order("created_at", { ascending: true })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("project_expenses")
+            .select(
+              "id, amount, description, status, incurred_on, created_at, projects(id, code, name), submitter:submitter_employee_id(full_name, role)",
+            )
+            .in("status", expenseStatuses)
+            .order("created_at", { ascending: true })
+            .limit(100);
+          if (projectFilterIds) q = q.in("project_id", projectFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
     caStatuses.length
-      ? supabase
-          .from("cash_advances")
-          .select(
-            "id, amount, purpose, status, needed_by, created_at, projects(id, code, name), requester:requester_employee_id(full_name, role)",
-          )
-          .in("status", [...caStatuses])
-          .order("created_at", { ascending: true })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("cash_advances")
+            .select(
+              "id, amount, purpose, status, needed_by, created_at, projects(id, code, name), requester:requester_employee_id(full_name, role)",
+            )
+            .in("status", [...caStatuses])
+            .order("created_at", { ascending: true })
+            .limit(100);
+          if (projectFilterIds) q = q.in("project_id", projectFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
     hrStatuses.length
-      ? supabase
-          .from("hr_requests")
-          .select(
-            "id, kind, status, reason, start_at, end_at, created_at, requester:requester_employee_id(full_name, role)",
-          )
-          .in("status", hrStatuses)
-          .order("created_at", { ascending: true })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("hr_requests")
+            .select(
+              "id, kind, status, reason, start_at, end_at, created_at, requester:requester_employee_id(full_name, role)",
+            )
+            .in("status", hrStatuses)
+            .order("created_at", { ascending: true })
+            .limit(100);
+          if (employeeFilterIds)
+            q = q.in("requester_employee_id", employeeFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
     canReviewReplenishment
       ? supabase
@@ -283,34 +345,53 @@ export default async function ApprovalsPage() {
           .limit(100)
       : { data: [] as unknown[] },
     budgetStatuses.length
-      ? supabase
-          .from("budgets")
-          .select(
-            "id, title, fiscal_year, status, total_planned_amount, created_at, projects(id, code, name), creator:employees!budgets_created_by_fkey(full_name, role)",
-          )
-          .in("status", budgetStatuses)
-          .order("created_at", { ascending: true })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("budgets")
+            .select(
+              "id, title, fiscal_year, status, total_planned_amount, created_at, projects(id, code, name), creator:employees!budgets_created_by_fkey(full_name, role)",
+            )
+            .in("status", budgetStatuses)
+            .order("created_at", { ascending: true })
+            .limit(100);
+          if (projectFilterIds) q = q.in("project_id", projectFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
     brStatuses.length
-      ? supabase
-          .from("budget_requests")
-          .select(
-            "id, budget_id, kind, amount, status, justification, requester_employee_id, created_at, requester:employees!budget_requests_requester_employee_id_fkey(full_name, role), budget:budgets!budget_requests_budget_id_fkey(id, title, fiscal_year, projects(id, code, name))",
-          )
-          .in("status", brStatuses)
-          .order("created_at", { ascending: true })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("budget_requests")
+            .select(
+              "id, budget_id, kind, amount, status, justification, requester_employee_id, created_at, requester:employees!budget_requests_requester_employee_id_fkey(full_name, role), budget:budgets!budget_requests_budget_id_fkey(id, title, fiscal_year, projects(id, code, name))",
+            )
+            .in("status", brStatuses)
+            .order("created_at", { ascending: true })
+            .limit(100);
+          // Budget requests point at a budget which points at a
+          // project — the RPC-style FK filter `budget.project_id`
+          // isn't supported by PostgREST's `.in()` shorthand, so
+          // we instead intersect on requester employee scope as
+          // the closest available proxy. PM sees BRs from their
+          // team; org roles see everything.
+          if (employeeFilterIds)
+            q = q.in("requester_employee_id", employeeFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
     canReviewWeeklyTimesheets
-      ? supabase
-          .from("timesheet_weeks")
-          .select(
-            "id, employee_id, week_start_date, status, total_hours, total_overtime, created_at, employee:employees!timesheet_weeks_employee_id_fkey(full_name, role)",
-          )
-          .eq("status", "SUBMITTED")
-          .order("week_start_date", { ascending: false })
-          .limit(100)
+      ? (() => {
+          let q = supabase
+            .from("timesheet_weeks")
+            .select(
+              "id, employee_id, week_start_date, status, total_hours, total_overtime, created_at, employee:employees!timesheet_weeks_employee_id_fkey(full_name, role)",
+            )
+            .eq("status", "SUBMITTED")
+            .order("week_start_date", { ascending: false })
+            .limit(100);
+          if (employeeFilterIds) q = q.in("employee_id", employeeFilterIds);
+          return q;
+        })()
       : { data: [] as unknown[] },
   ]);
 

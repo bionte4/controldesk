@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyProjectScope, isApproverRole } from "./project-scope";
+import {
+  buildApproverOrSelfClause,
+  classifyProjectScope,
+  isApproverRole,
+} from "./project-scope";
 
 describe("classifyProjectScope", () => {
   it("classifies executive + finance + HR roles as org-wide", () => {
@@ -83,5 +87,76 @@ describe("isApproverRole", () => {
     for (const role of ["EMPLOYEE", "PETTY_CASH_CUSTODIAN"] as const) {
       expect(isApproverRole(role)).toBe(false);
     }
+  });
+});
+
+describe("buildApproverOrSelfClause", () => {
+  const callerId = "00000000-0000-0000-0000-0000000000ca";
+
+  it("returns null on org scope (no filter, org-tier visibility)", () => {
+    expect(
+      buildApproverOrSelfClause(
+        { kind: "org" },
+        callerId,
+        "submitter_employee_id",
+        { treatAsApprover: true },
+      ),
+    ).toBeNull();
+  });
+
+  it("returns 'self' for non-approvers regardless of scope size", () => {
+    expect(
+      buildApproverOrSelfClause(
+        {
+          kind: "assigned",
+          projectIds: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"],
+          empty: false,
+        },
+        callerId,
+        "submitter_employee_id",
+        { treatAsApprover: false },
+      ),
+    ).toBe("self");
+  });
+
+  it("returns 'self' for approvers with empty scope (fresh onboarding)", () => {
+    expect(
+      buildApproverOrSelfClause(
+        { kind: "assigned", projectIds: [], empty: true },
+        callerId,
+        "submitter_employee_id",
+        { treatAsApprover: true },
+      ),
+    ).toBe("self");
+  });
+
+  it("emits a supabase-compatible OR clause for approvers with a scope", () => {
+    const projectIds = [
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    ];
+    const clause = buildApproverOrSelfClause(
+      { kind: "assigned", projectIds, empty: false },
+      callerId,
+      "submitter_employee_id",
+      { treatAsApprover: true },
+    );
+    expect(clause).toBe(
+      `project_id.in.(${projectIds.join(",")}),submitter_employee_id.eq.${callerId}`,
+    );
+  });
+
+  it("honours a custom submitter column (cash advances use requester_employee_id)", () => {
+    const clause = buildApproverOrSelfClause(
+      {
+        kind: "assigned",
+        projectIds: ["aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"],
+        empty: false,
+      },
+      callerId,
+      "requester_employee_id",
+      { treatAsApprover: true },
+    );
+    expect(clause).toContain("requester_employee_id.eq.");
   });
 });

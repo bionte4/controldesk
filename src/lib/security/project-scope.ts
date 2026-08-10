@@ -296,6 +296,55 @@ export const resolveEmployeeScope = cache(
 );
 
 /**
+ * Build a Supabase `.or()` clause for "approver-OR-self" list
+ * views (expenses, cash advances, budget requests, HR requests).
+ *
+ * Semantics — the caller may see a row when EITHER:
+ *   (a) the row belongs to a project in their `resolveProjectScope`
+ *       set (approver visibility), OR
+ *   (b) the row was submitted by them (self visibility).
+ *
+ * Returns `null` when no filter is needed (org scope) so the
+ * caller can branch cleanly:
+ *
+ *   const clause = buildApproverOrSelfClause(...);
+ *   if (clause === null) {
+ *     // no filter — org tier
+ *   } else if (clause === "self") {
+ *     query = query.eq(submitterColumn, callerId);
+ *   } else {
+ *     query = query.or(clause);
+ *   }
+ *
+ * The `"self"` sentinel exists so we don't emit `project_id.in.()`
+ * with an empty list — supabase-js treats that as an unfiltered
+ * SELECT and would silently leak tenant-wide rows (same footgun
+ * called out on `resolveProjectScope`). For scoped callers with
+ * zero active projects we fall back to submitter-only.
+ *
+ * `submitterColumn` differs per table:
+ *   - project_expenses    → "submitter_employee_id"
+ *   - cash_advances       → "requester_employee_id"
+ *   - budget_requests     → "requester_employee_id"
+ *   - hr_requests         → "requester_employee_id"
+ */
+export function buildApproverOrSelfClause(
+  scope: ProjectScope,
+  callerId: string,
+  submitterColumn: string,
+  opts: { treatAsApprover: boolean },
+): null | "self" | string {
+  if (scope.kind === "org") return null;
+  // Non-approver roles never see other people's rows regardless of
+  // project scope — they always fall back to their own submissions.
+  if (!opts.treatAsApprover) return "self";
+  if (scope.empty) return "self";
+  // supabase-js `.or()` string syntax — UUIDs don't contain the
+  // separator character (`,`), so no escaping needed.
+  return `project_id.in.(${scope.projectIds.join(",")}),${submitterColumn}.eq.${callerId}`;
+}
+
+/**
  * Convenience predicate — `true` when the caller is entitled to
  * see aggregate approval queues that live under a different
  * user's name (e.g. as an approver on other people's expenses).

@@ -15,6 +15,11 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  isApproverRole,
+  resolveEmployeeScope,
+} from "@/lib/security/project-scope";
 import {
   HR_CHAIN_SLOT_LABEL,
   HR_KIND_LABEL,
@@ -53,15 +58,45 @@ type RawRow = {
   requester: { full_name: string } | null;
 };
 
-async function loadRequests(): Promise<Row[]> {
+async function loadRequests(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<Row[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  // HR requests are the most PII-sensitive list in the tenant
+  // (leave/sick reasons, medical notes attached elsewhere). Rules
+  // §3 requires strict need-to-know filtering:
+  //   • Org roles (HR_ADMIN, ADMIN, DIRECTOR, GM, HM) — see all.
+  //   • Approvers with a scope (SPV, PM, OM, FINANCE) — see own
+  //     submissions + submissions from colleagues assigned to
+  //     their projects (via `resolveEmployeeScope`, same set the
+  //     employee directory uses).
+  //   • Non-approvers (EMPLOYEE, PETTY_CASH_CUSTODIAN) — see
+  //     only their own submissions, never someone else's leave.
+  const scope = await resolveEmployeeScope(caller);
+  const approver = isApproverRole(caller.role);
+
+  let query = supabase
     .from("hr_requests")
     .select(
       "id, kind, status, reason, start_at, end_at, created_at, requester:requester_employee_id(full_name)",
     )
     .order("created_at", { ascending: false })
     .limit(200);
+
+  if (scope.kind !== "org") {
+    if (!approver) {
+      query = query.eq("requester_employee_id", caller.id);
+    } else if (scope.ids.length === 0) {
+      // Approver with no reachable subordinates (freshly-onboarded
+      // PM with no assignments yet) — degrade safely to self.
+      query = query.eq("requester_employee_id", caller.id);
+    } else {
+      query = query.in("requester_employee_id", scope.ids);
+    }
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
 
   const rows = data as unknown as RawRow[];
@@ -78,13 +113,15 @@ async function loadRequests(): Promise<Row[]> {
 }
 
 export default async function HrRequestsPage() {
-  const [employee, rows, t, tKind] = await Promise.all([
-    requireCurrentEmployee(),
-    loadRequests(),
+  const employee = await requireCurrentEmployee();
+  const [rows, t, tKind] = await Promise.all([
+    loadRequests({
+      id: employee.id,
+      role: employee.role as AnyDbEmployeeRole,
+    }),
     getTranslations("hrRequests"),
     getTranslations("hrRequests.kinds"),
   ]);
-  void employee;
 
   return (
     <div className="flex flex-col gap-6">

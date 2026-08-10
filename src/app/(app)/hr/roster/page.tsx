@@ -12,6 +12,12 @@ import {
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  isApproverRole,
+  resolveEmployeeScope,
+  resolveProjectScope,
+} from "@/lib/security/project-scope";
 import type { RosterEntryStatus } from "@/types/database";
 
 import { RosterUpsertSheet } from "./roster-upsert-sheet";
@@ -45,7 +51,9 @@ type RawRow = {
   project: { code: string; name: string } | null;
 };
 
-async function loadRoster(): Promise<Row[]> {
+async function loadRoster(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<Row[]> {
   const supabase = await createClient();
   const today = new Date();
   const from = new Date(today);
@@ -55,7 +63,18 @@ async function loadRoster(): Promise<Row[]> {
 
   const iso = (d: Date) => d.toISOString().slice(0, 10);
 
-  const { data, error } = await supabase
+  // Roster reveals LEAVE / SICK / OFF alongside project assignments —
+  // it's a two-way PII leak (calendar + medical inference) if a plain
+  // Employee can see the whole crew's day. Rules §3 splits the visible
+  // set the same way `/hr/employees` and `/hr/requests` do:
+  //   • Org roles (HR / OM+ / Admin) — full tenant.
+  //   • Approvers (SPV / PM / FIN) — self + teammates on assigned
+  //     projects (via `resolveEmployeeScope`).
+  //   • Non-approvers — only their own row.
+  const scope = await resolveEmployeeScope(caller);
+  const approver = isApproverRole(caller.role);
+
+  let query = supabase
     .from("employee_rosters")
     .select(
       "id, work_date, status, employee:employee_id(full_name), shift:shift_id(code), project:project_id(code, name)",
@@ -64,6 +83,16 @@ async function loadRoster(): Promise<Row[]> {
     .lte("work_date", iso(to))
     .order("work_date", { ascending: true })
     .limit(400);
+
+  if (scope.kind !== "org") {
+    if (!approver || scope.ids.length === 0) {
+      query = query.eq("employee_id", caller.id);
+    } else {
+      query = query.in("employee_id", scope.ids);
+    }
+  }
+
+  const { data, error } = await query;
   if (error || !data) return [];
   const rows = data as unknown as RawRow[];
   return rows.map((row) => ({
@@ -76,15 +105,51 @@ async function loadRoster(): Promise<Row[]> {
   }));
 }
 
-async function loadOptions() {
+async function loadOptions(caller: { id: string; role: AnyDbEmployeeRole }) {
   const supabase = await createClient();
-  const [emps, shifts, projects] = await Promise.all([
-    supabase
+  const [empScope, projScope] = await Promise.all([
+    resolveEmployeeScope(caller),
+    resolveProjectScope(caller),
+  ]);
+
+  const empQuery = (() => {
+    let q = supabase
       .from("employees")
       .select("id, full_name, role")
       .eq("is_active", true)
       .order("full_name", { ascending: true })
-      .limit(200),
+      .limit(200);
+    if (empScope.kind !== "org") {
+      if (empScope.ids.length === 0) {
+        // Scoped caller with empty ids would leak everyone via
+        // supabase-js `.in("id", [])` bypass — pin to self.
+        q = q.eq("id", caller.id);
+      } else {
+        q = q.in("id", empScope.ids);
+      }
+    }
+    return q;
+  })();
+
+  const projQuery = (() => {
+    let q = supabase
+      .from("projects")
+      .select("id, code, name")
+      .order("code", { ascending: true })
+      .limit(200);
+    if (projScope.kind !== "org") {
+      if (projScope.empty) {
+        // No visible projects → empty picker rather than tenant leak.
+        q = q.eq("id", "00000000-0000-0000-0000-000000000000");
+      } else {
+        q = q.in("id", projScope.projectIds);
+      }
+    }
+    return q;
+  })();
+
+  const [emps, shifts, projects] = await Promise.all([
+    empQuery,
     // Return base + project shifts in one query — the form filters
     // client-side based on the selected project. Includes `project_id`
     // + `project.code` so the dropdown can show "Custom" tags for
@@ -98,11 +163,7 @@ async function loadOptions() {
       .order("project_id", { ascending: true, nullsFirst: true })
       .order("code", { ascending: true })
       .limit(500),
-    supabase
-      .from("projects")
-      .select("id, code, name")
-      .order("code", { ascending: true })
-      .limit(200),
+    projQuery,
   ]);
 
   type ShiftRow = {
@@ -140,16 +201,23 @@ const STATUS_TONE: Record<RosterEntryStatus, string> = {
 };
 
 export default async function RosterPage() {
-  const [employee, rows, options, t, tStatus] = await Promise.all([
-    requireCurrentEmployee(),
-    loadRoster(),
-    loadOptions(),
+  const employee = await requireCurrentEmployee();
+  const caller = {
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  };
+  const [rows, options, t, tStatus] = await Promise.all([
+    loadRoster(caller),
+    loadOptions(caller),
     getTranslations("roster"),
     getTranslations("roster.statuses"),
   ]);
-  void employee;
 
   const today = new Date().toISOString().slice(0, 10);
+  // Non-approver roles can view their own roster but cannot upsert
+  // anyone's — PDP would reject the mutation anyway, so we suppress
+  // the "New" button rather than dangle a dead form.
+  const canManageRoster = isApproverRole(caller.role);
 
   return (
     <div className="flex flex-col gap-6">
@@ -163,6 +231,7 @@ export default async function RosterPage() {
             {t("subtitle")}
           </p>
         </div>
+        {canManageRoster ? (
         <RosterUpsertSheet
           triggerLabel={t("actions.new")}
           title={t("form.title")}
@@ -193,6 +262,7 @@ export default async function RosterPage() {
             },
           }}
         />
+        ) : null}
       </header>
 
       {rows.length === 0 ? (

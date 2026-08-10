@@ -38,6 +38,19 @@ export const listWeeklyTimesheets = cache(
     limit?: number;
     status?: TimesheetStatus[];
     employeeId?: string;
+    /**
+     * Optional narrow — restrict to a set of employee ids (used by
+     * scoped viewers such as SPV/PM who should only see their own
+     * team's weekly packets). Precedence rules:
+     *   • `undefined` — no employee narrowing (org scope).
+     *   • Empty array — collapse to "no rows"; supabase-js normally
+     *     drops an empty `.in()` filter and would leak the tenant,
+     *     so we pin the query to an impossible id.
+     *   • Non-empty array — `.in("employee_id", ids)`.
+     * `employeeId` (single) always wins when set for backwards
+     * compatibility with the single-employee editor route.
+     */
+    employeeIds?: string[];
   }): Promise<WeekWithMeta[]> => {
     const supabase = await createClient();
     let query = supabase
@@ -50,6 +63,12 @@ export const listWeeklyTimesheets = cache(
     }
     if (opts?.employeeId) {
       query = query.eq("employee_id", opts.employeeId);
+    } else if (opts?.employeeIds !== undefined) {
+      if (opts.employeeIds.length === 0) {
+        query = query.eq("employee_id", "00000000-0000-0000-0000-000000000000");
+      } else {
+        query = query.in("employee_id", opts.employeeIds);
+      }
     }
     const { data, error } = await query;
     if (error) throw error;

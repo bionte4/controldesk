@@ -19,6 +19,12 @@ import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { STATUS_LABEL, STATUS_TONE } from "@/lib/expenses/state";
 import { EXPENSE_CATEGORIES } from "@/lib/validation/expense";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  buildApproverOrSelfClause,
+  isApproverRole,
+  resolveProjectScope,
+} from "@/lib/security/project-scope";
 import type { ExpensePaymentMethod, ExpenseStatus } from "@/types/database";
 
 import { NewExpenseSheet, type ProjectOption } from "./new-expense-sheet";
@@ -60,10 +66,23 @@ const PENDING_STATUSES: ExpenseStatus[] = [
 ];
 
 async function loadExpenses(input: {
-  currentEmployeeId: string;
+  caller: { id: string; role: AnyDbEmployeeRole };
   filter: StatusFilter;
 }): Promise<ExpenseRow[]> {
   const supabase = await createClient();
+
+  // Rules §3 — approver-OR-self project scope. This is the *primary*
+  // visibility gate; the status-filter switch below is a secondary
+  // slice that always AND-composes on top. Non-approvers only see
+  // their own submissions regardless of which status tab they open.
+  const scope = await resolveProjectScope(input.caller);
+  const scopeClause = buildApproverOrSelfClause(
+    scope,
+    input.caller.id,
+    "submitter_employee_id",
+    { treatAsApprover: isApproverRole(input.caller.role) },
+  );
+
   let query = supabase
     .from("project_expenses")
     .select(
@@ -72,14 +91,22 @@ async function loadExpenses(input: {
     .order("created_at", { ascending: false })
     .limit(200);
 
-  // Filter logic. NOTE: DRAFT rows are hidden from non-submitters at the
-  // UI layer here. RLS still lets them read, but that's fine — the list
-  // view just doesn't clutter with drafts owned by other people.
+  if (scopeClause === "self") {
+    query = query.eq("submitter_employee_id", input.caller.id);
+  } else if (scopeClause !== null) {
+    query = query.or(scopeClause);
+  }
+
+  // Filter logic. NOTE: DRAFT rows are hidden from non-submitters at
+  // the UI layer here. RLS still lets them read, but that's fine —
+  // the list view just doesn't clutter with drafts owned by other
+  // people. The DRAFT hide is redundant when scopeClause="self" but
+  // idempotent, so we leave the switch untouched for the other tabs.
   switch (input.filter) {
     case "MY_DRAFTS":
       query = query
         .eq("status", "DRAFT")
-        .eq("submitter_employee_id", input.currentEmployeeId);
+        .eq("submitter_employee_id", input.caller.id);
       break;
     case "PENDING":
       query = query.in("status", PENDING_STATUSES);
@@ -93,9 +120,8 @@ async function loadExpenses(input: {
     case "ALL":
     default:
       // Show everything except drafts owned by other people.
-      // Supabase's `.or()` filter is used for the OR-condition.
       query = query.or(
-        `status.neq.DRAFT,submitter_employee_id.eq.${input.currentEmployeeId}`,
+        `status.neq.DRAFT,submitter_employee_id.eq.${input.caller.id}`,
       );
       break;
   }
@@ -156,14 +182,40 @@ function computeExpenseSlaHint(
   return null;
 }
 
-async function loadProjectOptions(): Promise<ProjectOption[]> {
+/**
+ * Load project options for the New Expense sheet.
+ *
+ * Scoping mirrors `/finance/cash-advances::loadProjectOptions`:
+ *   - Org / approver roles (PM / OM / DIRECTOR / ADMIN / FINANCE)
+ *     see every live project in the tenant so they can back-file
+ *     expenses on any engagement.
+ *   - Everyone else (EMPLOYEE / SUPERVISOR / PCC / HR) only sees
+ *     projects with an ACTIVE assignment through any of the three
+ *     assignment tables — same union RLS uses.
+ *
+ * Leaving this open would leak the entire project register to
+ * unassigned employees (project codes/names are considered
+ * sensitive per rules §3) and would also produce a UX trap where
+ * picking an unrelated project would fail PDP with an opaque
+ * "not authorized" error.
+ */
+async function loadProjectOptions(actor: {
+  id: string;
+  role: AnyDbEmployeeRole;
+}): Promise<ProjectOption[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const scope = await resolveProjectScope(actor);
+  let base = supabase
     .from("projects")
     .select("id, code, name")
     .in("status", ["PLANNING", "ACTIVE"])
     .order("name", { ascending: true })
     .limit(200);
+  if (scope.kind !== "org") {
+    if (scope.empty) return [];
+    base = base.in("id", scope.projectIds);
+  }
+  const { data, error } = await base;
   if (error || !data) return [];
   return data.map((p) => ({ id: p.id, label: `${p.code} · ${p.name}` }));
 }
@@ -194,9 +246,13 @@ export default async function ExpensesPage({
     getTranslations("expenses"),
     getTranslations("expenses.categories"),
   ]);
+  const caller = {
+    id: employee.id,
+    role: employee.role as AnyDbEmployeeRole,
+  };
   const [expenses, projectOptions] = await Promise.all([
-    loadExpenses({ currentEmployeeId: employee.id, filter }),
-    loadProjectOptions(),
+    loadExpenses({ caller, filter }),
+    loadProjectOptions(caller),
   ]);
 
   // Field-level submitters (EMPLOYEE / SUPERVISOR / HR / PettyCash) don't see
