@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Banknote } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -12,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { PAYROLL_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { PayrollPeriodStatus } from "@/types/database";
 
@@ -204,13 +206,16 @@ function monthName(month: number, locale: string): string {
 }
 
 export default async function PayrollPage() {
-  const [employee, { periods, linesByPeriod }, t, tStatus] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!PAYROLL_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [{ periods, linesByPeriod }, t, tStatus] = await Promise.all([
     loadData(),
     getTranslations("payroll"),
     getTranslations("payroll.status"),
   ]);
-  void employee;
 
   const today = new Date();
   const currentYear = today.getUTCFullYear();

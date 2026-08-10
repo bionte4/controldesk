@@ -18,6 +18,7 @@ import {
   isStaffRole,
   MULTI_PROJECT_CANONICAL_ROLES,
   OPERATIONAL_LADDER,
+  PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
   pettyCashDecision,
   requiredApprovalChain,
@@ -490,5 +491,28 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(PERFORMANCE_VIEWER_ROLES).toContain("PROJECT_MANAGER");
     expect(PERFORMANCE_VIEWER_ROLES).toContain("HR_ADMIN");
     expect(PERFORMANCE_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("PAYROLL_VIEWER_ROLES excludes every operational role + PETTY_CASH_CUSTODIAN", () => {
+    // Rules §3 — payroll data (base salary, gross_pay, net_pay) is
+    // strictly finance/HR/admin. Even PETTY_CASH_CUSTODIAN (a finance-
+    // adjacent role) has no legitimate reason to see monthly gross.
+    // The RLS policy `payroll_lines_tenant_read` in migration 0080
+    // mirrors this list plus an "employee sees own row" branch.
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("PROJECT_MANAGER");
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("OPERATIONS_MANAGER");
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("HEAD_MANAGER");
+    expect(PAYROLL_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+  });
+
+  it("PAYROLL_VIEWER_ROLES includes finance + HR + admin + GM", () => {
+    // Mirrors sidebar `payroll` gate in src/lib/nav/config.ts and the
+    // `is_payroll_operator()` DB helper.
+    expect(PAYROLL_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(PAYROLL_VIEWER_ROLES).toContain("HR_ADMIN");
+    expect(PAYROLL_VIEWER_ROLES).toContain("GENERAL_MANAGER");
+    expect(PAYROLL_VIEWER_ROLES).toContain("TENANT_ADMIN");
   });
 });

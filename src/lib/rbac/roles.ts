@@ -79,6 +79,21 @@ export const PERFORMANCE_VIEWER_ROLES: readonly EmployeeRole[] = [
 ] as const;
 
 /**
+ * Roles allowed to read `/hr/payroll` (payroll periods + line items).
+ * Rules §3 mandates that salary and bank_account are masked for
+ * non-HR/Finance viewers, and the RLS policy on `payroll_lines` /
+ * `payroll_periods` is tenant-only — so an in-app redirect guard is
+ * needed to prevent URL-paste access from EMPLOYEE / SUPERVISOR /
+ * operational roles. Kept in sync with the sidebar `payroll` gate.
+ */
+export const PAYROLL_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "LEAD_FINANCE",
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+] as const;
+
+/**
  * Numeric rank on the operational ladder. Returns -1 for staff/functional
  * roles (finance, HR, custodian) which live outside the chain.
  */
