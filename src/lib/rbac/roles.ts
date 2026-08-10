@@ -131,6 +131,39 @@ export function canViewBudget(role: AnyDbEmployeeRole): boolean {
 }
 
 /**
+ * Roles allowed to open `/hr/employees` (the staff directory).
+ * EMPLOYEE and PETTY_CASH_CUSTODIAN are excluded — a field
+ * technician has no operational need to browse the org chart.
+ * SUPERVISOR + PROJECT_MANAGER see a *scoped* subset (only
+ * teammates on their own projects); OM sees the portfolio; HR /
+ * Finance / executive tiers see the entire tenant. Scoping logic
+ * lives in `resolveEmployeeScope()` — this list only gates
+ * whether the page renders at all.
+ *
+ * Rules §3 (HRIS visibility restriction) + §6 hierarchy.
+ */
+export const EMPLOYEE_DIRECTORY_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "SUPERVISOR",
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Named capability predicate for the staff directory. Same
+ * design contract as `canViewBudget` — Phase 2 (per-tenant
+ * capability overrides) will replace the implementation without
+ * changing this signature.
+ */
+export function canViewEmployeeDirectory(role: AnyDbEmployeeRole): boolean {
+  return roleInGate(role, EMPLOYEE_DIRECTORY_VIEWER_ROLES);
+}
+
+/**
  * Roles allowed to read `/finance/petty-cash` (fund balances,
  * custodian assignments, voucher ledger). Sidebar entry already
  * gates the same list; the page redirect guard mirrors it so a

@@ -37,6 +37,7 @@ import {
   BUDGET_VIEWER_ROLES,
   CLIENT_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
+  EMPLOYEE_DIRECTORY_VIEWER_ROLES,
   HANDOVER_VIEWER_ROLES,
   INSIGHTS_VIEWER_ROLES,
   PAYROLL_VIEWER_ROLES,
@@ -189,7 +190,18 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     labelKey: "people",
     items: [
-      { titleKey: "employees", href: "/hr/employees", icon: Users },
+      // Staff directory is HR/mgmt only — plain EMPLOYEE and PCC
+      // have no operational need for the org chart. Scoping
+      // (SPV/PM see teammates, OM portfolio, HR/Finance/Admin
+      // everyone) is enforced inside the page by
+      // `resolveEmployeeScope()`; this gate just controls the
+      // sidebar link so a denied role never sees a dead link.
+      {
+        titleKey: "employees",
+        href: "/hr/employees",
+        icon: Users,
+        roles: EMPLOYEE_DIRECTORY_VIEWER_ROLES,
+      },
       { titleKey: "roster", href: "/hr/roster", icon: CalendarDays },
       {
         titleKey: "shifts",

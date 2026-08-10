@@ -11,8 +11,10 @@ import {
   canApproveThreshold,
   canonicalCanApprove,
   canViewBudget,
+  canViewEmployeeDirectory,
   ASSIGNMENT_VIEWER_ROLES,
   BUDGET_VIEWER_ROLES,
+  EMPLOYEE_DIRECTORY_VIEWER_ROLES,
   CLIENT_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
   EMPLOYEE_ROLES,
@@ -560,6 +562,57 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(canViewBudget("GENERAL_MANAGER")).toBe(true);
     expect(canViewBudget("LEAD_FINANCE")).toBe(true);
     expect(canViewBudget("TENANT_ADMIN")).toBe(true);
+  });
+
+  it("EMPLOYEE_DIRECTORY_VIEWER_ROLES excludes field roles + PCC", () => {
+    // Staff directory is a workforce/HR concern (rules §3).
+    // A plain EMPLOYEE has no operational reason to browse the
+    // org chart. PETTY_CASH_CUSTODIAN also stays out — their
+    // workflow needs a specific project's employee list, which
+    // they get contextually via the project detail page.
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+  });
+
+  it("EMPLOYEE_DIRECTORY_VIEWER_ROLES admits SPV, PM+, HR, Finance, admin", () => {
+    // Scoping (SPV/PM see teammates only, OM sees portfolio,
+    // HR/Finance/Admin see everyone) is enforced by
+    // `resolveEmployeeScope()`. This gate only controls whether
+    // the page renders at all.
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("SUPERVISOR");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("OPERATIONS_MANAGER");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("HR_ADMIN");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(EMPLOYEE_DIRECTORY_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("canViewEmployeeDirectory() denies EMPLOYEE + PCC, admits others", () => {
+    expect(canViewEmployeeDirectory("EMPLOYEE")).toBe(false);
+    expect(canViewEmployeeDirectory("PETTY_CASH_CUSTODIAN")).toBe(false);
+
+    expect(canViewEmployeeDirectory("SUPERVISOR")).toBe(true);
+    expect(canViewEmployeeDirectory("PROJECT_MANAGER")).toBe(true);
+    expect(canViewEmployeeDirectory("OPERATIONS_MANAGER")).toBe(true);
+    expect(canViewEmployeeDirectory("HEAD_MANAGER")).toBe(true);
+    expect(canViewEmployeeDirectory("GENERAL_MANAGER")).toBe(true);
+    expect(canViewEmployeeDirectory("LEAD_FINANCE")).toBe(true);
+    expect(canViewEmployeeDirectory("HR_ADMIN")).toBe(true);
+    expect(canViewEmployeeDirectory("TENANT_ADMIN")).toBe(true);
+  });
+
+  it("canViewEmployeeDirectory() folds canonical roles", () => {
+    // Canonical field roles stay denied.
+    expect(canViewEmployeeDirectory("EMPLOYEE")).toBe(false);
+
+    // Canonical mgmt/finance/admin roles fold through
+    // BOTH the legacy DB name and the canonical alias so a
+    // tenant-migrated role string still gates correctly.
+    expect(canViewEmployeeDirectory("PM")).toBe(true);
+    expect(canViewEmployeeDirectory("OM")).toBe(true);
+    expect(canViewEmployeeDirectory("FINANCE")).toBe(true);
+    expect(canViewEmployeeDirectory("ADMIN")).toBe(true);
+    expect(canViewEmployeeDirectory("DIRECTOR")).toBe(true);
   });
 
   it("canViewBudget() honours canonical role folds", () => {

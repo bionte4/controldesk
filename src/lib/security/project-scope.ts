@@ -222,6 +222,79 @@ export const resolveProjectScope = cache(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Employee scope — derived from the project scope by walking the
+// `project_pm_assignments` + `project_employee_assignments`
+// membership tables. Used by `/hr/employees` and any future
+// team-directory surface (roster, timesheets, etc.) so the same
+// scoping contract applies uniformly across the app.
+// ---------------------------------------------------------------------------
+
+export type EmployeeScope =
+  | { kind: "org" }
+  | {
+      kind: "scoped";
+      /**
+       * Employee IDs the caller may see. Always includes the
+       * caller themselves so the directory never accidentally
+       * excludes the signed-in user from their own list. May be
+       * an empty scoped array if the caller has no active project
+       * assignments — call sites should still branch on
+       * `kind === "scoped"` before applying `.in("id", [])` so
+       * they don't fall into the supabase-js empty-filter leak.
+       */
+      ids: string[];
+    };
+
+/**
+ * Derive the set of employee IDs the caller is allowed to see in
+ * the staff directory, given their project-visibility scope:
+ *   - `org` roles (Admin / GM / Director / Finance / HR) → no
+ *     filter needed; the caller may see everyone in the tenant.
+ *   - `portfolio` roles (OM / HM) → everyone assigned to any
+ *     project in the caller's portfolio.
+ *   - `assigned` roles (PM / SPV) → everyone assigned to any
+ *     project the caller is on. EMPLOYEE and PCC are denied by
+ *     `canViewEmployeeDirectory()` at the page-guard level, so
+ *     they never reach this helper.
+ *
+ * The caller is always included in the scoped set. Empty
+ * scoped arrays return `[callerId]` so a PM with no team still
+ * sees themselves in the directory rather than an empty table.
+ */
+export const resolveEmployeeScope = cache(
+  async (
+    caller: { id: string; role: AnyDbEmployeeRole },
+  ): Promise<EmployeeScope> => {
+    const projectScope = await resolveProjectScope(caller);
+    if (projectScope.kind === "org") return { kind: "org" };
+    if (projectScope.empty) return { kind: "scoped", ids: [caller.id] };
+
+    const supabase = await createClient();
+    const [pmRes, memRes] = await Promise.all([
+      supabase
+        .from("project_pm_assignments")
+        .select("pm_employee_id")
+        .in("project_id", projectScope.projectIds)
+        .eq("status", "ACTIVE"),
+      supabase
+        .from("project_employee_assignments")
+        .select("employee_id")
+        .in("project_id", projectScope.projectIds)
+        .eq("status", "ACTIVE"),
+    ]);
+
+    const ids = new Set<string>([caller.id]);
+    for (const row of (pmRes.data ?? []) as { pm_employee_id: string }[]) {
+      ids.add(row.pm_employee_id);
+    }
+    for (const row of (memRes.data ?? []) as { employee_id: string }[]) {
+      ids.add(row.employee_id);
+    }
+    return { kind: "scoped", ids: [...ids] };
+  },
+);
+
 /**
  * Convenience predicate — `true` when the caller is entitled to
  * see aggregate approval queues that live under a different

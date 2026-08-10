@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { Users2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,7 +15,12 @@ import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadLookupOptions } from "@/lib/data/lookups";
 import { authorize } from "@/lib/security/pdp";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import {
+  canViewEmployeeDirectory,
+  type AnyDbEmployeeRole,
+  type EmployeeRole,
+} from "@/lib/rbac/roles";
+import { resolveEmployeeScope } from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
 import {
   AVAILABILITY_TONE,
@@ -57,16 +63,36 @@ function daysUntil(date: string | null): number | null {
   return diff;
 }
 
-async function loadEmployees(): Promise<EmployeeRow[]> {
+async function loadEmployees(
+  caller: { id: string; role: AnyDbEmployeeRole },
+): Promise<EmployeeRow[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Rules §3 — apply project-membership scope. Callers with an
+  // "org" scope (HR / Finance / Admin / Director tiers) see every
+  // employee in the tenant. Scoped callers (PM / SPV / OM) see
+  // only teammates on their assigned projects. EMPLOYEE and PCC
+  // never reach this loader — they're blocked by
+  // `canViewEmployeeDirectory()` at the page level.
+  const scope = await resolveEmployeeScope(caller);
+
+  let query = supabase
     .from("employees")
     .select(
       "id, full_name, email, phone, department, position_title, role, join_date, employment_type, contract_end_date, availability",
     )
     .order("full_name", { ascending: true })
     .limit(500);
+
+  if (scope.kind === "scoped") {
+    // `resolveEmployeeScope()` guarantees `ids` contains at
+    // least the caller themselves, so `.in("id", ids)` never
+    // hits the supabase-js empty-array-treats-as-no-filter
+    // footgun documented in `resolveProjectScope`.
+    query = query.in("id", scope.ids);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return [];
@@ -87,8 +113,22 @@ async function loadEmployees(): Promise<EmployeeRow[]> {
 }
 
 export default async function EmployeesPage() {
+  // Fetch the employee first — page-guard must run before any of
+  // the concurrent data loaders, otherwise a denied role still
+  // pays for the directory query round-trip and (worse) can time
+  // the tenant size via response latency.
+  const employee = await requireCurrentEmployee();
+  const dbRole = employee.role as AnyDbEmployeeRole;
+
+  // Rules §3 — plain EMPLOYEE and PETTY_CASH_CUSTODIAN have no
+  // reason to browse the org chart. `notFound()` (not 403) so
+  // the URL stays undiscoverable — same pattern as the finance /
+  // payroll / contracts guards.
+  if (!canViewEmployeeDirectory(dbRole)) {
+    notFound();
+  }
+
   const [
-    employee,
     rows,
     t,
     tCols,
@@ -97,8 +137,7 @@ export default async function EmployeesPage() {
     departmentOptions,
     positionOptions,
   ] = await Promise.all([
-    requireCurrentEmployee(),
-    loadEmployees(),
+    loadEmployees({ id: employee.id, role: dbRole }),
     getTranslations("employees"),
     getTranslations("employees.columns"),
     getTranslations("employees.employmentType"),
