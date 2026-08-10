@@ -12,10 +12,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { toCanonicalRole } from "@/lib/rbac/roles";
+import { roleInGate, toCanonicalRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { listAllShifts, type WorkShiftRow } from "@/lib/data/shifts";
-import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 
 import { ShiftUpsertSheet, type ShiftFormLabels } from "./shift-upsert-sheet";
 import { ShiftRowActions } from "./shift-row-actions";
@@ -25,7 +25,7 @@ export const metadata: Metadata = { title: "Shifts" };
 // Any role that can WRITE at least one scope of shift catalog. Read is
 // unrestricted for authenticated tenant members (needed by roster
 // form + timesheet lookups).
-const CAN_MANAGE_ANY_SHIFT: readonly EmployeeRole[] = [
+const CAN_MANAGE_ANY_SHIFT: readonly AnyDbEmployeeRole[] = [
   "HR_ADMIN",
   "TENANT_ADMIN",
   "GENERAL_MANAGER",
@@ -35,7 +35,7 @@ const CAN_MANAGE_ANY_SHIFT: readonly EmployeeRole[] = [
   "SUPERVISOR",
 ];
 
-const HR_OM_ROLES: readonly EmployeeRole[] = [
+const HR_OM_ROLES: readonly AnyDbEmployeeRole[] = [
   "HR_ADMIN",
   "TENANT_ADMIN",
   "GENERAL_MANAGER",
@@ -88,14 +88,14 @@ async function loadAllProjects(): Promise<
 
 export default async function ShiftsPage() {
   const employee = await requireCurrentEmployee();
-  const role = employee.role as string;
-  if (!(CAN_MANAGE_ANY_SHIFT as readonly string[]).includes(role)) {
+  const role = employee.role as AnyDbEmployeeRole;
+  if (!roleInGate(role, CAN_MANAGE_ANY_SHIFT)) {
     // 404 rather than 403 — keeps the URL undiscoverable to employees
     // without any shift-management authority.
     notFound();
   }
 
-  const isHrOm = (HR_OM_ROLES as readonly string[]).includes(role);
+  const isHrOm = roleInGate(role, HR_OM_ROLES);
   const canonical = toCanonicalRole(employee.role as AnyDbEmployeeRole);
 
   const [shifts, projects, t] = await Promise.all([

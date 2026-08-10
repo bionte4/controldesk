@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadCoaTree } from "@/lib/data/coa";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { roleInGate } from "@/lib/rbac/roles";
+import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 
 import { CoaManager } from "./coa-manager";
 
@@ -23,17 +24,18 @@ export const metadata: Metadata = { title: "Chart of Accounts" };
 /**
  * Curation surface for the tenant's Chart of Accounts. Finance owns the
  * master list — TENANT_ADMIN is included so a founder-only tenant can
- * bootstrap without a dedicated finance seat.
+ * bootstrap without a dedicated finance seat. Uses `roleInGate` so canonical
+ * GAS roles (`FINANCE`, `ADMIN`) fold onto their legacy equivalents (rules
+ * §6 Fase 0 aliasing).
  */
-const WRITE_ROLES: readonly EmployeeRole[] = ["TENANT_ADMIN", "LEAD_FINANCE"];
-
-function isWriteRole(role: string): boolean {
-  return (WRITE_ROLES as readonly string[]).includes(role);
-}
+const WRITE_ROLES: readonly AnyDbEmployeeRole[] = [
+  "TENANT_ADMIN",
+  "LEAD_FINANCE",
+];
 
 export default async function ChartOfAccountsPage() {
   const employee = await requireCurrentEmployee();
-  if (!isWriteRole(employee.role as string)) {
+  if (!roleInGate(employee.role as AnyDbEmployeeRole, WRITE_ROLES)) {
     notFound();
   }
 
