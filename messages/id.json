@@ -2684,7 +2684,27 @@
       "saved": "Perubahan disimpan.",
       "errorSave": "Gagal menyimpan perubahan.",
       "confirmGrantHigh": "Kapabilitas ini bersifat sensitif tinggi. Yakin mengizinkan role {role}?",
-      "confirmResetCapability": "Reset semua kustom untuk kapabilitas ini ke default katalog?"
+      "confirmResetCapability": "Reset semua kustom untuk kapabilitas ini ke default katalog?",
+      "history": {
+        "trigger": "Riwayat",
+        "triggerAria": "Buka riwayat perubahan untuk {capability}",
+        "title": "Riwayat perubahan",
+        "subtitle": "Semua perubahan pada kapabilitas \"{capability}\". Urutan terbaru di atas.",
+        "filterRole": "Filter role",
+        "filterAll": "Semua role",
+        "loading": "Memuat riwayat…",
+        "empty": "Belum ada perubahan tercatat untuk kapabilitas ini.",
+        "errorLoad": "Gagal memuat riwayat.",
+        "byActor": "oleh {actor}",
+        "actorUnknown": "Aktor tidak diketahui",
+        "allRoles": "Semua role ({count})",
+        "kind": {
+          "grant": "Diizinkan",
+          "revoke": "Ditolak",
+          "reset_cell": "Kembali ke default",
+          "reset_all": "Reset semua"
+        }
+      }
     },
     "lookups": {
       "backToSettings": "Kembali ke Pengaturan",

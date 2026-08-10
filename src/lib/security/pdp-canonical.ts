@@ -340,6 +340,14 @@ function decideCanonicalRead(
     // drives the chain-preview UI. Tighter policies live in the DB (RLS).
     return ALLOW("tenant-scoped threshold read");
   }
+  if (resource === "capability_override") {
+    // Reading the override audit trail is restricted to the same admin
+    // tier that can write it, so the history sheet on
+    // `/settings/capabilities` isn't accessible to non-admins even via
+    // a hand-rolled Server Action. Delegate to the write policy for
+    // consistency.
+    return decideCapabilityOverride(actor, "read");
+  }
   if (resource === "client_portal_view") {
     // Portal views are inaccessible to employees; the portal has its own
     // auth surface (`client_users`).
@@ -743,6 +751,17 @@ function decideCapabilityOverride(actor: CanonicalActor, action: CanonicalAction
   // ADMIN or DIRECTOR (`GENERAL_MANAGER` folds to DIRECTOR post-Fase 0),
   // delete requires ADMIN. RLS on `tenant_capability_overrides`
   // (migration 0081) enforces the same restriction at the row layer.
+  //
+  // The `read` action is gated to the same admin tier so the audit
+  // history sheet at `/settings/capabilities` can't be scraped by
+  // non-privileged callers via a hand-rolled Server Action call.
+  // RLS on `security_audit_logs` (migration 0004) provides a second
+  // wall for the underlying rows.
+  if (action === "read") {
+    return actor.role === "ADMIN" || actor.role === "DIRECTOR"
+      ? ALLOW("admin/director reads capability override history")
+      : DENY("only ADMIN / DIRECTOR may read capability override history");
+  }
   if (action === "create" || action === "update") {
     return actor.role === "ADMIN" || actor.role === "DIRECTOR"
       ? ALLOW("admin/director tunes capability matrix")

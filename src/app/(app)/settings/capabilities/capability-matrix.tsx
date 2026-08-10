@@ -53,6 +53,7 @@ import {
   resetCapabilityOverrideAction,
   upsertCapabilityOverrideAction,
 } from "./actions";
+import { CapabilityHistorySheet } from "./capability-history-sheet";
 
 export type CapabilityCellSnapshot = {
   role: EmployeeRole;
@@ -271,18 +272,25 @@ function CapabilityRow({
               {row.description}
             </CardDescription>
           </div>
-          {row.overrideCount > 0 ? (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={handleResetCapability}
-              disabled={isPending}
-              className="gap-1 text-xs"
-            >
-              <RotateCcw className="size-3" aria-hidden />
-              {t("resetCapability")}
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-1">
+            <CapabilityHistorySheet
+              capabilityId={row.id}
+              capabilityTitle={row.title}
+              triggerLabel={t("history.triggerAria", { capability: row.title })}
+            />
+            {row.overrideCount > 0 ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleResetCapability}
+                disabled={isPending}
+                className="gap-1 text-xs"
+              >
+                <RotateCcw className="size-3" aria-hidden />
+                {t("resetCapability")}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </CardHeader>
       <CardContent>

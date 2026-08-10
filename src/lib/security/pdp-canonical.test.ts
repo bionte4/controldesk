@@ -617,3 +617,61 @@ describe("authorizeCanonical — client_portal_view", () => {
     expect(decide(actor("DIRECTOR"), "create", "client_portal_view").effect).toBe("DENY");
   });
 });
+
+// ---------------------------------------------------------------------------
+// capability_override — Fase 2 (write) + Fase 3B (read gating on audit trail).
+// ---------------------------------------------------------------------------
+describe("authorizeCanonical — capability_override", () => {
+  it("ADMIN/DIRECTOR can create / update overrides", () => {
+    expect(decide(actor("ADMIN"), "create", "capability_override").effect).toBe(
+      "ALLOW",
+    );
+    expect(decide(actor("DIRECTOR"), "update", "capability_override").effect).toBe(
+      "ALLOW",
+    );
+  });
+
+  it("FINANCE cannot tune the capability matrix", () => {
+    expect(decide(actor("FINANCE"), "update", "capability_override").effect).toBe(
+      "DENY",
+    );
+  });
+
+  it("only ADMIN can delete an override row", () => {
+    expect(decide(actor("DIRECTOR"), "delete", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("ADMIN"), "delete", "capability_override").effect).toBe(
+      "ALLOW",
+    );
+  });
+
+  it("read of the audit trail is admin/director only (Fase 3B)", () => {
+    // History sheet on /settings/capabilities must not be scrape-able
+    // by non-privileged callers even via a hand-rolled server action.
+    // Legacy `decideCanonicalRead` fallback for tenant-scoped reads
+    // would otherwise let EMPLOYEE / SUPERVISOR through here; this
+    // test pins the tighter gate.
+    expect(decide(actor("EMPLOYEE"), "read", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("SUPERVISOR"), "read", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("FINANCE"), "read", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("PM"), "read", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("OM"), "read", "capability_override").effect).toBe(
+      "DENY",
+    );
+    expect(decide(actor("DIRECTOR"), "read", "capability_override").effect).toBe(
+      "ALLOW",
+    );
+    expect(decide(actor("ADMIN"), "read", "capability_override").effect).toBe(
+      "ALLOW",
+    );
+  });
+});

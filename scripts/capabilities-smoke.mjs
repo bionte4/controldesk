@@ -147,6 +147,49 @@ async function main() {
     }
   }
 
+  // -----------------------------------------------------------------
+  // Step 4 — Admin opens the History sheet on the first capability
+  // and verifies it loads (Fase 3B). Doesn't assert entry count
+  // because the seeded DB may or may not carry prior overrides — the
+  // key regression to pin is that the sheet does not 500 / crash.
+  // -----------------------------------------------------------------
+  {
+    log("Step 4 — Admin opens history sheet on a capability row");
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    try {
+      await login(page, ADMIN_EMAIL);
+      await page.goto(`${BASE}/settings/capabilities`, {
+        waitUntil: "domcontentloaded",
+        timeout: NAV_TIMEOUT,
+      });
+      await page.waitForTimeout(1200);
+
+      // Click the first "History" button (one per capability row).
+      const historyButtons = page.getByRole("button", { name: /Riwayat|History/i });
+      const btnCount = await historyButtons.count();
+      if (btnCount < 1) {
+        console.error(`  ✗ No history buttons rendered (found ${btnCount}).`);
+        failures += 1;
+      } else {
+        await historyButtons.first().click();
+        // Sheet title is a stable landmark ("Riwayat perubahan" / "Change history").
+        try {
+          await page
+            .getByRole("heading", { name: /Riwayat perubahan|Change history/i })
+            .first()
+            .waitFor({ state: "visible", timeout: NAV_TIMEOUT });
+          log(`  ✓ history sheet opened`);
+        } catch {
+          console.error(`  ✗ History sheet did not surface a title`);
+          failures += 1;
+        }
+      }
+    } finally {
+      await ctx.close();
+    }
+  }
+
   if (failures > 0) {
     console.error(`\n✗ ${failures} smoke check(s) failed.`);
     await browser.close();

@@ -2684,7 +2684,27 @@
       "saved": "Change saved.",
       "errorSave": "Failed to save change.",
       "confirmGrantHigh": "This capability is high sensitivity. Grant access to {role}?",
-      "confirmResetCapability": "Reset all overrides for this capability to catalog defaults?"
+      "confirmResetCapability": "Reset all overrides for this capability to catalog defaults?",
+      "history": {
+        "trigger": "History",
+        "triggerAria": "Open change history for {capability}",
+        "title": "Change history",
+        "subtitle": "Every override change for capability \"{capability}\". Most recent first.",
+        "filterRole": "Filter role",
+        "filterAll": "All roles",
+        "loading": "Loading history…",
+        "empty": "No change history recorded for this capability yet.",
+        "errorLoad": "Failed to load history.",
+        "byActor": "by {actor}",
+        "actorUnknown": "Unknown actor",
+        "allRoles": "All roles ({count})",
+        "kind": {
+          "grant": "Granted",
+          "revoke": "Revoked",
+          "reset_cell": "Reset to default",
+          "reset_all": "Reset all"
+        }
+      }
     },
     "lookups": {
       "backToSettings": "Back to Settings",
