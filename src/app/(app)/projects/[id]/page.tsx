@@ -24,6 +24,7 @@ import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import {
+  canViewBudget,
   formatRole,
   toCanonicalRole,
   type AnyDbEmployeeRole,
@@ -105,6 +106,13 @@ export default async function ProjectDetailPage(props: {
     notFound();
   }
 
+  // Rules §3 — budget/expense sections on the project detail page
+  // are gated on the `view_budget` capability. When the caller
+  // cannot see budgets, we (1) skip both queries entirely so the RSC
+  // payload never carries amounts, and (2) suppress the two cards
+  // that render them.
+  const showBudget = canViewBudget(employee.role as AnyDbEmployeeRole);
+
   const supabase = await createClient();
 
   type PmRow = {
@@ -182,19 +190,35 @@ export default async function ProjectDetailPage(props: {
       .eq("tenant_id", employee.tenant_id)
       .eq("status", "ACTIVE")
       .order("allocation_percentage", { ascending: false }),
-    supabase
-      .from("project_budgets")
-      .select("budget_amount, spent_amount")
-      .eq("project_id", id)
-      .eq("tenant_id", employee.tenant_id)
-      .maybeSingle(),
-    supabase
-      .from("project_expenses")
-      .select("id, amount, category, description, status, incurred_on, created_at")
-      .eq("project_id", id)
-      .eq("tenant_id", employee.tenant_id)
-      .order("created_at", { ascending: false })
-      .limit(10),
+    // Async IIFE wrappers normalise both branches to the same
+    // `{ data }` shape without conflicting with the Supabase-generated
+    // types. Downstream code coerces amounts via `parseMoneyFromDb`,
+    // so the row shape is intentionally kept loose here.
+    (async (): Promise<{ data: { budget_amount: unknown; spent_amount: unknown } | null }> => {
+      if (!showBudget) return { data: null };
+      const res = await supabase
+        .from("project_budgets")
+        .select("budget_amount, spent_amount")
+        .eq("project_id", id)
+        .eq("tenant_id", employee.tenant_id)
+        .maybeSingle();
+      return {
+        data: res.data as { budget_amount: unknown; spent_amount: unknown } | null,
+      };
+    })(),
+    (async (): Promise<{ data: unknown[] }> => {
+      if (!showBudget) return { data: [] };
+      const res = await supabase
+        .from("project_expenses")
+        .select(
+          "id, amount, category, description, status, incurred_on, created_at",
+        )
+        .eq("project_id", id)
+        .eq("tenant_id", employee.tenant_id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      return { data: (res.data ?? []) as unknown[] };
+    })(),
     supabase
       .from("project_milestones")
       .select(
@@ -224,10 +248,17 @@ export default async function ProjectDetailPage(props: {
 
   const client = project.clients as unknown as { id: string; name: string } | null;
 
+  // `parseMoneyFromDb` accepts string | number | null (generated
+  // types return number, runtime is a stringified numeric). Cast
+  // through `as` so the loosened row type stays compatible.
   const budget = budgetRow
     ? {
-        amount: parseMoneyFromDb(budgetRow.budget_amount),
-        spent: parseMoneyFromDb(budgetRow.spent_amount),
+        amount: parseMoneyFromDb(
+          budgetRow.budget_amount as string | number | null,
+        ),
+        spent: parseMoneyFromDb(
+          budgetRow.spent_amount as string | number | null,
+        ),
       }
     : null;
 
@@ -401,44 +432,52 @@ export default async function ProjectDetailPage(props: {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="glass lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="size-4" /> {t("budgetTitle")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!budget ? (
-              <p className="text-sm text-muted-foreground">
-                {t("budgetEmpty")}
-              </p>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between">
-                  <div>
-                    <p className="label-meta">{t("budgetSpent")}</p>
-                    <p className="font-display text-2xl font-semibold">
-                      {formatIDR(budget.spent, { compact: true })}
+      <div
+        className={
+          showBudget
+            ? "grid grid-cols-1 lg:grid-cols-3 gap-4"
+            : "grid grid-cols-1 gap-4"
+        }
+      >
+        {showBudget ? (
+          <Card className="glass lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="size-4" /> {t("budgetTitle")}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!budget ? (
+                <p className="text-sm text-muted-foreground">
+                  {t("budgetEmpty")}
+                </p>
+              ) : (
+                <>
+                  <div className="flex items-baseline justify-between">
+                    <div>
+                      <p className="label-meta">{t("budgetSpent")}</p>
+                      <p className="font-display text-2xl font-semibold">
+                        {formatIDR(budget.spent, { compact: true })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="label-meta">{t("budgetOf")}</p>
+                      <p className="font-mono text-sm text-muted-foreground">
+                        {formatIDR(budget.amount, { compact: true })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <Progress value={Math.min(100, spentPct)} />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {spentPct.toFixed(1)}% {t("budgetUsed")}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="label-meta">{t("budgetOf")}</p>
-                    <p className="font-mono text-sm text-muted-foreground">
-                      {formatIDR(budget.amount, { compact: true })}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <Progress value={Math.min(100, spentPct)} />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {spentPct.toFixed(1)}% {t("budgetUsed")}
-                  </p>
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card className="glass">
           <CardHeader>
@@ -594,7 +633,13 @@ export default async function ProjectDetailPage(props: {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div
+        className={
+          showBudget
+            ? "grid grid-cols-1 lg:grid-cols-2 gap-4"
+            : "grid grid-cols-1 gap-4"
+        }
+      >
         <Card className="glass">
           <CardHeader className="flex flex-row items-center justify-between gap-2">
             <CardTitle className="flex items-center gap-2">
@@ -661,7 +706,8 @@ export default async function ProjectDetailPage(props: {
           </CardContent>
         </Card>
 
-        <Card className="glass">
+        {showBudget ? (
+          <Card className="glass">
           <CardHeader>
             <CardTitle>{t("expensesTitle")}</CardTitle>
           </CardHeader>
@@ -707,12 +753,19 @@ export default async function ProjectDetailPage(props: {
               </div>
             )}
           </CardContent>
-        </Card>
+          </Card>
+        ) : null}
       </div>
 
       <ProjectTasksSection projectId={id} tenantId={employee.tenant_id} />
 
-      <ProjectDirectLaborSection projectId={id} />
+      {/* Direct Labor Cost surfaces per-employee hourly rate + cost —
+          this is derived payroll data. Gate behind the same
+          `view_budget` capability so Employees / Supervisors don't
+          see either their teammates' or their own labor cost in a
+          project cross-section. A dedicated `view_project_labor_cost`
+          capability may split from this in Fase 2. */}
+      {showBudget ? <ProjectDirectLaborSection projectId={id} /> : null}
 
       <ProjectIssuesSection
         projectId={id}

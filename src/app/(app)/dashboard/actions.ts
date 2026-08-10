@@ -3,7 +3,11 @@
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { formatIDR, parseMoneyFromDb, type Money } from "@/lib/format/money";
 import { budgetPendingForRole } from "@/lib/budgets/state";
-import { toCanonicalRole, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import {
+  canViewBudget,
+  toCanonicalRole,
+  type AnyDbEmployeeRole,
+} from "@/lib/rbac/roles";
 import { PENDING_STATUSES as EXPENSE_PENDING_STATUSES } from "@/lib/expenses/state";
 import { CA_PENDING_APPROVAL_STATUSES } from "@/lib/cash-advance/state";
 import { CANONICAL_CA_PENDING_STATUSES } from "@/lib/cash-advance/state-canonical";
@@ -51,6 +55,16 @@ export type DashboardMetrics = {
 export type PortfolioSnapshot = CorePortfolioSnapshot & {
   tenantId: string;
   scope: ProjectScope["kind"];
+  /**
+   * Rules §3 — capability gate for budget numbers. When false, the
+   * snapshot still contains project tiles (progress ring, milestone
+   * status), but *all monetary figures* are zeroed and the renderer
+   * hides money-bearing UI (header totals, per-tile budget ring +
+   * planned/realised/outstanding strings). Employees / Supervisors
+   * fall in the `false` branch by default; toggled via
+   * `canViewBudget()` at fetch time.
+   */
+  showBudget: boolean;
 };
 
 export type { PortfolioTile };
@@ -67,7 +81,10 @@ function flatSparkline(): KpiPoint[] {
  * `supabase-js` gotcha where `.in("col", [])` behaves as an
  * unfiltered query and would silently leak tenant-wide rows.
  */
-function emptyMetrics(scope: ProjectScope["kind"]): DashboardMetrics {
+function emptyMetrics(
+  scope: ProjectScope["kind"],
+  opts: { showBudget: boolean },
+): DashboardMetrics {
   const zeroKpi = (id: string, label: string, formatted = "0"): Kpi => ({
     id,
     label,
@@ -77,16 +94,27 @@ function emptyMetrics(scope: ProjectScope["kind"]): DashboardMetrics {
     trend: "flat",
     sparkline: flatSparkline(),
   });
+  const kpis: Kpi[] = [
+    zeroKpi("active_projects", "dashboard.kpis.activeProjects"),
+  ];
+  if (opts.showBudget) {
+    kpis.push(
+      zeroKpi(
+        "approved_budget",
+        "dashboard.kpis.approvedBudget",
+        formatIDR(0n as Money, { compact: true }),
+      ),
+    );
+  }
+  kpis.push(
+    zeroKpi("milestone_done_pct", "dashboard.kpis.milestoneDone", "0.0%"),
+    zeroKpi("pending_approvals", "dashboard.kpis.pendingApprovals"),
+    zeroKpi("issues_at_risk", "dashboard.kpis.issuesAtRisk"),
+  );
   return {
     updatedAt: new Date().toISOString(),
     scope,
-    kpis: [
-      zeroKpi("active_projects", "dashboard.kpis.activeProjects"),
-      zeroKpi("approved_budget", "dashboard.kpis.approvedBudget", formatIDR(0n as Money, { compact: true })),
-      zeroKpi("milestone_done_pct", "dashboard.kpis.milestoneDone", "0.0%"),
-      zeroKpi("pending_approvals", "dashboard.kpis.pendingApprovals"),
-      zeroKpi("issues_at_risk", "dashboard.kpis.issuesAtRisk"),
-    ],
+    kpis,
   };
 }
 
@@ -114,10 +142,12 @@ async function loadScopedBudgetIds(
  */
 export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   const employee = await requireCurrentEmployee();
+  const dbRole = employee.role as AnyDbEmployeeRole;
   const scope = await resolveProjectScope({
     id: employee.id,
-    role: employee.role as AnyDbEmployeeRole,
+    role: dbRole,
   });
+  const showBudget = canViewBudget(dbRole);
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {
@@ -127,7 +157,12 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
       budgetDetails: [],
       milestones: [],
     });
-    return { ...core, tenantId: employee.tenant_id, scope: scope.kind };
+    return {
+      ...core,
+      tenantId: employee.tenant_id,
+      scope: scope.kind,
+      showBudget,
+    };
   }
 
   let projectsQ = supabase
@@ -140,17 +175,24 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
     projectsQ = projectsQ.in("id", scope.projectIds);
   }
 
-  let budgetsQ = supabase
-    .from("budgets")
-    .select(
-      "id, project_id, title, fiscal_year, status, total_planned_amount, created_at",
-    )
-    .order("fiscal_year", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (scope.kind !== "org") {
-    budgetsQ = budgetsQ.in("project_id", scope.projectIds);
-  }
+  // Budget-bearing tables are only fetched when the caller is
+  // allowed to see monetary figures. For Employee / Supervisor the
+  // arrays stay empty and the renderer hides money UI entirely —
+  // fetching would be wasted round-trips + a leak vector if the
+  // client ever exposed the payload.
+  const budgetsQ = (() => {
+    if (!showBudget) return Promise.resolve({ data: [] as unknown[] });
+    let q = supabase
+      .from("budgets")
+      .select(
+        "id, project_id, title, fiscal_year, status, total_planned_amount, created_at",
+      )
+      .order("fiscal_year", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (scope.kind !== "org") q = q.in("project_id", scope.projectIds);
+    return q;
+  })();
 
   let milestonesQ = supabase
     .from("project_milestones")
@@ -170,11 +212,9 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   const budgets = (budgetsRes.data ?? []) as unknown as BudgetRow[];
   const milestones = (milestonesRes.data ?? []) as unknown as MilestoneRow[];
 
-  // `budget_details` are scoped through their parent budget IDs to
-  // avoid a JOIN — smaller round-trip, and RLS still applies.
   const budgetIds = budgets.map((b) => b.id).filter(Boolean);
   const budgetDetailsRes =
-    budgetIds.length > 0
+    showBudget && budgetIds.length > 0
       ? await supabase
           .from("budget_details")
           .select(
@@ -192,7 +232,12 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
     milestones,
   });
 
-  return { ...core, tenantId: employee.tenant_id, scope: scope.kind };
+  return {
+    ...core,
+    tenantId: employee.tenant_id,
+    scope: scope.kind,
+    showBudget,
+  };
 }
 
 /**
@@ -217,10 +262,11 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     id: employee.id,
     role: dbRole,
   });
+  const showBudget = canViewBudget(dbRole);
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {
-    return emptyMetrics(scope.kind);
+    return emptyMetrics(scope.kind, { showBudget });
   }
 
   const isScoped = scope.kind !== "org";
@@ -243,15 +289,26 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     return q;
   })();
 
-  const approvedBudgetQ = (() => {
-    let q = supabase
-      .from("budgets")
-      .select("total_planned_amount")
-      .eq("status", "APPROVED")
-      .limit(500);
-    if (isScoped) q = q.in("project_id", projectIds);
-    return q;
-  })();
+  // Skip the entire query when the caller can't see budgets — the
+  // KPI is dropped from the resulting array below. We wrap the
+  // supabase-js call in an async IIFE so both branches settle to
+  // the same `{ data }` shape; the actual money coercion happens
+  // downstream via `parseMoneyFromDb`, which accepts either the
+  // generated numeric type or the runtime string form.
+  const approvedBudgetQ: Promise<{
+    data: { total_planned_amount: unknown }[] | null;
+  }> = showBudget
+    ? (async () => {
+        let q = supabase
+          .from("budgets")
+          .select("total_planned_amount")
+          .eq("status", "APPROVED")
+          .limit(500);
+        if (isScoped) q = q.in("project_id", projectIds);
+        const res = await q;
+        return { data: res.data as { total_planned_amount: unknown }[] | null };
+      })()
+    : Promise.resolve({ data: [] });
 
   const milestonesQ = (() => {
     let q = supabase
@@ -472,60 +529,66 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   }
   const issuesAttentionCount = issuesBreachedCount + issuesAtRiskCount;
 
+  const kpis: Kpi[] = [
+    {
+      id: "active_projects",
+      label: "dashboard.kpis.activeProjects",
+      value: activeProjects,
+      formatted: String(activeProjects),
+      delta: 0,
+      trend: "flat",
+      sparkline: flatSparkline(),
+    },
+  ];
+  if (showBudget) {
+    kpis.push({
+      id: "approved_budget",
+      label: "dashboard.kpis.approvedBudget",
+      value: Number(totalApprovedPlanned),
+      formatted: formatIDR(totalApprovedPlanned, { compact: true }),
+      delta: 0,
+      trend: "flat",
+      sparkline: flatSparkline(),
+    });
+  }
+  kpis.push(
+    {
+      id: "milestone_done_pct",
+      label: "dashboard.kpis.milestoneDone",
+      value: donePct,
+      formatted: `${donePct.toFixed(1)}%`,
+      delta: 0,
+      trend: donePct > 0 ? "up" : "flat",
+      sparkline: flatSparkline(),
+    },
+    {
+      id: "pending_approvals",
+      label: "dashboard.kpis.pendingApprovals",
+      value: pendingCount,
+      formatted: String(pendingCount),
+      delta: 0,
+      trend: pendingCount > 0 ? "up" : "flat",
+      sparkline: flatSparkline(),
+    },
+    {
+      id: "issues_at_risk",
+      label: "dashboard.kpis.issuesAtRisk",
+      value: issuesAttentionCount,
+      formatted:
+        issuesBreachedCount > 0
+          ? `${issuesBreachedCount}!${
+              issuesAtRiskCount > 0 ? ` · ${issuesAtRiskCount}` : ""
+            }`
+          : String(issuesAttentionCount),
+      delta: 0,
+      trend: issuesBreachedCount > 0 ? "up" : "flat",
+      sparkline: flatSparkline(),
+    },
+  );
+
   return {
     updatedAt: new Date().toISOString(),
     scope: scope.kind,
-    kpis: [
-      {
-        id: "active_projects",
-        label: "dashboard.kpis.activeProjects",
-        value: activeProjects,
-        formatted: String(activeProjects),
-        delta: 0,
-        trend: "flat",
-        sparkline: flatSparkline(),
-      },
-      {
-        id: "approved_budget",
-        label: "dashboard.kpis.approvedBudget",
-        value: Number(totalApprovedPlanned),
-        formatted: formatIDR(totalApprovedPlanned, { compact: true }),
-        delta: 0,
-        trend: "flat",
-        sparkline: flatSparkline(),
-      },
-      {
-        id: "milestone_done_pct",
-        label: "dashboard.kpis.milestoneDone",
-        value: donePct,
-        formatted: `${donePct.toFixed(1)}%`,
-        delta: 0,
-        trend: donePct > 0 ? "up" : "flat",
-        sparkline: flatSparkline(),
-      },
-      {
-        id: "pending_approvals",
-        label: "dashboard.kpis.pendingApprovals",
-        value: pendingCount,
-        formatted: String(pendingCount),
-        delta: 0,
-        trend: pendingCount > 0 ? "up" : "flat",
-        sparkline: flatSparkline(),
-      },
-      {
-        id: "issues_at_risk",
-        label: "dashboard.kpis.issuesAtRisk",
-        value: issuesAttentionCount,
-        formatted:
-          issuesBreachedCount > 0
-            ? `${issuesBreachedCount}!${
-                issuesAtRiskCount > 0 ? ` · ${issuesAtRiskCount}` : ""
-              }`
-            : String(issuesAttentionCount),
-        delta: 0,
-        trend: issuesBreachedCount > 0 ? "up" : "flat",
-        sparkline: flatSparkline(),
-      },
-    ],
+    kpis,
   };
 }

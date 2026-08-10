@@ -16,7 +16,11 @@ import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
+import {
+  canViewBudget,
+  type AnyDbEmployeeRole,
+  type EmployeeRole,
+} from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ProjectPriority,
@@ -116,6 +120,7 @@ async function loadSponsorOptions(): Promise<SponsorOption[]> {
 
 async function loadProjects(
   employee: { id: string; role: AnyDbEmployeeRole },
+  opts: { showBudget: boolean },
 ): Promise<ProjectRow[]> {
   const supabase = await createClient();
   const scope = await resolveProjectScope(employee);
@@ -126,11 +131,19 @@ async function loadProjects(
   // was the exact leak fixed on the Dashboard.
   if (scope.kind !== "org" && scope.empty) return [];
 
+  // Rules §3 — omit the `project_budgets(budget_amount)` join for
+  // callers without the `view_budget` capability. The join is a
+  // relational embed, not a filter, so dropping it saves one nested
+  // fetch and removes the amount from the RSC payload entirely.
+  const baseSelect =
+    "id, code, project_number, name, status, priority, project_type, start_date, end_date, client_id, clients(id, name, project_code)";
+  const selectClause = opts.showBudget
+    ? `${baseSelect}, project_budgets(budget_amount)`
+    : baseSelect;
+
   let query = supabase
     .from("projects")
-    .select(
-      "id, code, project_number, name, status, priority, project_type, start_date, end_date, client_id, clients(id, name, project_code), project_budgets(budget_amount)",
-    )
+    .select(selectClause)
     .order("start_date", { ascending: false, nullsFirst: false })
     .limit(200);
   if (scope.kind !== "org") {
@@ -141,25 +154,37 @@ async function loadProjects(
   if (error) return [];
 
   return (data ?? []).map((row) => {
-    const cli = row.clients as unknown as
-      | { id: string; name: string; project_code: string | null }
-      | null;
+    const r = row as unknown as {
+      id: string;
+      code: string;
+      project_number: string | null;
+      name: string;
+      status: ProjectStatus;
+      priority: ProjectPriority | null;
+      project_type: ProjectType | null;
+      start_date: string | null;
+      end_date: string | null;
+      client_id: string;
+      clients: { id: string; name: string; project_code: string | null } | null;
+      project_budgets?: { budget_amount: string }[] | null;
+    };
+    const cli = r.clients;
     return {
-      id: row.id,
-      code: row.code,
-      project_number: row.project_number,
-      name: row.name,
-      status: row.status as ProjectStatus,
-      priority: (row.priority ?? "MEDIUM") as ProjectPriority,
-      project_type: (row.project_type ?? "INTERNAL") as ProjectType,
-      start_date: row.start_date,
-      end_date: row.end_date,
-      client_id: row.client_id,
+      id: r.id,
+      code: r.code,
+      project_number: r.project_number,
+      name: r.name,
+      status: r.status,
+      priority: r.priority ?? "MEDIUM",
+      project_type: r.project_type ?? "INTERNAL",
+      start_date: r.start_date,
+      end_date: r.end_date,
+      client_id: r.client_id,
       client_name: cli?.name ?? "—",
       client_code: cli?.project_code ?? null,
-      budget_amount_db:
-        (row.project_budgets as unknown as { budget_amount: string }[] | null)?.[0]
-          ?.budget_amount ?? null,
+      budget_amount_db: opts.showBudget
+        ? r.project_budgets?.[0]?.budget_amount ?? null
+        : null,
     };
   });
 }
@@ -185,6 +210,8 @@ export default async function ProjectsPage() {
   // project-visibility scope (rules §3 ABAC). Fetch the employee
   // first so we can parallelise the rest against that scope.
   const employee = await requireCurrentEmployee();
+  const dbRole = employee.role as AnyDbEmployeeRole;
+  const showBudget = canViewBudget(dbRole);
   const [
     projects,
     clientOptions,
@@ -196,10 +223,7 @@ export default async function ProjectsPage() {
     tType,
     tCols,
   ] = await Promise.all([
-    loadProjects({
-      id: employee.id,
-      role: employee.role as AnyDbEmployeeRole,
-    }),
+    loadProjects({ id: employee.id, role: dbRole }, { showBudget }),
     loadClientOptions(),
     loadPmOptions(),
     loadSponsorOptions(),
@@ -269,7 +293,11 @@ export default async function ProjectsPage() {
                     <ColHead>{tCols("type")}</ColHead>
                     <ColHead>{tCols("status")}</ColHead>
                     <ColHead>{tCols("priority")}</ColHead>
-                    <ColHead className="text-right">{tCols("budget")}</ColHead>
+                    {showBudget ? (
+                      <ColHead className="text-right">
+                        {tCols("budget")}
+                      </ColHead>
+                    ) : null}
                     <ColHead>{tCols("period")}</ColHead>
                   </tr>
                 </thead>
@@ -327,13 +355,15 @@ export default async function ProjectsPage() {
                           {tPriority(p.priority)}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums">
-                        {p.budget_amount_db
-                          ? formatIDR(parseMoneyFromDb(p.budget_amount_db), {
-                              compact: true,
-                            })
-                          : "—"}
-                      </td>
+                      {showBudget ? (
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          {p.budget_amount_db
+                            ? formatIDR(parseMoneyFromDb(p.budget_amount_db), {
+                                compact: true,
+                              })
+                            : "—"}
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3 text-muted-foreground text-xs">
                         {p.start_date
                           ? formatInTz(p.start_date, "dd MMM yyyy")

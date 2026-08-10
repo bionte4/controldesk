@@ -111,6 +111,26 @@ export const BUDGET_VIEWER_ROLES: readonly EmployeeRole[] = [
 ] as const;
 
 /**
+ * Named capability predicate over `BUDGET_VIEWER_ROLES` — checks
+ * whether the caller is allowed to see monetary budget figures
+ * anywhere in the app (Dashboard KPI "Approved Budget", portfolio
+ * tile amounts, `/projects` list Budget column, `/projects/[id]`
+ * expense section, `/finance/budgets`). Deliberately named after
+ * the *capability* (not the role gate) so Phase 2 (tenant-scoped
+ * capability overrides via an admin toggle UI) can replace the
+ * implementation without churning every call site — the signature
+ * stays `(role) => boolean` and eventually becomes async when
+ * capability lookups require a DB round-trip.
+ *
+ * Rules §3 (finance visibility restriction). Employees and
+ * Supervisors do NOT see budget numbers by default; only PM+ and
+ * Finance/executive seats do.
+ */
+export function canViewBudget(role: AnyDbEmployeeRole): boolean {
+  return roleInGate(role, BUDGET_VIEWER_ROLES);
+}
+
+/**
  * Roles allowed to read `/finance/petty-cash` (fund balances,
  * custodian assignments, voucher ledger). Sidebar entry already
  * gates the same list; the page redirect guard mirrors it so a

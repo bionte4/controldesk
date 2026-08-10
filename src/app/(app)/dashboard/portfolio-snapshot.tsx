@@ -117,33 +117,41 @@ export async function PortfolioSnapshotSection({
     );
   }
 
+  // Rules §3 — hide monetary aggregates when the caller lacks the
+  // `view_budget` capability. Active-project count and average
+  // progress are non-monetary and always shown, so an Employee
+  // still sees a meaningful portfolio header.
   const totalsItems: Array<{ key: string; label: string; value: string }> = [
     {
       key: "active",
       label: labels.totals.activeProjects,
       value: String(snapshot.activeProjectCount),
     },
-    {
-      key: "planned",
-      label: labels.totals.totalPlanned,
-      value: formatIDR(snapshot.totalPlannedAll, { compact: true }),
-    },
-    {
-      key: "realised",
-      label: labels.totals.totalRealised,
-      value: formatIDR(snapshot.totalRealizedAll, { compact: true }),
-    },
-    {
-      key: "outstanding",
-      label: labels.totals.totalOutstanding,
-      value: formatIDR(snapshot.totalOutstandingAll, { compact: true }),
-    },
-    {
-      key: "progress",
-      label: labels.totals.averageProgress,
-      value: `${snapshot.averageProgressPct.toFixed(1)}%`,
-    },
   ];
+  if (snapshot.showBudget) {
+    totalsItems.push(
+      {
+        key: "planned",
+        label: labels.totals.totalPlanned,
+        value: formatIDR(snapshot.totalPlannedAll, { compact: true }),
+      },
+      {
+        key: "realised",
+        label: labels.totals.totalRealised,
+        value: formatIDR(snapshot.totalRealizedAll, { compact: true }),
+      },
+      {
+        key: "outstanding",
+        label: labels.totals.totalOutstanding,
+        value: formatIDR(snapshot.totalOutstandingAll, { compact: true }),
+      },
+    );
+  }
+  totalsItems.push({
+    key: "progress",
+    label: labels.totals.averageProgress,
+    value: `${snapshot.averageProgressPct.toFixed(1)}%`,
+  });
 
   return (
     <Card className="glass">
@@ -152,7 +160,14 @@ export async function PortfolioSnapshotSection({
           <CardTitle className="font-display">{labels.section.title}</CardTitle>
           <CardDescription>{labels.section.subtitle}</CardDescription>
         </div>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs sm:grid-cols-5">
+        <dl
+          className={cn(
+            "grid gap-x-6 gap-y-2 text-xs",
+            snapshot.showBudget
+              ? "grid-cols-2 sm:grid-cols-5"
+              : "grid-cols-2 sm:grid-cols-2",
+          )}
+        >
           {totalsItems.map((item) => (
             <div key={item.key} className="min-w-0">
               <dt className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -168,7 +183,12 @@ export async function PortfolioSnapshotSection({
       <CardContent>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {snapshot.tiles.map((tile) => (
-            <ProjectTile key={tile.projectId} tile={tile} labels={labels} />
+            <ProjectTile
+              key={tile.projectId}
+              tile={tile}
+              labels={labels}
+              showBudget={snapshot.showBudget}
+            />
           ))}
         </div>
       </CardContent>
@@ -176,10 +196,18 @@ export async function PortfolioSnapshotSection({
   );
 }
 
-function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) {
+function ProjectTile({
+  tile,
+  labels,
+  showBudget,
+}: {
+  tile: PortfolioTile;
+  labels: Labels;
+  showBudget: boolean;
+}) {
   const progress = Math.max(0, Math.min(100, tile.progressPct));
   const budgetPct = tile.budget.exists ? tile.budget.utilizationPct : 0;
-  const overBudget = tile.budget.exists && budgetPct > 100;
+  const overBudget = showBudget && tile.budget.exists && budgetPct > 100;
 
   const doneCount = tile.milestoneCounts.DONE;
   const inProgressCount = tile.milestoneCounts.IN_PROGRESS;
@@ -191,6 +219,13 @@ function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) 
     tile.milestoneCounts.PLANNED +
     tile.milestoneCounts.CANCELLED;
 
+  // Aria label composes progress + budget when visible; drops the
+  // budget half for capability-gated viewers so screen readers don't
+  // announce a zero utilisation that isn't actually rendered.
+  const ariaSummary = showBudget
+    ? `${tile.name} — ${progress.toFixed(0)}% ${labels.ring.progress}, ${budgetPct.toFixed(0)}% ${labels.ring.budget}`
+    : `${tile.name} — ${progress.toFixed(0)}% ${labels.ring.progress}`;
+
   return (
     <Link
       href={`/projects/${tile.projectId}`}
@@ -199,7 +234,7 @@ function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) 
         "transition-all hover:border-primary/40 hover:bg-card/70 hover:shadow-md",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
       )}
-      aria-label={`${tile.name} — ${progress.toFixed(0)}% ${labels.ring.progress}, ${budgetPct.toFixed(0)}% ${labels.ring.budget}`}
+      aria-label={ariaSummary}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -228,56 +263,93 @@ function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) 
           topLabel={`${progress.toFixed(0)}%`}
           bottomLabel={labels.ring.progress}
         />
-        <HealthRing
-          percent={tile.budget.exists ? Math.min(100, budgetPct) : 0}
-          strokeColor={
-            tile.budget.exists
-              ? budgetStrokeColor(budgetPct)
-              : "var(--color-muted-foreground)"
-          }
-          topLabel={tile.budget.exists ? `${budgetPct.toFixed(0)}%` : "—"}
-          bottomLabel={
-            tile.budget.exists ? labels.labels.utilisation : labels.labels.noBudget
-          }
-          muted={!tile.budget.exists}
-        />
+        {showBudget ? (
+          <>
+            <HealthRing
+              percent={tile.budget.exists ? Math.min(100, budgetPct) : 0}
+              strokeColor={
+                tile.budget.exists
+                  ? budgetStrokeColor(budgetPct)
+                  : "var(--color-muted-foreground)"
+              }
+              topLabel={tile.budget.exists ? `${budgetPct.toFixed(0)}%` : "—"}
+              bottomLabel={
+                tile.budget.exists
+                  ? labels.labels.utilisation
+                  : labels.labels.noBudget
+              }
+              muted={!tile.budget.exists}
+            />
 
-        <div className="min-w-0 flex-1 space-y-1.5 text-xs">
-          {tile.budget.exists ? (
-            <>
-              <div className="flex justify-between gap-2 truncate">
-                <span className="text-muted-foreground">
-                  {labels.labels.planned}
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatIDR(tile.budget.planned, { compact: true })}
-                </span>
+            <div className="min-w-0 flex-1 space-y-1.5 text-xs">
+              {tile.budget.exists ? (
+                <>
+                  <div className="flex justify-between gap-2 truncate">
+                    <span className="text-muted-foreground">
+                      {labels.labels.planned}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {formatIDR(tile.budget.planned, { compact: true })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2 truncate">
+                    <span className="text-muted-foreground">
+                      {labels.labels.realised}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {formatIDR(tile.budget.realized, { compact: true })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2 truncate">
+                    <span className="text-muted-foreground">
+                      {labels.labels.outstanding}
+                    </span>
+                    <span className="font-medium tabular-nums">
+                      {formatIDR(tile.budget.outstanding, { compact: true })}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground">{labels.labels.noBudget}</p>
+              )}
+            </div>
+          </>
+        ) : (
+          // Non-budget viewer: fill the horizontal space with a
+          // milestone-focused strip so the tile doesn't look
+          // lopsided next to the single progress ring.
+          <div className="min-w-0 flex-1 text-xs">
+            {totalMilestones > 0 ? (
+              <div className="space-y-1">
+                <p className="text-muted-foreground">
+                  {labels.labels.milestones}
+                </p>
+                <p className="font-medium">
+                  <span className="font-semibold text-foreground">
+                    {doneCount}
+                  </span>
+                  /{totalMilestones}
+                  {inProgressCount > 0 ? (
+                    <span className="ml-2 text-muted-foreground">
+                      {inProgressCount} IP
+                    </span>
+                  ) : null}
+                  {atRiskCount > 0 ? (
+                    <span className="ml-2 text-destructive">
+                      {atRiskCount} AR
+                    </span>
+                  ) : null}
+                </p>
               </div>
-              <div className="flex justify-between gap-2 truncate">
-                <span className="text-muted-foreground">
-                  {labels.labels.realised}
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatIDR(tile.budget.realized, { compact: true })}
-                </span>
-              </div>
-              <div className="flex justify-between gap-2 truncate">
-                <span className="text-muted-foreground">
-                  {labels.labels.outstanding}
-                </span>
-                <span className="font-medium tabular-nums">
-                  {formatIDR(tile.budget.outstanding, { compact: true })}
-                </span>
-              </div>
-            </>
-          ) : (
-            <p className="text-muted-foreground">{labels.labels.noBudget}</p>
-          )}
-        </div>
+            ) : (
+              <p className="text-muted-foreground">—</p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 pt-1">
-        {overBudget ? (
+        {showBudget && overBudget ? (
           <Badge
             variant="outline"
             className="border-destructive/40 bg-destructive/10 text-destructive"
@@ -285,7 +357,7 @@ function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) 
             <AlertTriangle className="mr-1 size-3" />
             {labels.labels.over}
           </Badge>
-        ) : tile.budget.exists && budgetPct > 0 ? (
+        ) : showBudget && tile.budget.exists && budgetPct > 0 ? (
           <Badge
             variant="outline"
             className="border-success/40 bg-success/10 text-success"
@@ -294,7 +366,7 @@ function ProjectTile({ tile, labels }: { tile: PortfolioTile; labels: Labels }) 
             {labels.labels.onTrack}
           </Badge>
         ) : null}
-        {totalMilestones > 0 ? (
+        {showBudget && totalMilestones > 0 ? (
           <span className="text-[11px] text-muted-foreground">
             <span className="font-medium text-foreground">{doneCount}</span>/
             {totalMilestones} {labels.labels.milestones.toLowerCase()}

@@ -10,6 +10,7 @@ import {
   caGeneralApprovalChain,
   canApproveThreshold,
   canonicalCanApprove,
+  canViewBudget,
   ASSIGNMENT_VIEWER_ROLES,
   BUDGET_VIEWER_ROLES,
   CLIENT_VIEWER_ROLES,
@@ -539,6 +540,45 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(BUDGET_VIEWER_ROLES).toContain("OPERATIONS_MANAGER");
     expect(BUDGET_VIEWER_ROLES).toContain("LEAD_FINANCE");
     expect(BUDGET_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("canViewBudget() denies field roles and grants PM+ / finance / admin", () => {
+    // Named-capability predicate over BUDGET_VIEWER_ROLES.
+    // Non-viewers — Dashboard "Approved Budget" KPI, portfolio
+    // tile amounts, and `/projects` Budget column are all gated
+    // through this single call site. Adding a role to the deny
+    // list here (or the canonical fold) automatically hides all
+    // four surfaces without further wiring.
+    expect(canViewBudget("EMPLOYEE")).toBe(false);
+    expect(canViewBudget("SUPERVISOR")).toBe(false);
+    expect(canViewBudget("HR_ADMIN")).toBe(false);
+    expect(canViewBudget("PETTY_CASH_CUSTODIAN")).toBe(false);
+
+    expect(canViewBudget("PROJECT_MANAGER")).toBe(true);
+    expect(canViewBudget("OPERATIONS_MANAGER")).toBe(true);
+    expect(canViewBudget("HEAD_MANAGER")).toBe(true);
+    expect(canViewBudget("GENERAL_MANAGER")).toBe(true);
+    expect(canViewBudget("LEAD_FINANCE")).toBe(true);
+    expect(canViewBudget("TENANT_ADMIN")).toBe(true);
+  });
+
+  it("canViewBudget() honours canonical role folds", () => {
+    // GAS canonical roles (§6) fold through roleInGate:
+    //   PM      -> PROJECT_MANAGER
+    //   OM      -> OPERATIONS_MANAGER
+    //   FINANCE -> LEAD_FINANCE
+    //   ADMIN   -> TENANT_ADMIN
+    //   DIRECTOR -> HEAD_MANAGER / GENERAL_MANAGER
+    // These pass because BUDGET_VIEWER_ROLES contains the DB role
+    // names and roleInGate folds the canonical caller to a match.
+    expect(canViewBudget("PM")).toBe(true);
+    expect(canViewBudget("OM")).toBe(true);
+    expect(canViewBudget("FINANCE")).toBe(true);
+    expect(canViewBudget("ADMIN")).toBe(true);
+    expect(canViewBudget("DIRECTOR")).toBe(true);
+
+    // Canonical field roles stay denied.
+    expect(canViewBudget("EMPLOYEE")).toBe(false);
   });
 
   it("PETTY_CASH_VIEWER_ROLES centers on custodian + finance + management", () => {
