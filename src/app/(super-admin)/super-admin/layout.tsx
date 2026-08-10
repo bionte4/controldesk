@@ -47,6 +47,12 @@ export default async function SuperAdminLayout({
               >
                 + New tenant
               </Link>
+              <Link
+                href="/super-admin/admins"
+                className="hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                Admins
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">

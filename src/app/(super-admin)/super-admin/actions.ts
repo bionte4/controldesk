@@ -13,6 +13,8 @@ import {
 } from "@/lib/ops/tenant-provisioning";
 import { FEATURE_KEYS, isKnownFeatureKey } from "@/lib/ops/feature-flags";
 import { log } from "@/lib/observability/log";
+import { getCurrentPlatformAdmin } from "@/lib/auth/platform-admin-session";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 /**
  * Server actions for the /super-admin surface (Fase 2 + 3, migration 0077).
@@ -246,6 +248,351 @@ const toggleFeatureFlagSchema = z
     notes: z.string().trim().max(500).optional(),
   })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Promote an existing auth.users row to platform admin (Fase 5).
+// The account must already exist — typically a real ops person who
+// was invited to another tenant, or a dedicated ops auth user created
+// via `createPlatformAdminAction`. This is the safer of the two paths
+// because it never creates new credentials.
+// ---------------------------------------------------------------------------
+const promoteAdminSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(EMAIL_PATTERN, { message: "Format email tidak valid." }),
+    full_name: z.string().trim().min(2).max(200),
+  })
+  .strict();
+
+export const promotePlatformAdminAction = withPlatformAdminAction({
+  schema: promoteAdminSchema,
+  auditAction: "CREATE",
+  resourceName: "platform_admins",
+  handler: async (input, ctx) => {
+    // Look up the auth user by email. auth.admin.listUsers is
+    // paginated; we page through until we find it or exhaust. This
+    // scales to ~thousands of users. For 10k+ we'd need a `getUserByEmail`
+    // endpoint (not present in Supabase JS as of v2.x).
+    let target: { id: string; email?: string; created_at: string } | null =
+      null;
+    let page = 1;
+    for (;;) {
+      const listRes = await ctx.supabase.auth.admin.listUsers({
+        page,
+        perPage: 1000,
+      });
+      if (listRes.error) throw new Error(listRes.error.message);
+      const hit = listRes.data.users.find(
+        (u) => u.email?.toLowerCase() === input.email,
+      );
+      if (hit) {
+        target = { id: hit.id, email: hit.email, created_at: hit.created_at };
+        break;
+      }
+      if (listRes.data.users.length < 1000) break;
+      page += 1;
+      if (page > 20) break; // Safety cap — 20k users searched.
+    }
+    if (!target) {
+      throw new Error(
+        `Tidak ada auth.users dengan email ${input.email}. ` +
+          `Buat user dulu (bisa via "Buat admin baru" atau via provisioning tenant).`,
+      );
+    }
+
+    const existing = await ctx.supabase
+      .from("platform_admins")
+      .select("user_id, is_active")
+      .eq("user_id", target.id)
+      .maybeSingle();
+
+    if (existing.data) {
+      if (existing.data.is_active) {
+        throw new Error(
+          `${input.email} sudah menjadi platform admin aktif.`,
+        );
+      }
+      // Row exists but inactive — re-activate + refresh full_name.
+      const upd = await ctx.supabase
+        .from("platform_admins")
+        .update({
+          is_active: true,
+          full_name: input.full_name,
+          created_by: ctx.admin.user_id,
+        })
+        .eq("user_id", target.id);
+      if (upd.error) throw new Error(upd.error.message);
+
+      revalidatePath("/super-admin/admins");
+      return {
+        result: {
+          user_id: target.id,
+          email: input.email,
+          reactivated: true,
+        },
+        auditResourceId: target.id,
+        auditOldValues: { is_active: false },
+        auditNewValues: { is_active: true, full_name: input.full_name },
+        auditMetadata: {
+          email: input.email,
+          promotion_source: "reactivate_existing_row",
+        },
+      };
+    }
+
+    const ins = await ctx.supabase.from("platform_admins").insert({
+      user_id: target.id,
+      email: input.email,
+      full_name: input.full_name,
+      is_active: true,
+      created_by: ctx.admin.user_id,
+    });
+    if (ins.error) throw new Error(ins.error.message);
+
+    revalidatePath("/super-admin/admins");
+    return {
+      result: {
+        user_id: target.id,
+        email: input.email,
+        reactivated: false,
+      },
+      auditResourceId: target.id,
+      auditNewValues: {
+        email: input.email,
+        full_name: input.full_name,
+        is_active: true,
+      },
+      auditMetadata: {
+        email: input.email,
+        promotion_source: "existing_auth_user",
+      },
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Create a brand-new auth user + platform_admins row in one go (Fase 5).
+// For fresh hires who don't have an account yet. Password auto-generated
+// and returned to the caller for one-time display (never persisted).
+// ---------------------------------------------------------------------------
+const createAdminSchema = z
+  .object({
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(EMAIL_PATTERN, { message: "Format email tidak valid." }),
+    full_name: z.string().trim().min(2).max(200),
+    password: z.string().min(12).optional(),
+  })
+  .strict();
+
+export const createPlatformAdminAction = withPlatformAdminAction({
+  schema: createAdminSchema,
+  auditAction: "CREATE",
+  resourceName: "platform_admins",
+  handler: async (input, ctx) => {
+    const password = input.password ?? generateSecurePassword();
+
+    // Preflight — email must not already exist in auth.users. This
+    // avoids collisions and forces the operator to use "Promote
+    // existing" when appropriate.
+    let existingUserId: string | null = null;
+    let page = 1;
+    for (;;) {
+      const listRes = await ctx.supabase.auth.admin.listUsers({
+        page,
+        perPage: 1000,
+      });
+      if (listRes.error) throw new Error(listRes.error.message);
+      const hit = listRes.data.users.find(
+        (u) => u.email?.toLowerCase() === input.email,
+      );
+      if (hit) {
+        existingUserId = hit.id;
+        break;
+      }
+      if (listRes.data.users.length < 1000) break;
+      page += 1;
+      if (page > 20) break;
+    }
+    if (existingUserId) {
+      throw new Error(
+        `Email ${input.email} sudah terdaftar di auth.users (user_id ${existingUserId}). ` +
+          `Gunakan "Promote existing user" untuk menjadikannya platform admin.`,
+      );
+    }
+
+    const authRes = await ctx.supabase.auth.admin.createUser({
+      email: input.email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: input.full_name },
+      app_metadata: {
+        role: "platform_admin",
+        provisioned_by: "super-admin-ui",
+        provisioned_at: new Date().toISOString(),
+        provisioned_by_user_id: ctx.admin.user_id,
+      },
+    });
+    if (authRes.error || !authRes.data.user) {
+      throw new Error(
+        authRes.error?.message ?? "Auth user creation returned empty result.",
+      );
+    }
+    const newUserId = authRes.data.user.id;
+
+    const ins = await ctx.supabase.from("platform_admins").insert({
+      user_id: newUserId,
+      email: input.email,
+      full_name: input.full_name,
+      is_active: true,
+      created_by: ctx.admin.user_id,
+    });
+    if (ins.error) {
+      // Rollback the auth user so retry is clean. If rollback fails,
+      // we log — orphan auth.users row can be cleaned up manually.
+      const del = await ctx.supabase.auth.admin.deleteUser(newUserId);
+      if (del.error) {
+        log.error("createPlatformAdminAction: rollback of auth user failed", {
+          user_id: newUserId,
+          error: del.error.message,
+        });
+      }
+      throw new Error(ins.error.message);
+    }
+
+    revalidatePath("/super-admin/admins");
+    return {
+      result: {
+        user_id: newUserId,
+        email: input.email,
+        temporary_password: password,
+        password_auto_generated: input.password === undefined,
+      },
+      auditResourceId: newUserId,
+      auditNewValues: {
+        email: input.email,
+        full_name: input.full_name,
+        is_active: true,
+      },
+      auditMetadata: {
+        email: input.email,
+        promotion_source: "new_auth_user",
+        password_auto_generated: input.password === undefined,
+      },
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Deactivate a platform admin (soft — is_active=false). Auth user is
+// KEPT — they may still be a tenant user via `employees`. Self-demote
+// is blocked to prevent an operator from locking themselves out. To
+// hard-remove, run SQL against `platform_admins` directly.
+// ---------------------------------------------------------------------------
+const setAdminActiveSchema = z
+  .object({
+    user_id: z.string().uuid(),
+    is_active: z.boolean(),
+  })
+  .strict();
+
+export async function setPlatformAdminActiveAction(rawInput: unknown) {
+  // We handle the self-demote guard OUTSIDE of `withPlatformAdminAction`
+  // because it needs the current admin identity to compare against the
+  // target. `withPlatformAdminAction` also loads the identity, so we
+  // could refactor to pass it in — but a preliminary check here keeps
+  // the error message crisp.
+  const admin = await getCurrentPlatformAdmin();
+  if (!admin) {
+    return {
+      ok: false as const,
+      code: "UNAUTHENTICATED" as const,
+      reason: "Not signed in as a platform admin.",
+    };
+  }
+  const parsed = setAdminActiveSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return {
+      ok: false as const,
+      code: "VALIDATION" as const,
+      reason: parsed.error.issues.map((i) => i.message).join("; "),
+    };
+  }
+  if (parsed.data.user_id === admin.user_id && parsed.data.is_active === false) {
+    return {
+      ok: false as const,
+      code: "PRECONDITION" as const,
+      reason:
+        "Tidak bisa non-aktifkan diri sendiri. Minta platform admin lain untuk melakukan aksi ini.",
+    };
+  }
+
+  return withPlatformAdminAction({
+    schema: setAdminActiveSchema,
+    auditAction: "UPDATE",
+    resourceName: "platform_admins",
+    handler: async (input, ctx) => {
+      const before = await ctx.supabase
+        .from("platform_admins")
+        .select("user_id, email, is_active, full_name")
+        .eq("user_id", input.user_id)
+        .maybeSingle();
+      if (!before.data) {
+        throw new Error("Platform admin row not found.");
+      }
+      if (before.data.is_active === input.is_active) {
+        return {
+          result: {
+            user_id: input.user_id,
+            is_active: input.is_active,
+            unchanged: true,
+          },
+          auditResourceId: input.user_id,
+          auditOldValues: { is_active: before.data.is_active },
+          auditNewValues: { is_active: input.is_active },
+          auditMetadata: { unchanged: true },
+        };
+      }
+      const upd = await ctx.supabase
+        .from("platform_admins")
+        .update({ is_active: input.is_active })
+        .eq("user_id", input.user_id);
+      if (upd.error) throw new Error(upd.error.message);
+
+      revalidatePath("/super-admin/admins");
+      return {
+        result: {
+          user_id: input.user_id,
+          is_active: input.is_active,
+          unchanged: false,
+        },
+        auditResourceId: input.user_id,
+        auditOldValues: { is_active: before.data.is_active },
+        auditNewValues: { is_active: input.is_active },
+        auditMetadata: {
+          email: before.data.email,
+          full_name: before.data.full_name,
+        },
+      };
+    },
+  })(parsed.data);
+}
+
+// Small helper to expose the current admin's user_id to client
+// components (used by the admin list to disable the self-row's
+// deactivate button). Returning a plain server action is simpler than
+// threading it through the RSC page as a prop.
+export async function getCurrentPlatformAdminIdAction() {
+  const supabase = createServiceRoleClient();
+  void supabase; // ensure we're on server
+  const admin = await getCurrentPlatformAdmin();
+  return admin?.user_id ?? null;
+}
 
 export const toggleFeatureFlagAction = withPlatformAdminAction({
   schema: toggleFeatureFlagSchema,

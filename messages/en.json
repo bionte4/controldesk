@@ -306,7 +306,8 @@
       "overview": "Overview",
       "preferences": "Preferences",
       "integrations": "Integrations",
-      "approvalThresholds": "Approval thresholds"
+      "approvalThresholds": "Approval thresholds",
+      "features": "Active features"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",
@@ -1950,6 +1951,10 @@
           "title": "Approval Thresholds",
           "description": "Tune the IDR amounts that drive PM / Finance / Director routing per tenant."
         },
+        "features": {
+          "title": "Active features",
+          "description": "See which features are enabled by the platform team for your tenant (read-only)."
+        },
         "bulkImport": {
           "title": "Bulk import",
           "description": "Upload CSV/XLSX for clients, employees, projects, and budget lines."
@@ -2366,6 +2371,21 @@
     }
   },
   "settings": {
+    "features": {
+      "kicker": "Admin · Active features",
+      "title": "Features enabled for your tenant",
+      "subtitle": "Read-only view of which features are enabled or disabled for your tenant by the ControlDesk platform team. Toggling is done by platform admins — contact support@controldesk.app to request activation.",
+      "infoBanner": {
+        "title": "Why can't I toggle these?",
+        "description": "Feature flags are managed centrally by the platform team to ensure every new capability is ready from a capacity, cost, and configuration standpoint (e.g. Google OAuth setup, SMTP credentials, third-party API access)."
+      },
+      "stats": {
+        "total": "Total features",
+        "enabled": "Enabled",
+        "overridden": "Custom overrides",
+        "overriddenHint": "Features explicitly set by a platform admin (outside the default value)."
+      }
+    },
     "users": {
       "backToSettings": "Back to Settings",
       "kicker": "Admin · User accounts",

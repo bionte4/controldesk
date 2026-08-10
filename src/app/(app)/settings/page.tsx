@@ -10,6 +10,7 @@ import {
   Scale,
   Settings as SettingsIcon,
   Sparkles,
+  ToggleRight,
   Upload,
   UserCog,
   type LucideIcon,
@@ -44,6 +45,7 @@ type TileKey =
   | "coa"
   | "lookups"
   | "approvalThresholds"
+  | "features"
   | "bulkImport"
   | "integrations"
   | "secrets"
@@ -83,6 +85,16 @@ const ADMIN_TILES: readonly AdminTile[] = [
     // per-tenant thresholds. RLS policy on `approval_thresholds` also
     // gates writes to canonical ADMIN/DIRECTOR — this list only decides
     // whether the tile renders in the hub.
+    allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+  },
+  {
+    key: "features",
+    href: "/settings/features",
+    icon: ToggleRight,
+    // Read-only view — tenant admin sees which features are enabled
+    // for their tenant. Toggling remains platform-admin only (Fase 3
+    // + migration 0077 RLS). Mirrors the approval-thresholds gate so
+    // TENANT_ADMIN + DIRECTOR see the tile.
     allowed: ["TENANT_ADMIN", "GENERAL_MANAGER"],
   },
   {
@@ -146,6 +158,10 @@ export default async function SettingsHubPage() {
     approvalThresholds: {
       title: t("admin.tiles.approvalThresholds.title"),
       description: t("admin.tiles.approvalThresholds.description"),
+    },
+    features: {
+      title: t("admin.tiles.features.title"),
+      description: t("admin.tiles.features.description"),
     },
     bulkImport: {
       title: t("admin.tiles.bulkImport.title"),

@@ -306,7 +306,8 @@
       "overview": "Ringkasan",
       "preferences": "Preferensi",
       "integrations": "Integrasi",
-      "approvalThresholds": "Ambang Approval"
+      "approvalThresholds": "Ambang Approval",
+      "features": "Fitur Aktif"
     },
     "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
     "commandPlaceholder": "Cari perintah, lompat ke halaman…",
@@ -1950,6 +1951,10 @@
           "title": "Ambang Approval",
           "description": "Sesuaikan nominal batas rantai approval per tenant (Expense, Cash Advance, Budget, Petty Cash)."
         },
+        "features": {
+          "title": "Fitur Aktif",
+          "description": "Lihat fitur mana yang di-enable oleh tim platform untuk tenant Anda (baca-saja)."
+        },
         "bulkImport": {
           "title": "Impor Massal",
           "description": "Unggah CSV/XLSX untuk klien, karyawan, proyek, dan budget line."
@@ -2366,6 +2371,21 @@
     }
   },
   "settings": {
+    "features": {
+      "kicker": "Admin · Fitur aktif",
+      "title": "Fitur aktif untuk tenant Anda",
+      "subtitle": "Tampilan baca-saja fitur yang di-enable/disable oleh tim platform ControlDesk untuk tenant Anda. Toggle dilakukan oleh admin platform — hubungi support@controldesk.app untuk permintaan aktivasi.",
+      "infoBanner": {
+        "title": "Kenapa saya tidak bisa toggle?",
+        "description": "Feature flag di-manage sentral oleh tim platform untuk memastikan setiap fitur baru siap dari sisi kapasitas, biaya, dan konfigurasi (misal OAuth Google, kredensial SMTP, akses API pihak ketiga)."
+      },
+      "stats": {
+        "total": "Total fitur",
+        "enabled": "Aktif",
+        "overridden": "Custom override",
+        "overriddenHint": "Fitur yang di-set eksplisit oleh admin platform (di luar default)."
+      }
+    },
     "users": {
       "backToSettings": "Kembali ke Setelan",
       "kicker": "Admin · Akun pengguna",

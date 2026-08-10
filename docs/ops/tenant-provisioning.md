@@ -141,8 +141,9 @@ JWT hook (`custom_access_token_hook`, updated di migration 0077)
 otomatis inject claim `is_platform_admin: true` ke JWT saat user
 login jika ada row aktif di `platform_admins`.
 
-**Cara buat platform admin baru** (butuh service_role SQL akses;
-belum ada UI untuk manage platform admins — chicken-and-egg):
+**Cara buat platform admin pertama (bootstrap chicken-and-egg)**:
+karena UI Fase 5 baru bisa diakses setelah minimal ada satu platform
+admin, admin **pertama** harus di-seed via SQL:
 
 ```sql
 -- Prasyarat: auth.users row untuk email tersebut harus sudah ada.
@@ -158,6 +159,29 @@ Setelah row masuk, user tersebut logout+login lagi (supaya JWT baru
 di-issue dengan claim `is_platform_admin=true`), lalu buka
 `/super-admin/tenants`.
 
+**Setelah admin pertama ada**: platform admin ke-2 dan seterusnya
+dibuat lewat UI di `/super-admin/admins/new` (Fase 5). Dua mode:
+
+- **Promote existing user** — user email harus sudah punya row di
+  `auth.users` (mis. sudah pernah di-invite ke tenant lain). Aman,
+  tidak menciptakan credential baru. Kalau row `platform_admins`
+  lama ada dengan `is_active=false`, otomatis di-re-aktivasi.
+- **Buat akun baru** — buat auth.users baru + row `platform_admins`
+  sekaligus. Password auto-generate, ditampilkan sekali di UI, salin
+  manual + kirim ke user via channel aman.
+
+**Manage existing** — di `/super-admin/admins` operator bisa:
+
+- Nonaktifkan platform admin lain (soft — set `is_active=false`;
+  auth.users tetap ada, JWT claim `is_platform_admin` hilang di
+  refresh berikutnya).
+- Reaktivasi platform admin nonaktif.
+- **Tidak bisa** nonaktifkan diri sendiri — block di UI dan server
+  action. Kalau perlu, minta platform admin lain melakukannya.
+
+Untuk hard-delete row `platform_admins` (bukan cuma soft-deactivate),
+jalankan SQL langsung — audit log tetap immutable per rules §3.
+
 **Fitur di Super-Admin UI**:
 
 - **List semua tenant** (`/super-admin/tenants`) — 1 baris per tenant,
@@ -172,6 +196,11 @@ di-issue dengan claim `is_platform_admin=true`), lalu buka
   (employees/clients/projects/CA counts), **panel Suspend/Reactivate**,
   **panel Feature flags** (Fase 3), **recent audit log** (10 aksi
   platform-admin terakhir untuk tenant ini).
+- **Platform admin management** (`/super-admin/admins`) — Fase 5.
+  List semua platform admin (aktif + nonaktif), tombol nonaktifkan
+  / reaktivasi. Tambah admin baru via `/super-admin/admins/new`
+  dengan dua mode: **Promote existing user** atau **Buat akun baru**.
+  Self-deactivate diblock baik di UI maupun server.
 
 **Semua aksi platform-admin di-audit** ke tabel terpisah
 `public.platform_admin_audit_logs` (immutable, INSERT-only, trigger
@@ -202,9 +231,16 @@ karena bug config).
 **Toggle**: hanya platform admin (via `/super-admin/tenants/{id}`).
 Tenant admin **tidak bisa** toggle flag mereka sendiri (RLS policy
 `tenant_feature_flags_platform_write` di migration 0077) — decision
-tersebut ada di sisi platform team. Tenant admin **bisa read**
-flag mereka lewat RLS `tenant_feature_flags_self_read` (tambahkan
-UI read-only kalau perlu; belum diimplementasi).
+tersebut ada di sisi platform team.
+
+**Read-only view untuk tenant admin (Fase 5)**: tenant admin bisa
+melihat status fitur mereka di **Settings → Fitur Aktif**
+(`/settings/features`). Halaman ini menampilkan setiap key registry
+lengkap dengan status Aktif/Nonaktif dan badge "default" kalau tidak
+ada row eksplisit. RLS policy `tenant_feature_flags_self_read`
+memastikan hanya baris untuk tenant sendiri yang di-fetch. Gate role:
+`TENANT_ADMIN` + `GENERAL_MANAGER` (konsisten dengan surface admin
+lainnya di Settings).
 
 **Bagaimana pakai di code**:
 
@@ -696,9 +732,10 @@ Status roadmap tenant lifecycle:
 | 2    | **Tenant suspension** — kolom `tenants.status enum('active', 'suspended', 'terminated')` + proxy guard + `/suspended` static page        | ✅ Shipped — migration 0077 + `src/app/suspended/`      |
 | 3    | **Feature flag per tenant** — tabel `tenant_feature_flags` + `isFeatureEnabled()` helper + toggle UI + registry di `src/lib/ops/feature-flags.ts` | ✅ Shipped — migration 0077 + `src/lib/ops/feature-flags.ts` |
 | 4    | **Automated welcome email** — `--send-email` flag di CLI, env-scoped SMTP (bypass server-only mailer)                                    | ✅ Shipped — CLI `scripts/tenant/create.ts` upgrade    |
-| 5    | **Read-only feature-flag view untuk tenant admin** — panel "Fitur aktif untuk tenant Anda" di Settings                                    | ⏳ Planned                                          |
-| 5    | **Platform admin management UI** — tambah/hapus platform admin (chicken-egg: bootstrap admin via SQL, sisanya via UI)                    | ⏳ Planned                                          |
+| 5    | **Read-only feature-flag view untuk tenant admin** — panel "Fitur aktif untuk tenant Anda" di Settings                                   | ✅ Shipped — `src/app/(app)/settings/features/`      |
+| 5    | **Platform admin management UI** — tambah / promote / nonaktifkan platform admin. Self-demote di-block. Chicken-egg: admin pertama tetap SQL. | ✅ Shipped — `src/app/(super-admin)/super-admin/admins/`  |
 | 6+   | **Tenant self-signup** — marketing page apex → `/register-org` → auto-provision + Stripe billing                                          | ⏳ Planned                                          |
+| 6+   | **Bulk feature-flag toggle** — set flag ke ON/OFF untuk semua tenant sekaligus (canary rollout ke 10% tenant, dsb.)                       | ⏳ Planned                                          |
 
 Rekomendasi pattern:
 

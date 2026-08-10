@@ -23,6 +23,7 @@ import {
   Scale,
   ShieldCheck,
   Sparkles,
+  ToggleRight,
   Upload,
   UserCog,
   UserPlus,
@@ -287,6 +288,16 @@ export const NAV_SECTIONS: NavSection[] = [
         // `public.approval_thresholds` (migration 0024) enforces the
         // same ADMIN/DIRECTOR write policy at the row layer as a second
         // line of defence.
+        roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
+      },
+      {
+        titleKey: "features",
+        href: "/settings/features",
+        icon: ToggleRight,
+        // Read-only view of the tenant's feature flags (Fase 5). Toggle
+        // is platform-admin only via /super-admin/tenants/{id} —
+        // enforced by migration 0077 RLS policy
+        // `tenant_feature_flags_platform_write`.
         roles: ["TENANT_ADMIN", "GENERAL_MANAGER"],
       },
       {
