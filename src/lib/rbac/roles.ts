@@ -145,6 +145,66 @@ export const UPK_VIEWER_ROLES: readonly EmployeeRole[] = [
 ] as const;
 
 /**
+ * Roles allowed to browse `/clients` (client directory + contacts +
+ * commercial history). Rules §8 places client relationship management
+ * at the delivery + finance layer — PMs know who their client is,
+ * OM/HM/GM run the portfolio, LEAD_FINANCE invoices them. Plain
+ * EMPLOYEE / SUPERVISOR see clients contextually through their own
+ * project assignments only.
+ */
+export const CLIENT_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Roles allowed to view `/assignments` (cross-project PM + employee
+ * allocation matrix). Only management + HR (for utilization planning)
+ * — plain EMPLOYEE / SUPERVISOR see their own assignments from the
+ * project detail page instead.
+ */
+export const ASSIGNMENT_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "HR_ADMIN",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Roles allowed to view `/handovers` (PM handover notes: outgoing PM
+ * → incoming PM briefings, issue register snapshots, budget over-run
+ * warnings). Management-only concern.
+ */
+export const HANDOVER_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "PROJECT_MANAGER",
+  "OPERATIONS_MANAGER",
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "TENANT_ADMIN",
+] as const;
+
+/**
+ * Roles allowed to view `/insights` (AI-generated insight cards:
+ * expense impact prediction, resource utilization, client health,
+ * SLA breach forecast). AI outputs synthesize cross-project data
+ * that non-management shouldn't see holistically.
+ */
+export const INSIGHTS_VIEWER_ROLES: readonly EmployeeRole[] = [
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+  "HEAD_MANAGER",
+  "OPERATIONS_MANAGER",
+  "PROJECT_MANAGER",
+  "LEAD_FINANCE",
+] as const;
+
+/**
  * Numeric rank on the operational ladder. Returns -1 for staff/functional
  * roles (finance, HR, custodian) which live outside the chain.
  */

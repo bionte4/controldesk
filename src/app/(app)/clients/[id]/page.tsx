@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import {
   ArrowLeft,
   Building2,
@@ -23,7 +23,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { CLIENT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus, ContractStatus, ProjectStatus } from "@/types/database";
@@ -61,14 +61,17 @@ export default async function ClientDetailPage(props: {
 }) {
   const { id } = await props.params;
 
-  const [employee, t, tStatus, tContractStatus, tProjectStatus] =
-    await Promise.all([
-      requireCurrentEmployee(),
-      getTranslations("clients.detail"),
-      getTranslations("clients.status"),
-      getTranslations("contracts.status"),
-      getTranslations("projects.status"),
-    ]);
+  const employee = await requireCurrentEmployee();
+  if (!CLIENT_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [t, tStatus, tContractStatus, tProjectStatus] = await Promise.all([
+    getTranslations("clients.detail"),
+    getTranslations("clients.status"),
+    getTranslations("contracts.status"),
+    getTranslations("projects.status"),
+  ]);
 
   const supabase = await createClient();
 

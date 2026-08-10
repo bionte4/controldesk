@@ -10,11 +10,15 @@ import {
   caGeneralApprovalChain,
   canApproveThreshold,
   canonicalCanApprove,
+  ASSIGNMENT_VIEWER_ROLES,
   BUDGET_VIEWER_ROLES,
+  CLIENT_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
   EMPLOYEE_ROLES,
   expenseApprovalChain,
   formatRole,
+  HANDOVER_VIEWER_ROLES,
+  INSIGHTS_VIEWER_ROLES,
   isOperationalRole,
   isStaffRole,
   MULTI_PROJECT_CANONICAL_ROLES,
@@ -557,5 +561,53 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(UPK_VIEWER_ROLES).not.toContain("EMPLOYEE");
     expect(UPK_VIEWER_ROLES).not.toContain("SUPERVISOR");
     expect(UPK_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+  });
+
+  it("CLIENT_VIEWER_ROLES excludes non-delivery / non-finance roles", () => {
+    // Rules §8 places client relationship management at the delivery
+    // (PM/OM/HM/GM) + finance layer. EMPLOYEE / SUPERVISOR see clients
+    // contextually through their own project assignments instead.
+    expect(CLIENT_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(CLIENT_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(CLIENT_VIEWER_ROLES).not.toContain("HR_ADMIN");
+    expect(CLIENT_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+    expect(CLIENT_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(CLIENT_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(CLIENT_VIEWER_ROLES).toContain("TENANT_ADMIN");
+  });
+
+  it("ASSIGNMENT_VIEWER_ROLES centers on management + HR", () => {
+    expect(ASSIGNMENT_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(ASSIGNMENT_VIEWER_ROLES).toContain("OPERATIONS_MANAGER");
+    expect(ASSIGNMENT_VIEWER_ROLES).toContain("HR_ADMIN");
+    expect(ASSIGNMENT_VIEWER_ROLES).toContain("TENANT_ADMIN");
+    expect(ASSIGNMENT_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(ASSIGNMENT_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(ASSIGNMENT_VIEWER_ROLES).not.toContain("LEAD_FINANCE");
+  });
+
+  it("HANDOVER_VIEWER_ROLES includes PROJECT_MANAGER (own the transition)", () => {
+    // Outgoing + incoming PM both need visibility. Rest of the
+    // management chain gets read-through for exec context.
+    expect(HANDOVER_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(HANDOVER_VIEWER_ROLES).toContain("OPERATIONS_MANAGER");
+    expect(HANDOVER_VIEWER_ROLES).toContain("TENANT_ADMIN");
+    expect(HANDOVER_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(HANDOVER_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(HANDOVER_VIEWER_ROLES).not.toContain("HR_ADMIN");
+  });
+
+  it("INSIGHTS_VIEWER_ROLES matches management + LEAD_FINANCE", () => {
+    // AI insights synthesize cross-project data — sensitive by nature
+    // (client health scores, SLA breach forecasts, gross margin
+    // trends). Kept out of EMPLOYEE / SUPERVISOR reach.
+    expect(INSIGHTS_VIEWER_ROLES).toContain("TENANT_ADMIN");
+    expect(INSIGHTS_VIEWER_ROLES).toContain("GENERAL_MANAGER");
+    expect(INSIGHTS_VIEWER_ROLES).toContain("PROJECT_MANAGER");
+    expect(INSIGHTS_VIEWER_ROLES).toContain("LEAD_FINANCE");
+    expect(INSIGHTS_VIEWER_ROLES).not.toContain("EMPLOYEE");
+    expect(INSIGHTS_VIEWER_ROLES).not.toContain("SUPERVISOR");
+    expect(INSIGHTS_VIEWER_ROLES).not.toContain("HR_ADMIN");
+    expect(INSIGHTS_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
   });
 });

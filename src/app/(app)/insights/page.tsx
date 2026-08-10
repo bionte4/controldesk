@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -13,6 +14,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { INSIGHTS_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { AI_INSIGHT_KINDS } from "@/lib/ai/schemas";
 import type {
@@ -64,12 +66,15 @@ async function loadLatestByKind(): Promise<Map<AiInsightKind, InsightRow>> {
 }
 
 export default async function InsightsPage() {
-  const [_employee, latest, t] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!INSIGHTS_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [latest, t] = await Promise.all([
     loadLatestByKind(),
     getTranslations("insights"),
   ]);
-  void _employee;
 
   return (
     <div className="flex flex-col gap-6">

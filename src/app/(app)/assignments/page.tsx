@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { UserPlus, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,6 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { ASSIGNMENT_VIEWER_ROLES } from "@/lib/rbac/roles";
 import {
   loadAssignments,
   loadEmployeeOptions,
@@ -41,12 +43,15 @@ export default async function AssignmentsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const [params, employee, t] = await Promise.all([
+  const employee = await requireCurrentEmployee();
+  if (!ASSIGNMENT_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [params, t] = await Promise.all([
     searchParams,
-    requireCurrentEmployee(),
     getTranslations("assignments"),
   ]);
-  void employee;
 
   const tab = (params.tab ?? "byProject") as "byProject" | "byEmployee" | "workload";
   const status = params.status === "all" ? undefined : "ACTIVE";

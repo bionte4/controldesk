@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeftRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { HANDOVER_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { PMH_STATUS_LABEL, PMH_STATUS_TONE } from "@/lib/handover/state";
 import type { PmHandoverStatus } from "@/types/database";
@@ -134,14 +136,17 @@ async function loadPmOptions(): Promise<PmOption[]> {
 }
 
 export default async function HandoversPage() {
-  const [employee, rows, projects, pms, t] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!HANDOVER_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [rows, projects, pms, t] = await Promise.all([
     loadHandovers(),
     loadProjectOptions(),
     loadPmOptions(),
     getTranslations("handovers"),
   ]);
-  void employee;
 
   return (
     <div className="flex flex-col gap-6">

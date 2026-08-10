@@ -33,8 +33,12 @@ import {
 } from "lucide-react";
 
 import {
+  ASSIGNMENT_VIEWER_ROLES,
   BUDGET_VIEWER_ROLES,
+  CLIENT_VIEWER_ROLES,
   CONTRACT_VIEWER_ROLES,
+  HANDOVER_VIEWER_ROLES,
+  INSIGHTS_VIEWER_ROLES,
   PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
   PETTY_CASH_VIEWER_ROLES,
@@ -88,33 +92,35 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "insights",
         href: "/insights",
         icon: BrainCircuit,
-        roles: [
-          "TENANT_ADMIN",
-          "GENERAL_MANAGER",
-          "HEAD_MANAGER",
-          "OPERATIONS_MANAGER",
-          "PROJECT_MANAGER",
-          "LEAD_FINANCE",
-        ],
+        // AI insight cards synthesize cross-project data — mirrors
+        // `INSIGHTS_VIEWER_ROLES` in `src/lib/rbac/roles.ts`. The
+        // `/insights` page also enforces the same list as a redirect
+        // guard because RLS on `ai_insights` is tenant-only.
+        roles: INSIGHTS_VIEWER_ROLES,
       },
     ],
   },
   {
     labelKey: "delivery",
     items: [
-      { titleKey: "clients", href: "/clients", icon: Briefcase },
+      {
+        titleKey: "clients",
+        href: "/clients",
+        icon: Briefcase,
+        // Client directory + commercial history. Sidebar + page
+        // redirect both source from `CLIENT_VIEWER_ROLES` so EMPLOYEE
+        // / SUPERVISOR see clients only via their own project detail
+        // pages (rules §8 delivery-layer scoping).
+        roles: CLIENT_VIEWER_ROLES,
+      },
       { titleKey: "projects", href: "/projects", icon: ClipboardList },
       {
         titleKey: "assignments",
         href: "/assignments",
         icon: UserPlus,
-        roles: [
-          "PROJECT_MANAGER",
-          "OPERATIONS_MANAGER",
-          "HEAD_MANAGER",
-          "GENERAL_MANAGER",
-          "TENANT_ADMIN",
-        ],
+        // Cross-project PM + employee allocation matrix — management
+        // + HR (utilization planning). Mirrors `ASSIGNMENT_VIEWER_ROLES`.
+        roles: ASSIGNMENT_VIEWER_ROLES,
       },
       // NOTE: "Team" nav entry retired — the staff directory lives at
       // /hr/employees (People > Karyawan) as of the Employees module. The
@@ -124,12 +130,10 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "handovers",
         href: "/handovers",
         icon: ArrowLeftRight,
-        roles: [
-          "OPERATIONS_MANAGER",
-          "HEAD_MANAGER",
-          "GENERAL_MANAGER",
-          "TENANT_ADMIN",
-        ],
+        // PM handover notes. Mirrors `HANDOVER_VIEWER_ROLES` — the
+        // list now includes PROJECT_MANAGER (they own the outgoing +
+        // incoming perspective) so the link isn't a dead-end for PMs.
+        roles: HANDOVER_VIEWER_ROLES,
       },
     ],
   },

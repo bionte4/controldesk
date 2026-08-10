@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Users2 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
@@ -14,7 +15,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { CLIENT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus } from "@/types/database";
 
@@ -131,8 +132,12 @@ const STATUS_TONE: Record<ClientStatus, string> = {
 };
 
 export default async function ClientsPage() {
-  const [employee, clients, t, tStatus, tCols] = await Promise.all([
-    requireCurrentEmployee(),
+  const employee = await requireCurrentEmployee();
+  if (!CLIENT_VIEWER_ROLES.includes(employee.role)) {
+    redirect("/dashboard?error=forbidden");
+  }
+
+  const [clients, t, tStatus, tCols] = await Promise.all([
     loadClients(),
     getTranslations("clients"),
     getTranslations("clients.status"),
