@@ -15,7 +15,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CLIENT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
+import { CLIENT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus } from "@/types/database";
 
@@ -133,7 +133,7 @@ const STATUS_TONE: Record<ClientStatus, string> = {
 
 export default async function ClientsPage() {
   const employee = await requireCurrentEmployee();
-  if (!CLIENT_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, CLIENT_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

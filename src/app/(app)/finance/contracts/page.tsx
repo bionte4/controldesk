@@ -16,7 +16,7 @@ import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CONTRACT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
+import { CONTRACT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus } from "@/types/database";
 
@@ -52,7 +52,7 @@ export default async function ContractsPage() {
   // so the guard has to live here in addition to the sidebar role gate.
   // Redirect with `error=forbidden` so the shell can surface a toast
   // (same pattern as `/reports`).
-  if (!CONTRACT_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+  if (!roleInGate(employee.role, CONTRACT_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

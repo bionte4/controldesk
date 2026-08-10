@@ -23,7 +23,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CLIENT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
+import { CLIENT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ClientStatus, ContractStatus, ProjectStatus } from "@/types/database";
@@ -62,7 +62,7 @@ export default async function ClientDetailPage(props: {
   const { id } = await props.params;
 
   const employee = await requireCurrentEmployee();
-  if (!CLIENT_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, CLIENT_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

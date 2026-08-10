@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { formatDateOnly } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
-import { toCanonicalRole, UPK_VIEWER_ROLES } from "@/lib/rbac/roles";
+import { roleInGate, toCanonicalRole, UPK_VIEWER_ROLES } from "@/lib/rbac/roles";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { UpkStatus } from "@/lib/validation/upk";
@@ -40,7 +40,7 @@ export default async function UpkDetailPage(props: {
 }) {
   const { id } = await props.params;
   const employee = await requireCurrentEmployee();
-  if (!UPK_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, UPK_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
   const [t, tStatus] = await Promise.all([

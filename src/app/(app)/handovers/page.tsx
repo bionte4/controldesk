@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { HANDOVER_VIEWER_ROLES } from "@/lib/rbac/roles";
+import { HANDOVER_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { PMH_STATUS_LABEL, PMH_STATUS_TONE } from "@/lib/handover/state";
 import type { PmHandoverStatus } from "@/types/database";
@@ -137,7 +137,7 @@ async function loadPmOptions(): Promise<PmOption[]> {
 
 export default async function HandoversPage() {
   const employee = await requireCurrentEmployee();
-  if (!HANDOVER_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, HANDOVER_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

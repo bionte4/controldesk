@@ -23,6 +23,7 @@ import { loadPostableAccounts } from "@/lib/data/coa";
 import { loadLookupOptions } from "@/lib/data/lookups";
 import {
   BUDGET_VIEWER_ROLES,
+  roleInGate,
   toCanonicalRole,
   type AnyDbEmployeeRole,
 } from "@/lib/rbac/roles";
@@ -196,7 +197,7 @@ export default async function BudgetDetailPage(props: {
   const { id } = await props.params;
 
   const employee = await requireCurrentEmployee();
-  if (!BUDGET_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, BUDGET_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

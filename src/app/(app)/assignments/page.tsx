@@ -15,7 +15,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { ASSIGNMENT_VIEWER_ROLES } from "@/lib/rbac/roles";
+import { ASSIGNMENT_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
 import {
   loadAssignments,
   loadEmployeeOptions,
@@ -44,7 +44,7 @@ export default async function AssignmentsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const employee = await requireCurrentEmployee();
-  if (!ASSIGNMENT_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, ASSIGNMENT_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

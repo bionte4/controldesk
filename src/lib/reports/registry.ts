@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 
 /**
  * Report registry — single source of truth for the metadata that the
@@ -57,7 +57,16 @@ export type ReportMeta = {
   icon: LucideIcon;
   titleKey: string;
   descriptionKey: string;
-  allowedRoles: readonly EmployeeRole[];
+  /**
+   * Union of every DB role string (legacy OR canonical GAS alias)
+   * that may see this card. Kept as `AnyDbEmployeeRole[]` — not
+   * `EmployeeRole[]` — because the DB emits both legacy and canonical
+   * values during the Fase 0 dual-mode. We check membership via a
+   * strict string `.includes()` (see `reportsForRole` below) so
+   * PETTY_CASH_CUSTODIAN stays scoped to petty-cash reports even
+   * though it folds to canonical `FINANCE` alongside LEAD_FINANCE.
+   */
+  allowedRoles: readonly AnyDbEmployeeRole[];
   filters: readonly ReportFilter[];
   /**
    * Default filter helper for the form — some reports default to
@@ -68,17 +77,30 @@ export type ReportMeta = {
   defaultDateRange: "currentMonth" | "currentFiscalYear" | "last90Days";
 };
 
-const CORE_FINANCE: readonly EmployeeRole[] = [
+// Legacy DB names + canonical GAS aliases side-by-side so a user
+// seeded with either flavour can see the same reports. See rules §6
+// on the dual-mode enum during Fase 0. Kept `TENANT_ADMIN` distinct
+// from `HR_ADMIN` (both fold to `ADMIN` canonical) so canonical
+// `ADMIN` remains ambiguous — reports gate through explicit legacy
+// values, and canonical `ADMIN` is admitted here because the intent
+// is "any admin-tier org role".
+const CORE_FINANCE: readonly AnyDbEmployeeRole[] = [
   "LEAD_FINANCE",
   "OPERATIONS_MANAGER",
   "HEAD_MANAGER",
   "GENERAL_MANAGER",
   "TENANT_ADMIN",
+  // Canonical GAS aliases:
+  "FINANCE",
+  "OM",
+  "DIRECTOR",
+  "ADMIN",
 ];
 
-const FINANCE_PLUS_PM: readonly EmployeeRole[] = [
+const FINANCE_PLUS_PM: readonly AnyDbEmployeeRole[] = [
   ...CORE_FINANCE,
   "PROJECT_MANAGER",
+  "PM",
 ];
 
 export const REPORT_REGISTRY: Readonly<Record<ReportKind, ReportMeta>> = {
@@ -119,7 +141,10 @@ export const REPORT_REGISTRY: Readonly<Record<ReportKind, ReportMeta>> = {
     descriptionKey: "pettyCashStatement.description",
     // Custodians can pull their own fund statement; Finance sees all
     // funds. PM is intentionally excluded — petty cash is a
-    // custodian/finance domain per rules §10.
+    // custodian/finance domain per rules §10. Explicitly enumerates
+    // both legacy + canonical role names since canonical `FINANCE`
+    // folds LEAD_FINANCE with PETTY_CASH_CUSTODIAN, and we want the
+    // gate here to remain explicit rather than lossy.
     allowedRoles: [
       "PETTY_CASH_CUSTODIAN",
       "LEAD_FINANCE",
@@ -127,6 +152,12 @@ export const REPORT_REGISTRY: Readonly<Record<ReportKind, ReportMeta>> = {
       "HEAD_MANAGER",
       "GENERAL_MANAGER",
       "TENANT_ADMIN",
+      // Canonical GAS aliases (FINANCE folds LEAD_FINANCE +
+      // PETTY_CASH_CUSTODIAN, so it's admitted regardless):
+      "FINANCE",
+      "OM",
+      "DIRECTOR",
+      "ADMIN",
     ],
     filters: ["dateRange", "fund"],
     defaultDateRange: "currentMonth",
@@ -154,8 +185,16 @@ export const REPORT_REGISTRY: Readonly<Record<ReportKind, ReportMeta>> = {
 /**
  * Filter the registry to the reports a given role is allowed to see.
  * Used by the RSC `/reports` page to render the card list.
+ *
+ * Uses strict string `.includes()` (NOT the canonical fold from
+ * `roleInGate`) because petty-cash reports legitimately want to
+ * distinguish `PETTY_CASH_CUSTODIAN` from `LEAD_FINANCE` even
+ * though both fold to canonical `FINANCE`. Each `allowedRoles`
+ * list therefore explicitly enumerates both flavours (legacy DB
+ * name + canonical GAS alias) — see `CORE_FINANCE` /
+ * `FINANCE_PLUS_PM` above for the shared bases.
  */
-export function reportsForRole(role: EmployeeRole): ReportMeta[] {
+export function reportsForRole(role: AnyDbEmployeeRole): ReportMeta[] {
   return REPORT_KINDS.map((k) => REPORT_REGISTRY[k]).filter((r) =>
     r.allowedRoles.includes(role),
   );

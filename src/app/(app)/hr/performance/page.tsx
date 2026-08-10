@@ -17,6 +17,7 @@ import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import {
   PERFORMANCE_VIEWER_ROLES,
+  roleInGate,
   type EmployeeRole,
 } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
@@ -45,7 +46,7 @@ export default async function PerformanceEvaluationsPage() {
   // RLS filters rows to HR/Mgmt OR "I am SPV/PM/OM of this row" —
   // EMPLOYEE without those relationships would land on an empty page.
   // Redirect them to the dashboard for a clearer signal.
-  if (!PERFORMANCE_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+  if (!roleInGate(employee.role, PERFORMANCE_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

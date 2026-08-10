@@ -386,6 +386,43 @@ export function toCanonicalRole(dbRole: AnyDbEmployeeRole): CanonicalRole {
 }
 
 /**
+ * Central helper for role-based visibility gates.
+ *
+ * The DB `employees.role` column may hold EITHER a legacy value
+ * (`PROJECT_MANAGER`, `LEAD_FINANCE`, `GENERAL_MANAGER`, …) or a
+ * canonical GAS alias (`PM`, `FINANCE`, `DIRECTOR`, …). Gate lists
+ * across the codebase (`CONTRACT_VIEWER_ROLES`,
+ * `PAYROLL_VIEWER_ROLES`, `NAV_SECTIONS[].items[].roles`,
+ * `REPORT_REGISTRY[…].allowedRoles`) are historically declared using
+ * legacy names, so a raw `.includes(employee.role)` misses when the
+ * user is seeded with a canonical value — the audit found this
+ * caused DIRECTOR/FINANCE/PM canonical accounts to be 404'd from
+ * pages they should legitimately see (`/hr/shifts`, `/hr/performance`,
+ * `/reports`, `/settings/coa`).
+ *
+ * `roleInGate` collapses both sides through `toCanonicalRole()` and
+ * compares in canonical space — so `roleInGate('PM', [...])` matches
+ * any gate list that contains `'PROJECT_MANAGER'` or `'PM'`, and
+ * vice versa. Direct-string equality is still checked first as a
+ * fast-path so the helper stays cheap in hot loops.
+ *
+ * NOTE: gate lists MUST contain values whose canonical form is the
+ * one you want to allow. E.g. don't put `TENANT_ADMIN` in a gate
+ * expecting to admit `HR_ADMIN` too — both fold to `ADMIN` so the
+ * canonical fold WILL admit HR_ADMIN. If you want to distinguish
+ * TENANT_ADMIN from HR_ADMIN you must gate at the DB layer (RLS) or
+ * split the gate before it reaches this helper.
+ */
+export function roleInGate(
+  role: AnyDbEmployeeRole,
+  gate: readonly AnyDbEmployeeRole[],
+): boolean {
+  if (gate.some((g) => g === role)) return true;
+  const actorCanonical = toCanonicalRole(role);
+  return gate.some((g) => toCanonicalRole(g) === actorCanonical);
+}
+
+/**
  * Reverse map used by seed / test factories that want to produce a legacy
  * DB row from a canonical role. `ADMIN → TENANT_ADMIN`, `DIRECTOR → GENERAL_MANAGER`,
  * `FINANCE → LEAD_FINANCE`, etc. Kept deterministic so E2E fixtures are stable.

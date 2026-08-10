@@ -42,6 +42,7 @@ import {
   PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
   PETTY_CASH_VIEWER_ROLES,
+  roleInGate,
   UPK_VIEWER_ROLES,
   type AnyDbEmployeeRole,
   type EmployeeRole,
@@ -366,8 +367,12 @@ export const NAV_SECTIONS: NavSection[] = [
 export function filterNavForRole(role: AnyDbEmployeeRole): NavSection[] {
   return NAV_SECTIONS.map((section) => ({
     ...section,
+    // `roleInGate` folds canonical + legacy on both sides so a user
+    // seeded with `role='PM'` sees every item declared with
+    // `PROJECT_MANAGER` (and vice versa). Keeps the sidebar drift-free
+    // during the Fase 0 legacy/canonical dual-mode.
     items: section.items.filter(
-      (item) => !item.roles || item.roles.includes(role as EmployeeRole),
+      (item) => !item.roles || roleInGate(role, item.roles),
     ),
   })).filter((section) => section.items.length > 0);
 }

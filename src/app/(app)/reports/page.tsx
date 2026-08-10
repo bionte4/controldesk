@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { roleInGate, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
 import { reportsForRole } from "@/lib/reports/registry";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +35,7 @@ export const metadata: Metadata = { title: "Reports" };
  */
 export default async function ReportsIndexPage() {
   const employee = await requireCurrentEmployee();
-  const dbRole = employee.role as EmployeeRole;
+  const dbRole = employee.role as AnyDbEmployeeRole;
   const reports = reportsForRole(dbRole);
   if (reports.length === 0) {
     redirect("/dashboard?error=forbidden");
@@ -129,17 +129,26 @@ export default async function ReportsIndexPage() {
  * Cheap heuristic for the scope badge — reflects what the caller will
  * *typically* see, not a hard guarantee (RLS is the source of truth).
  */
-function scopeForRole(role: EmployeeRole): "org" | "portfolio" | "assigned" {
-  if (
-    role === "TENANT_ADMIN" ||
-    role === "GENERAL_MANAGER" ||
-    role === "LEAD_FINANCE" ||
-    role === "HR_ADMIN"
-  ) {
-    return "org";
-  }
-  if (role === "HEAD_MANAGER" || role === "OPERATIONS_MANAGER") {
-    return "portfolio";
-  }
+const ORG_SCOPE_ROLES: readonly AnyDbEmployeeRole[] = [
+  "TENANT_ADMIN",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "HR_ADMIN",
+];
+const PORTFOLIO_SCOPE_ROLES: readonly AnyDbEmployeeRole[] = [
+  "HEAD_MANAGER",
+  "OPERATIONS_MANAGER",
+];
+
+function scopeForRole(
+  role: AnyDbEmployeeRole,
+): "org" | "portfolio" | "assigned" {
+  // `roleInGate` folds legacy + canonical GAS aliases so a user
+  // seeded with `role='FINANCE'` matches the `LEAD_FINANCE` gate,
+  // `role='DIRECTOR'` matches `GENERAL_MANAGER`, `role='OM'` matches
+  // `OPERATIONS_MANAGER`, etc. Prevents the audit finding where
+  // canonical DIR/FIN saw an inaccurate "assigned" scope badge.
+  if (roleInGate(role, ORG_SCOPE_ROLES)) return "org";
+  if (roleInGate(role, PORTFOLIO_SCOPE_ROLES)) return "portfolio";
   return "assigned";
 }

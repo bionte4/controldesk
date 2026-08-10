@@ -26,6 +26,7 @@ import {
   PAYROLL_VIEWER_ROLES,
   PERFORMANCE_VIEWER_ROLES,
   PETTY_CASH_VIEWER_ROLES,
+  roleInGate,
   UPK_VIEWER_ROLES,
   pettyCashDecision,
   requiredApprovalChain,
@@ -609,5 +610,56 @@ describe("rbac/roles — read-guard role lists", () => {
     expect(INSIGHTS_VIEWER_ROLES).not.toContain("SUPERVISOR");
     expect(INSIGHTS_VIEWER_ROLES).not.toContain("HR_ADMIN");
     expect(INSIGHTS_VIEWER_ROLES).not.toContain("PETTY_CASH_CUSTODIAN");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// `roleInGate` — canonical / legacy fold helper (Fase 0 §6 dual-mode).
+// ---------------------------------------------------------------------------
+describe("rbac/roles — roleInGate canonical fold", () => {
+  it("matches directly when the DB role is already in the gate", () => {
+    expect(roleInGate("PROJECT_MANAGER", CONTRACT_VIEWER_ROLES)).toBe(false);
+    expect(roleInGate("LEAD_FINANCE", CONTRACT_VIEWER_ROLES)).toBe(true);
+    expect(roleInGate("TENANT_ADMIN", CONTRACT_VIEWER_ROLES)).toBe(true);
+  });
+
+  it("admits a canonical actor onto a legacy-declared gate", () => {
+    // Canonical `FINANCE` folds to the same slot as `LEAD_FINANCE`,
+    // so a user seeded with `role='FINANCE'` should see /finance/contracts.
+    expect(roleInGate("FINANCE", CONTRACT_VIEWER_ROLES)).toBe(true);
+    // Canonical `DIRECTOR` folds like `GENERAL_MANAGER` — also in.
+    expect(roleInGate("DIRECTOR", CONTRACT_VIEWER_ROLES)).toBe(true);
+    // Canonical `ADMIN` folds like `TENANT_ADMIN` — also in.
+    expect(roleInGate("ADMIN", CONTRACT_VIEWER_ROLES)).toBe(true);
+  });
+
+  it("admits a legacy actor onto a canonical-declared gate", () => {
+    // The symmetric case: gate expressed in canonical values, actor
+    // arrives as legacy DB value. Should still match.
+    const canonicalGate = ["PM", "FINANCE", "ADMIN"] as const;
+    expect(roleInGate("PROJECT_MANAGER", canonicalGate)).toBe(true);
+    expect(roleInGate("LEAD_FINANCE", canonicalGate)).toBe(true);
+    expect(roleInGate("TENANT_ADMIN", canonicalGate)).toBe(true);
+  });
+
+  it("rejects when neither direct nor canonical fold matches", () => {
+    // EMPLOYEE canonical form is `EMPLOYEE` — no fold path to
+    // FINANCE / DIRECTOR / ADMIN.
+    expect(roleInGate("EMPLOYEE", CONTRACT_VIEWER_ROLES)).toBe(false);
+    expect(roleInGate("SUPERVISOR", CONTRACT_VIEWER_ROLES)).toBe(false);
+    expect(roleInGate("PM", CONTRACT_VIEWER_ROLES)).toBe(false);
+  });
+
+  it("PAYROLL_VIEWER_ROLES admits canonical FINANCE / ADMIN / DIRECTOR", () => {
+    // Regression test for the audit finding: canonical DIR/FIN
+    // accounts were 404'd from /hr/payroll despite being the exact
+    // roles the sidebar entry targets.
+    expect(roleInGate("FINANCE", PAYROLL_VIEWER_ROLES)).toBe(true);
+    expect(roleInGate("ADMIN", PAYROLL_VIEWER_ROLES)).toBe(true);
+    expect(roleInGate("DIRECTOR", PAYROLL_VIEWER_ROLES)).toBe(true);
+    // Canonical PM/OM/SUPERVISOR/EMPLOYEE stay out.
+    expect(roleInGate("PM", PAYROLL_VIEWER_ROLES)).toBe(false);
+    expect(roleInGate("OM", PAYROLL_VIEWER_ROLES)).toBe(false);
+    expect(roleInGate("EMPLOYEE", PAYROLL_VIEWER_ROLES)).toBe(false);
   });
 });

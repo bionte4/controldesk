@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { PAYROLL_VIEWER_ROLES } from "@/lib/rbac/roles";
+import { PAYROLL_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type { PayrollPeriodStatus } from "@/types/database";
 
@@ -207,7 +207,7 @@ function monthName(month: number, locale: string): string {
 
 export default async function PayrollPage() {
   const employee = await requireCurrentEmployee();
-  if (!PAYROLL_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, PAYROLL_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

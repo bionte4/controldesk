@@ -15,7 +15,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { BUDGET_VIEWER_ROLES } from "@/lib/rbac/roles";
+import { BUDGET_VIEWER_ROLES, roleInGate } from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_STATUS_LABEL, BUDGET_STATUS_TONE } from "@/lib/budgets/state";
 import type { BudgetStatus } from "@/types/database";
@@ -81,7 +81,7 @@ async function loadProjectOptions(): Promise<ProjectOption[]> {
 
 export default async function BudgetsPage() {
   const employee = await requireCurrentEmployee();
-  if (!BUDGET_VIEWER_ROLES.includes(employee.role)) {
+  if (!roleInGate(employee.role, BUDGET_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 

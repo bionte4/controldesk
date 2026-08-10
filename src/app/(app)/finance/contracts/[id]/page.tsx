@@ -22,7 +22,7 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { CONTRACT_VIEWER_ROLES, type EmployeeRole } from "@/lib/rbac/roles";
+import { CONTRACT_VIEWER_ROLES, roleInGate, type EmployeeRole } from "@/lib/rbac/roles";
 import { authorize } from "@/lib/security/pdp";
 import { createClient } from "@/lib/supabase/server";
 import type { ContractStatus, ProjectStatus } from "@/types/database";
@@ -58,7 +58,7 @@ export default async function ContractDetailPage(props: {
   // Mirrors the list-page guard: RLS on `bpo_contracts` is tenant-only,
   // so we role-gate contract detail (MRR, client industry, linked
   // projects) at the app layer.
-  if (!CONTRACT_VIEWER_ROLES.includes(employee.role as EmployeeRole)) {
+  if (!roleInGate(employee.role, CONTRACT_VIEWER_ROLES)) {
     redirect("/dashboard?error=forbidden");
   }
 
