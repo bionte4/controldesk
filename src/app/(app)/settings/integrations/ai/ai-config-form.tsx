@@ -45,9 +45,15 @@ const PROVIDER_OPTIONS: readonly AiProvider[] = [
 /**
  * Suggested default model per provider. Users can change freely — the
  * verify-before-save call catches typos or unavailable models.
+ *
+ * Note on Google: we intentionally default to `gemini-flash-latest`
+ * (the always-latest-stable alias) instead of a pinned major (e.g.
+ * `gemini-2.5-flash`). Google routinely deprecates pinned versions and
+ * returns a hard error for new users — the alias keeps new tenants
+ * self-healing across those rollovers.
  */
 const DEFAULT_MODEL: Record<AiProvider, string> = {
-  GOOGLE: "gemini-2.5-flash",
+  GOOGLE: "gemini-flash-latest",
   OPENAI: "gpt-4o-mini",
   ANTHROPIC: "claude-sonnet-5",
   OPENAI_COMPATIBLE: "llama3.1:70b",

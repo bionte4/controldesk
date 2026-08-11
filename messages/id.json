@@ -2109,8 +2109,8 @@
         "GOOGLE": {
           "label": "Google Gemini (cloud)",
           "tagline": "Model Google — Gemini flash cepat & murah, Gemini pro untuk reasoning. Data melewati Google.",
-          "modelPlaceholder": "gemini-2.5-flash",
-          "modelHint": "Contoh: gemini-2.5-flash, gemini-2.5-pro, gemini-flash-latest.",
+          "modelPlaceholder": "gemini-flash-latest",
+          "modelHint": "Contoh: gemini-flash-latest (recommended — auto-track versi stable), gemini-2.5-pro. Hindari versi pinned (mis. gemini-2.5-flash) karena bisa di-deprecate Google.",
           "apiKeyPlaceholder": "AIza...",
           "apiKeyHint": "Buat di https://aistudio.google.com/apikey. Terenkripsi di database.",
           "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."

@@ -2109,8 +2109,8 @@
         "GOOGLE": {
           "label": "Google Gemini (cloud)",
           "tagline": "Google models — Gemini flash is fast & cheap, Gemini pro handles reasoning. Data passes through Google.",
-          "modelPlaceholder": "gemini-2.5-flash",
-          "modelHint": "Examples: gemini-2.5-flash, gemini-2.5-pro, gemini-flash-latest.",
+          "modelPlaceholder": "gemini-flash-latest",
+          "modelHint": "Examples: gemini-flash-latest (recommended — always-latest stable alias), gemini-2.5-pro. Avoid pinned versions (e.g. gemini-2.5-flash) since Google routinely deprecates them.",
           "apiKeyPlaceholder": "AIza...",
           "apiKeyHint": "Create at https://aistudio.google.com/apikey. Encrypted at rest.",
           "apiKeyHintUpdate": "Leave blank to keep the current key. Paste a fresh value to rotate."
