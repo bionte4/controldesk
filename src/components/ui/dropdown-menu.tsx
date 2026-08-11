@@ -81,15 +81,69 @@ function DropdownMenuLabel({
   )
 }
 
+/**
+ * DropdownMenuItem — thin wrapper over Base UI's Menu.Item.
+ *
+ * Historical footgun: several call sites still pass `onSelect={fn}` — a
+ * Radix UI convention where the menu forwards a synthetic "select"
+ * event (invoked on click or keyboard activation) with an optional
+ * `preventDefault()` semantic to keep the menu open. Base UI has NO
+ * such prop. Its Menu.Item is a `<div role="menuitem">` and forwards
+ * every unrecognised prop straight to the div. On a plain div,
+ * `onSelect` is a text-selection listener that never fires on click,
+ * so any `onSelect={() => setOpen(true)}` handler silently no-ops.
+ *
+ * To keep existing call sites working (see shift-row-actions,
+ * task-row-actions, template-row-actions, calendar-sync-panel — all
+ * shipped assuming Radix semantics), we translate `onSelect` into an
+ * `onClick` that swallows a shim `{preventDefault(){}}` argument.
+ * The Radix-style `event.preventDefault()` becomes a no-op (Base UI
+ * closes on click via `closeOnClick={true}` by default, which is
+ * exactly the behaviour those call sites want), but the underlying
+ * business logic (e.g. `setEditOpen(true)`) actually runs.
+ */
+type BaseUIItemMouseEvent = NonNullable<
+  MenuPrimitive.Item.Props["onClick"]
+> extends (event: infer E) => unknown
+  ? E
+  : never
+
 function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  onSelect,
+  onClick,
   ...props
-}: MenuPrimitive.Item.Props & {
+}: Omit<MenuPrimitive.Item.Props, "onSelect"> & {
   inset?: boolean
   variant?: "default" | "destructive"
+  /**
+   * Radix-style selection callback. Prefer `onClick` for new code; this
+   * prop exists to keep pre-Base-UI-migration call sites working.
+   * The shim `event` only implements `preventDefault()` (no-op) — do
+   * not rely on other DOM event properties from within `onSelect`.
+   */
+  onSelect?: (event: {
+    preventDefault(): void
+    defaultPrevented: boolean
+  }) => void
 }) {
+  const handleClick =
+    onSelect || onClick
+      ? (event: BaseUIItemMouseEvent) => {
+          onClick?.(event)
+          if (onSelect) {
+            const shim = {
+              preventDefault() {
+                shim.defaultPrevented = true
+              },
+              defaultPrevented: false,
+            }
+            onSelect(shim)
+          }
+        }
+      : undefined
   return (
     <MenuPrimitive.Item
       data-slot="dropdown-menu-item"
@@ -99,6 +153,7 @@ function DropdownMenuItem({
         "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
         className
       )}
+      onClick={handleClick}
       {...props}
     />
   )
