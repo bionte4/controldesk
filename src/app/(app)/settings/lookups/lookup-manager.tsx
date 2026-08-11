@@ -34,6 +34,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -323,30 +332,36 @@ export function LookupManager({ buckets }: { buckets: DomainBucket }) {
       </Tabs>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Create / edit dialog.                                                */}
+      {/* Create / edit slide-over. Uses the same Sheet pattern as the       */}
+      {/* rest of the app (shifts, cash-advances, capabilities) so the       */}
+      {/* form has real breathing room on wider screens and doesn't shove   */}
+      {/* long descriptions into a cramped centered modal.                    */}
       {/* ------------------------------------------------------------------ */}
-      <Dialog
+      <Sheet
         open={dialogOpen}
         onOpenChange={(open) => {
           if (!open) closeDialog();
         }}
       >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-lg data-[side=right]:md:max-w-xl overflow-y-auto"
+        >
+          <SheetHeader>
+            <SheetTitle>
               {editor?.kind === "edit"
                 ? t("editTitle")
                 : editor?.kind === "create"
                   ? t("createTitle", { domain: tDomains(editor.domain) })
                   : ""}
-            </DialogTitle>
-            <DialogDescription>{t("editDescription")}</DialogDescription>
-          </DialogHeader>
+            </SheetTitle>
+            <SheetDescription>{t("editDescription")}</SheetDescription>
+          </SheetHeader>
 
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-4 px-4"
             >
               <div className="grid gap-3 sm:grid-cols-2">
                 <FormField
@@ -386,7 +401,7 @@ export function LookupManager({ buckets }: { buckets: DomainBucket }) {
                     <FormLabel>{t("form.description")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        rows={2}
+                        rows={3}
                         placeholder={t("form.descriptionPlaceholder")}
                         {...field}
                       />
@@ -433,8 +448,8 @@ export function LookupManager({ buckets }: { buckets: DomainBucket }) {
                 />
               </div>
 
-              <DialogFooter>
-                <DialogClose
+              <SheetFooter className="mt-4 flex-row justify-end gap-2">
+                <SheetClose
                   render={
                     <Button
                       type="button"
@@ -451,11 +466,11 @@ export function LookupManager({ buckets }: { buckets: DomainBucket }) {
                   ) : null}
                   {tCommon("save")}
                 </Button>
-              </DialogFooter>
+              </SheetFooter>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
 
       {/* ------------------------------------------------------------------ */}
       {/* Delete confirm dialog.                                               */}
