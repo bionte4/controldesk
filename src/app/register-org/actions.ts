@@ -195,6 +195,42 @@ export async function requestSignupAction(
     // the user can try resend from the confirmation page.
   }
 
+  // Audit — write the send outcome to `email_outbox` even though the
+  // tenant doesn't exist yet (the column is nullable). Without this row,
+  // ops teams can't distinguish "signup verify was never triggered" from
+  // "email was sent but never delivered". `tenant_id=null` marks these
+  // pre-provisioning rows so digest / retention queries can skip them
+  // cleanly. Fire-and-forget — a failed audit row must never break the
+  // signup UX (falls back to observability logs above).
+  await supa.from("email_outbox").insert({
+    tenant_id: null,
+    to_address: parsed.data.adminEmail,
+    from_address:
+      sendRes.from ??
+      process.env.SMTP_FROM ??
+      "ControlDesk <no-reply@controldesk.app>",
+    subject: email.subject,
+    body_text: email.text,
+    body_html: null,
+    status: sendRes.status,
+    provider: sendRes.provider,
+    provider_message_id: sendRes.providerMessageId ?? null,
+    error_message: sendRes.error ?? null,
+    metadata: {
+      kind: "signup_verify",
+      slug,
+      config_source: sendRes.configSource ?? null,
+    },
+    sent_at: sendRes.status === "SENT" ? new Date().toISOString() : null,
+  }).then(({ error }) => {
+    if (error) {
+      log.warn("signup verify email_outbox insert failed", {
+        slug,
+        error: error.message,
+      });
+    }
+  });
+
   return {
     ok: true,
     data: {
@@ -400,6 +436,39 @@ export async function verifySignupAction(
       : emailRes.status === "FAILED"
         ? "FAILED"
         : "SKIPPED";
+
+  // Audit — persist the confirmation send outcome. Unlike the verify step,
+  // we now know the tenant_id, so this row is queryable by ops from the
+  // provisioned workspace context.
+  await supa.from("email_outbox").insert({
+    tenant_id: provisioned.tenant_id,
+    to_address: reqRow.data.admin_email,
+    from_address:
+      emailRes.from ??
+      process.env.SMTP_FROM ??
+      "ControlDesk <no-reply@controldesk.app>",
+    subject: confirmation.subject,
+    body_text: confirmation.text,
+    body_html: null,
+    status: emailRes.status,
+    provider: emailRes.provider,
+    provider_message_id: emailRes.providerMessageId ?? null,
+    error_message: emailRes.error ?? null,
+    metadata: {
+      kind: "signup_confirmation",
+      slug: reqRow.data.slug,
+      config_source: emailRes.configSource ?? null,
+    },
+    sent_at: emailRes.status === "SENT" ? new Date().toISOString() : null,
+  }).then(({ error }) => {
+    if (error) {
+      log.warn("signup confirmation email_outbox insert failed", {
+        slug: reqRow.data.slug,
+        tenant_id: provisioned.tenant_id,
+        error: error.message,
+      });
+    }
+  });
 
   return {
     ok: true,

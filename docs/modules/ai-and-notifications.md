@@ -141,9 +141,17 @@ range. Mark-as-read individual atau bulk.
 
 Tiga surface paralel:
 
-1. **In-app bell** — badge topbar + full page `/notifications`.
-2. **Email** — via `email_outbox` + nodemailer.
-3. **Realtime** — Supabase Realtime `postgres_changes` untuk auto-refresh UI.
+1. **In-app bell** — badge topbar + full page `/notifications`. Fan-out
+   default untuk semua kind, ditulis oleh helper `notifyUser()` /
+   `notifyRoles()` di `src/lib/notifications/service.ts`.
+2. **Telegram** — opt-in per user (`user_telegram_links`) via bot per
+   tenant. Best-effort, tidak block server action kalau gagal.
+3. **Email** — via `email_outbox` + Nodemailer. Saat ini **hanya**
+   dipakai oleh cron digest, settlement reminders, dan self-signup;
+   server-action-driven notifications belum fan-out ke email (dilacak
+   di [`../../TODO.md`](../../TODO.md)).
+4. **Realtime** — Supabase Realtime `postgres_changes` untuk
+   auto-refresh UI notifikasi + approval inbox.
 
 Plus khusus untuk Client Portal: `portal_notifications` — surface
 terpisah, lihat [`clients-and-portal.md#notifications`](clients-and-portal.md#notifications).
@@ -191,9 +199,11 @@ DIGEST_DAILY (aggregated)
 
 Postgres function: `public.enqueue_notification(user_id, kind, title, body, action_url, payload)`.
 
-Dipakai dari triggers + Server Actions. Fanned out via internal insert
-+ email_outbox row (kalau user opt-in email untuk kind ini di
-`notification_preferences`).
+Dipakai dari DB triggers + Server Actions. Fanned out via
+`notifications` INSERT + optional Telegram push (best-effort, gated
+oleh `user_notification_preferences`). Fan-out ke `email_outbox`
+**belum di-wire pada mutations** — cek "Writer semantics" di bagian
+Email outbox di bawah untuk daftar caller yang saat ini menulis outbox.
 
 Contoh trigger (approval state change):
 
@@ -207,33 +217,52 @@ EXECUTE FUNCTION public.trg_expense_state_notify();
 
 ### Email outbox
 
-Tabel `public.email_outbox`:
+Tabel `public.email_outbox` (schema: migrasi
+[`0016_retention_and_ops_logs.sql`](../../supabase/migrations/0016_retention_and_ops_logs.sql)):
 
-| Kolom              | Tipe                | Note                                              |
-| ------------------ | ------------------- | ------------------------------------------------- |
-| `id`               | `uuid`              |                                                   |
-| `tenant_id`        | `uuid`              |                                                   |
-| `to_email`         | `text`              |                                                   |
-| `subject`          | `text`              |                                                   |
-| `body_html`        | `text`              |                                                   |
-| `body_text`        | `text`              |                                                   |
-| `notification_id`  | `uuid`              | FK → `notifications.id`                           |
-| `status`           | `email_status`      | `PENDING` / `SENT` / `FAILED` / `BOUNCED`         |
-| `attempts`         | `int`               | Retry counter (max 3, then FAILED)                |
-| `sent_at`          | `timestamptz`       |                                                   |
-| `error_message`    | `text`              |                                                   |
+| Kolom                 | Tipe          | Note                                                     |
+| --------------------- | ------------- | -------------------------------------------------------- |
+| `id`                  | `uuid`        | PK                                                       |
+| `tenant_id`           | `uuid`        | Nullable — signup verify emails ditulis sebelum tenant ada |
+| `to_address`          | `text`        | Alamat penerima                                          |
+| `from_address`        | `text`        | `From:` yang benar-benar dikirim (tenant relay vs env)   |
+| `subject`             | `text`        |                                                          |
+| `body_text`           | `text`        |                                                          |
+| `body_html`           | `text`        | Nullable — sekarang semua sender pakai text-only         |
+| `status`              | `text`        | `PENDING` / `SENT` / `FAILED` / `SKIPPED` (CHECK)        |
+| `provider`            | `text`        | `smtp` (Nodemailer aktif) atau `noop` (dev fallback)     |
+| `provider_message_id` | `text`        | Message-ID dari SMTP MTA                                 |
+| `error_message`       | `text`        | Diisi kalau `status='FAILED'`                            |
+| `metadata`            | `jsonb`       | `{ kind, ...contextual }` — dipakai filter di UI ops     |
+| `created_at`          | `timestamptz` |                                                          |
+| `sent_at`             | `timestamptz` | Diisi hanya saat `status='SENT'`                         |
 
-**Why an outbox?** Rules §20 — email attempt harus **auditable**, bahkan
-saat SMTP degraded. Sending logic via `nodemailer` + backoff retry
-policy.
+**Why an outbox?** Rules §20 — setiap email attempt wajib **auditable**,
+walaupun SMTP sedang degraded. Baris ini adalah source-of-truth untuk
+menjawab "kenapa user X tidak menerima email Y".
 
-Cron `/api/cron/email-flush` (setiap 5 menit) pick up `PENDING` +
-transient `FAILED` (attempts < 3) rows dan retry send. `SENT` dan hard
-`FAILED` (attempts ≥ 3, bounced, etc.) di-preserve untuk audit.
+**Writer semantics (state per 2026-08-12).** `sendEmail()` di
+`src/lib/notify/mailer.ts` mengembalikan `EmailResult` — writing ke
+`email_outbox` **eksplisit dilakukan caller** (bukan mailer). Caller
+yang saat ini sudah patuh:
 
-**Templates**: Bahasa Indonesia default, dengan i18n key `emails.*` di
-`messages/id.json` + `messages/en.json`. Deep-link URL selalu absolute
-per tenant subdomain.
+- `POST /api/cron/digest` — insert baris `status='SENT'`/`'FAILED'` per
+  penerima.
+- `POST /api/cron/settlement-reminders` — insert per notification email
+  yang dikirim.
+- `POST /register-org` (verify + confirmation) — insert setelah signup
+  step.
+
+**Tidak ada retry cron** saat ini. `SKIPPED` = SMTP belum
+dikonfigurasikan; `FAILED` = transient error yang tidak di-retry
+otomatis (ops harus resend manual dari UI, atau kirim ulang dari cron).
+Baseline yang berlaku, bukan aspirational. Retry loop / bounce
+detection direncanakan sebagai backlog di [`../../TODO.md`](../../TODO.md).
+
+**Templates**: Bahasa Indonesia default, dikonstruksi inline oleh
+helper renderer per-kind (mis. `renderSignupVerificationEmail()`,
+`renderDigestEmail()`) — bukan lewat i18n JSON. Deep-link URL selalu
+absolute per tenant subdomain (`https://{slug}.controldesk.app/...`).
 
 ### Realtime
 
@@ -307,4 +336,6 @@ Kalau row `notifications` di-insert dengan `channels: ['in_app', 'email', 'teleg
 - Integration setup + troubleshooting → [`../integrations/`](../integrations/).
 - CLI dev tools → [`../dev-tools.md`](../dev-tools.md).
 - Observability + logging AI errors → [`../ops/observability.md`](../ops/observability.md).
-- Cron endpoints (digest, insights, email-flush) → [`../api-reference.md`](../api-reference.md).
+- Cron endpoints (`digest`, `ai-insights-sweep`, `settlement-reminders`,
+  `retention`, `google-calendar-drain`, `issues-sla-sweeper`, dsb.) →
+  [`../api-reference.md`](../api-reference.md).

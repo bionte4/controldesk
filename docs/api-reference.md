@@ -166,6 +166,35 @@ Response:
 }
 ```
 
+### `POST /api/cron/ai-insights-sweep`
+
+**Schedule** — `*/15 * * * *` (every 15 minutes).
+
+Sweeps every eligible tenant (`active`/`suspended` status) and
+regenerates the four AI insight kinds
+(`predict-expense-impact`, `analyze-resource-utilization`,
+`analyze-client-health`, `analyze-sla-breach`) when the latest cached
+row is older than the freshness window (default 15 minutes). Skips
+tenants missing an AI config or whose Redis-backed daily token cap is
+exhausted.
+
+Isolation: each tenant is queried with an explicit
+`.eq("tenant_id", …)` filter through the service-role client — no
+cross-tenant reads.
+
+Response:
+
+```json
+{
+  "status": "success",
+  "started_at": "2026-08-12T00:00:34.153Z",
+  "processed": 4,
+  "generated": 6,
+  "skipped": 10,
+  "errors": []
+}
+```
+
 ### `POST /api/cron/issues-sla-sweeper`
 
 **Schedule** — `*/15 * * * *` (every 15 minutes).
