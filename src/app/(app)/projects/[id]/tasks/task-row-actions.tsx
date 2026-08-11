@@ -166,10 +166,25 @@ export function TaskRowActions({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>{t("actions.openMenu")}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+          {/*
+            Keep Base UI's Menu open long enough for the sheet to mount
+            — see shift-row-actions.tsx for the full rationale on the
+            preventDefault() dance.
+          */}
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setEditOpen(true);
+            }}
+          >
             {t("actions.edit")}
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setChildOpen(true)}>
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setChildOpen(true);
+            }}
+          >
             {t("actions.addChild")}
           </DropdownMenuItem>
 

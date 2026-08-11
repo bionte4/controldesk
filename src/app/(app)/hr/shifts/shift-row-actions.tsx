@@ -85,11 +85,28 @@ export function ShiftRowActions({
           }
         />
         <DropdownMenuContent align="end">
-          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+          {/*
+            `event.preventDefault()` keeps Base UI's Menu from
+            auto-closing before we flip the sheet/dialog state.
+            Without it, the menu close routine restores focus to the
+            trigger in the same tick that the Sheet mounts, and Base
+            UI's dismiss layer treats the click as a click-outside on
+            the freshly-opened Sheet — so the Sheet never appears.
+            (Same pattern used in calendar-sync-panel.tsx.)
+          */}
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              setEditOpen(true);
+            }}
+          >
             <Pencil className="mr-2 size-4" /> {editLabel}
           </DropdownMenuItem>
           <DropdownMenuItem
-            onSelect={() => setConfirmOpen(true)}
+            onSelect={(event) => {
+              event.preventDefault();
+              setConfirmOpen(true);
+            }}
             className="text-rose-500 focus:text-rose-500"
           >
             <Trash2 className="mr-2 size-4" /> {deleteLabel}
