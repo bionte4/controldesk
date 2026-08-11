@@ -1,9 +1,20 @@
 import "server-only";
 
 import { generateObject } from "ai";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import type { CurrentEmployee } from "@/lib/auth/session";
+import type { Database } from "@/types/database";
+
+/**
+ * Supabase client shape shared between the cookie-bound anon client (RSC /
+ * server-action path) and the service-role client (cron path). Generators
+ * accept either — the cookie client relies on RLS for tenant isolation,
+ * while the service-role client relies on the explicit
+ * `.eq("tenant_id", …)` filter added below (defence in depth).
+ */
+export type InsightSupabase = SupabaseClient<Database>;
 import { parseMoneyFromDb } from "@/lib/format/money";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 import { resolveAiModel } from "@/lib/integrations/ai";
@@ -167,20 +178,26 @@ async function run<T>(opts: {
 export async function predictExpenseImpact(
   actor: CurrentEmployee,
   locale: Locale = DEFAULT_LOCALE,
+  client?: InsightSupabase,
 ) {
-  const supabase = await createClient();
+  // Cookie-bound anon client for the UI (RLS enforces tenant scope) OR a
+  // caller-provided service-role client for the cron sweep (`.eq("tenant_id",
+  // …)` on every query does the tenant scoping in that path).
+  const supabase = client ?? (await createClient());
 
   const { data: projects } = await supabase
     .from("projects")
     .select(
       "id, code, name, status, budgets:project_budgets(budget_amount, spent_amount)",
     )
+    .eq("tenant_id", actor.tenant_id)
     .eq("status", "ACTIVE")
     .limit(20);
 
   const { data: pendingExpenses } = await supabase
     .from("project_expenses")
     .select("id, project_id, amount, category, status")
+    .eq("tenant_id", actor.tenant_id)
     .not("status", "in", '("APPROVED","REJECTED","CANCELLED")')
     .limit(200);
 
@@ -283,23 +300,27 @@ export async function predictExpenseImpact(
 export async function analyzeResourceUtilization(
   actor: CurrentEmployee,
   locale: Locale = DEFAULT_LOCALE,
+  client?: InsightSupabase,
 ) {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
 
   const { data: employees } = await supabase
     .from("employees")
     .select("id, role, full_name, email, is_active")
+    .eq("tenant_id", actor.tenant_id)
     .eq("is_active", true)
     .limit(200);
 
   const { data: employeeAllocs } = await supabase
     .from("project_employee_assignments")
     .select("employee_id, project_id, allocation_percentage, status")
+    .eq("tenant_id", actor.tenant_id)
     .eq("status", "ACTIVE");
 
   const { data: pmAllocs } = await supabase
     .from("project_pm_assignments")
     .select("pm_employee_id, project_id, assignment_role, status")
+    .eq("tenant_id", actor.tenant_id)
     .eq("status", "ACTIVE");
 
   const empRedacted = new Map<
@@ -442,14 +463,16 @@ export async function analyzeResourceUtilization(
 export async function analyzeClientHealth(
   actor: CurrentEmployee,
   locale: Locale = DEFAULT_LOCALE,
+  client?: InsightSupabase,
 ) {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
 
   const { data: clients } = await supabase
     .from("clients")
     .select(
       "id, name, status, industry, projects(id, status), contracts:bpo_contracts(mrr_amount, status)",
     )
+    .eq("tenant_id", actor.tenant_id)
     .limit(20);
 
   type C = {
@@ -589,12 +612,14 @@ export async function analyzeClientHealth(
 export async function analyzeSlaBreach(
   actor: CurrentEmployee,
   locale: Locale = DEFAULT_LOCALE,
+  client?: InsightSupabase,
 ) {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
 
   const { data: projects } = await supabase
     .from("projects")
     .select("id, code, name, status")
+    .eq("tenant_id", actor.tenant_id)
     .eq("status", "ACTIVE")
     .limit(20);
 
@@ -726,16 +751,17 @@ export async function runInsight(
   kind: AiInsightKindLiteral,
   actor: CurrentEmployee,
   locale: Locale = DEFAULT_LOCALE,
+  client?: InsightSupabase,
 ): Promise<AnyInsight> {
   switch (kind) {
     case "PREDICT_EXPENSE_IMPACT":
-      return { kind, run: await predictExpenseImpact(actor, locale) };
+      return { kind, run: await predictExpenseImpact(actor, locale, client) };
     case "ANALYZE_RESOURCE_UTILIZATION":
-      return { kind, run: await analyzeResourceUtilization(actor, locale) };
+      return { kind, run: await analyzeResourceUtilization(actor, locale, client) };
     case "ANALYZE_CLIENT_HEALTH":
-      return { kind, run: await analyzeClientHealth(actor, locale) };
+      return { kind, run: await analyzeClientHealth(actor, locale, client) };
     case "ANALYZE_SLA_BREACH":
-      return { kind, run: await analyzeSlaBreach(actor, locale) };
+      return { kind, run: await analyzeSlaBreach(actor, locale, client) };
   }
 }
 

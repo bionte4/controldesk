@@ -1,5 +1,7 @@
 import "server-only";
 
+import { generateText } from "ai";
+
 import { log } from "@/lib/observability/log";
 
 import type { AiProvider } from "./repository";
@@ -41,7 +43,16 @@ export async function verifyAiCredentials(input: {
     let model: unknown = null;
 
     if (input.provider === "GOOGLE") {
-      const mod = (await dyn("@ai-sdk/google").catch(() => null)) as
+      // Direct `await import(...)` (not the `new Function` bypass used for
+      // the optional openai/anthropic branches below) so Next.js's file
+      // tracer follows the import chain and copies `@ai-sdk/google` +
+      // its transitive `@ai-sdk/provider-utils` / `@ai-sdk/provider` deps
+      // into `.next/standalone/node_modules/`. Without this, the prod
+      // Docker `runner` stage boots without the SDK and every verify
+      // call fails with "SDK not installed on the server." (This is
+      // safe here because `@ai-sdk/google` is a first-party dependency
+      // in package.json — resolve-at-build-time is guaranteed.)
+      const mod = (await import("@ai-sdk/google").catch(() => null)) as
         | { google: (id: string) => unknown; createGoogleGenerativeAI?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
       if (!mod) {
@@ -123,18 +134,11 @@ export async function verifyAiCredentials(input: {
       };
     }
 
-    // Call generateText from the Vercel AI SDK (cheaper than
-    // generateObject for a smoke test; no schema required).
-    const aiMod = (await dyn("ai").catch(() => null)) as
-      | { generateText?: (o: unknown) => Promise<{ text?: string }> }
-      | null;
-    if (!aiMod?.generateText) {
-      return {
-        ok: false,
-        error: "Vercel AI SDK (`ai`) is not installed on the server.",
-      };
-    }
-
+    // Use a direct static import of `generateText` (not the `new Function`
+    // bypass) so Next.js's file tracer picks up the `ai` package into
+    // `.next/standalone/node_modules/`. Same reason we do the direct
+    // import for `@ai-sdk/google` above.
+    //
     // Hard-cap the wait — remote LLMs can be slow to warm up on cold
     // GPUs. 15s is generous but bounded.
     const timeoutMs = 15000;
@@ -142,13 +146,13 @@ export async function verifyAiCredentials(input: {
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const result = await aiMod.generateText({
-        model,
+      const result = await generateText({
+        // The AI SDK's `LanguageModel` type is a discriminated union of
+        // provider-specific handles; each branch of the block above
+        // returns one of those. We erase the type here because upstream
+        // dynamic-import shims give us `unknown`.
+        model: model as Parameters<typeof generateText>[0]["model"],
         prompt: "Respond with the single word: pong.",
-        // Non-standard fields the SDK forwards to the provider.
-        // Some providers respect `abortSignal`, some ignore it — the
-        // await/reject on the AbortController still terminates the
-        // request.
         abortSignal: controller.signal,
       });
       return { ok: true, response: (result.text ?? "").trim().slice(0, 200) };

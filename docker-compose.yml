@@ -105,6 +105,58 @@ services:
     networks:
       - controldesk
 
+  # ---------------------------------------------------------------------------
+  # ai-insights-cron — tiny scheduler that pokes /api/cron/ai-insights-sweep on
+  # the `app` container every 15 minutes so AI insights stay fresh without a
+  # user having to click "Run all". Only starts under the `prod` profile
+  # alongside the `app` service (dev workflows use `pnpm dev` + the /insights
+  # UI button). The container is a plain Alpine + curl loop; no need to
+  # introduce a heavier cron image for a single job.
+  # ---------------------------------------------------------------------------
+  ai-insights-cron:
+    image: alpine:3.20
+    container_name: controldesk-ai-insights-cron
+    profiles:
+      - prod
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    env_file:
+      - path: .env.local
+        required: false
+    environment:
+      # Reach the app over the internal compose network — never through the
+      # host port. `INTERVAL_SEC` doubles as the freshness window on the
+      # server side (see FRESHNESS_WINDOW_MIN in the sweep route).
+      TARGET_URL: http://app:3000/api/cron/ai-insights-sweep
+      INTERVAL_SEC: "900"
+    # Alpine ships curl separately; install it once, then loop. The
+    # `Authorization: Bearer $CRON_SECRET` header is skipped in dev when
+    # `CRON_SECRET` is unset (route falls through to "unauthed OK if
+    # NODE_ENV != production"). Prod deployments MUST set CRON_SECRET in
+    # .env.local so the header lines up.
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl >/dev/null 2>&1
+        echo "ai-insights cron: polling $$TARGET_URL every $$INTERVAL_SEC s"
+        while true; do
+          if [ -n "$$CRON_SECRET" ]; then
+            curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" "$$TARGET_URL" \
+              -o /dev/null -w 'ai-insights sweep -> HTTP %{http_code} in %{time_total}s\n' \
+              || echo "ai-insights sweep FAILED"
+          else
+            curl -fsS -X POST "$$TARGET_URL" \
+              -o /dev/null -w 'ai-insights sweep (no auth) -> HTTP %{http_code} in %{time_total}s\n' \
+              || echo "ai-insights sweep FAILED"
+          fi
+          sleep "$$INTERVAL_SEC"
+        done
+    networks:
+      - controldesk
+
 volumes:
   redis-data:
 

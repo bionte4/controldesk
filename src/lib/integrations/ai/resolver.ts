@@ -172,7 +172,12 @@ async function buildModel(
 
   try {
     if (cfg.provider === "GOOGLE") {
-      const mod = (await dyn("@ai-sdk/google").catch(() => null)) as
+      // Direct `await import(...)` — mirrors `verify.ts`. Lets Next.js
+      // file-trace the SDK + its transitive dependencies into the
+      // standalone bundle. Openai/anthropic branches below stay on the
+      // `new Function` bypass because those packages aren't a hard
+      // dependency in package.json yet.
+      const mod = (await import("@ai-sdk/google").catch(() => null)) as
         | { google: (id: string) => unknown; createGoogleGenerativeAI?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
       if (!mod) return null;
