@@ -46,7 +46,7 @@ import {
   type EmploymentTypeInput,
 } from "@/lib/validation/employee";
 
-import { createEmployeeAction } from "./actions";
+import { createEmployeeAction, updateEmployeeAction } from "./actions";
 
 /**
  * Manager candidate for the reports-to select. Passed from the parent
@@ -58,6 +58,30 @@ export type ManagerOption = {
   id: string;
   full_name: string;
   role: string;
+};
+
+/**
+ * Existing employee prefill payload for edit mode. All optional fields
+ * come as `null` from Postgres — the form defaults coerce those to
+ * `undefined` so RHF doesn't treat them as "user cleared this field on
+ * purpose" (which would then send `null` to the server and blow away
+ * data unintentionally).
+ */
+export type ExistingEmployee = {
+  id: string;
+  first_name: string;
+  last_name: string | null;
+  email: string;
+  phone: string | null;
+  department: string | null;
+  position_title: string | null;
+  role: string;
+  date_of_birth: string | null;
+  join_date: string;
+  employment_type: string;
+  contract_end_date: string | null;
+  availability: string;
+  reports_to_employee_id: string | null;
 };
 
 /**
@@ -89,22 +113,71 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-const DEFAULT_VALUES: CreateEmployeeInput = {
-  first_name: "",
-  last_name: undefined,
-  email: "",
-  phone: undefined,
-  department: undefined,
-  position_title: undefined,
-  role: "EMPLOYEE",
-  date_of_birth: undefined,
-  join_date: todayIso(),
-  employment_type: "PERMANENT",
-  contract_end_date: undefined,
-  availability: "AVAILABLE",
-  reports_to_employee_id: undefined,
-  notes: undefined,
-};
+/**
+ * Coerce a DB role string back into the canonical enum. Rows created
+ * during the legacy 10-value phase may still carry values like
+ * `HEAD_MANAGER`; those are already in `EMPLOYEE_ROLES` so this is
+ * effectively a null-safe cast.
+ */
+function coerceRole(raw: string | null | undefined): EmployeeRoleInput {
+  if (raw && (EMPLOYEE_ROLES as readonly string[]).includes(raw)) {
+    return raw as EmployeeRoleInput;
+  }
+  return "EMPLOYEE";
+}
+
+function coerceEmployment(raw: string | null | undefined): EmploymentTypeInput {
+  if (raw && (EMPLOYMENT_TYPES as readonly string[]).includes(raw)) {
+    return raw as EmploymentTypeInput;
+  }
+  return "PERMANENT";
+}
+
+function coerceAvailability(
+  raw: string | null | undefined,
+): EmployeeAvailabilityInput {
+  if (raw && (EMPLOYEE_AVAILABILITIES as readonly string[]).includes(raw)) {
+    return raw as EmployeeAvailabilityInput;
+  }
+  return "AVAILABLE";
+}
+
+function buildDefaults(existing?: ExistingEmployee): CreateEmployeeInput {
+  if (!existing) {
+    return {
+      first_name: "",
+      last_name: undefined,
+      email: "",
+      phone: undefined,
+      department: undefined,
+      position_title: undefined,
+      role: "EMPLOYEE",
+      date_of_birth: undefined,
+      join_date: todayIso(),
+      employment_type: "PERMANENT",
+      contract_end_date: undefined,
+      availability: "AVAILABLE",
+      reports_to_employee_id: undefined,
+      notes: undefined,
+    };
+  }
+  return {
+    first_name: existing.first_name,
+    last_name: existing.last_name ?? undefined,
+    email: existing.email,
+    phone: existing.phone ?? undefined,
+    department: existing.department ?? undefined,
+    position_title: existing.position_title ?? undefined,
+    role: coerceRole(existing.role),
+    date_of_birth: existing.date_of_birth ?? undefined,
+    join_date: existing.join_date,
+    employment_type: coerceEmployment(existing.employment_type),
+    contract_end_date: existing.contract_end_date ?? undefined,
+    availability: coerceAvailability(existing.availability),
+    reports_to_employee_id: existing.reports_to_employee_id ?? undefined,
+    notes: undefined,
+  };
+}
 
 /**
  * `departmentOptions` and `positionOptions` are the ACTIVE labels loaded
@@ -113,52 +186,105 @@ const DEFAULT_VALUES: CreateEmployeeInput = {
  * inputs — users may pick a suggestion OR type a custom value (rules §6
  * "free-text with Combobox suggestion").
  */
-type NewEmployeeSheetProps = {
+type EmployeeUpsertSheetProps = {
+  /** When provided, the sheet is in edit mode — prefills fields and
+   *  calls `updateEmployeeAction` on submit. Skip for create mode. */
+  existing?: ExistingEmployee;
   departmentOptions?: readonly string[];
   positionOptions?: readonly string[];
   /**
-   * Existing employees that a new hire can report to. Rendered in the
+   * Existing employees that a hire can report to. Rendered in the
    * `reports_to_employee_id` select alongside a "no manager" sentinel.
-   * When empty, the field renders disabled with a helper hint so the
-   * admin knows to add managers first (or just leave everyone flat).
+   * When empty, the field renders disabled with a helper hint. In edit
+   * mode the current row is filtered out client-side to prevent
+   * self-reporting (the DB-level FK check would otherwise be the only
+   * guard, and its error message is not friendly).
    */
   managerOptions?: readonly ManagerOption[];
+  /**
+   * Controlled open state. When provided (e.g. from a row-actions
+   * dropdown driving the edit flow), the sheet omits its own trigger
+   * button.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function NewEmployeeSheet({
+export function EmployeeUpsertSheet({
+  existing,
   departmentOptions = [],
   positionOptions = [],
   managerOptions = [],
-}: NewEmployeeSheetProps = {}) {
+  open: openProp,
+  onOpenChange,
+}: EmployeeUpsertSheetProps = {}) {
   const t = useTranslations("employees");
   const tf = useTranslations("employees.form");
   const tType = useTranslations("employees.employmentType");
   const tAvail = useTranslations("employees.availability");
   const tRole = useTranslations("employees.role");
   const tCommon = useTranslations("common");
-  const [open, setOpen] = React.useState(false);
+
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [isPending, startTransition] = React.useTransition();
+
+  const isEdit = Boolean(existing);
+  // Only render the "+ New employee" trigger when no external control
+  // is provided AND we're in create mode. Edit sheets are always driven
+  // externally from a row-action dropdown.
+  const showTrigger = !isEdit && openProp === undefined;
 
   const form = useForm<CreateEmployeeInput>({
     resolver: zodResolver(
       createEmployeeSchema,
     ) as unknown as Resolver<CreateEmployeeInput>,
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: buildDefaults(existing),
     mode: "onBlur",
   });
+
+  // When the caller swaps `existing` (e.g. clicked Edit on a different
+  // row while the sheet was still mounted, or reopened after a save),
+  // wipe RHF state to the new snapshot. Also reset when the sheet
+  // closes in create mode so the next open starts empty.
+  React.useEffect(() => {
+    if (open) {
+      form.reset(buildDefaults(existing));
+    }
+    // Purposefully NOT re-running on `form` changes — RHF's `reset`
+    // is stable-by-reference across renders. The dep array only cares
+    // about which snapshot we're loading.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, existing?.id]);
 
   const employmentType = form.watch("employment_type");
   const isPermanent = employmentType === "PERMANENT";
   const endDateRequired = NON_PERMANENT_TYPES.includes(employmentType);
 
+  // In edit mode, exclude the row itself from the manager candidates so
+  // the admin can't accidentally point `reports_to` at the same
+  // employee. The FK constraint at the DB level does not prevent this
+  // (a self-cycle is a valid FK).
+  const filteredManagers = React.useMemo(() => {
+    if (!existing) return managerOptions;
+    return managerOptions.filter((m) => m.id !== existing.id);
+  }, [managerOptions, existing]);
+
   function onSubmit(values: CreateEmployeeInput) {
     startTransition(async () => {
-      const result = await createEmployeeAction(values);
+      const result = existing
+        ? await updateEmployeeAction({ id: existing.id, ...values })
+        : await createEmployeeAction(values);
       if (result.ok) {
         toast.success(
-          tf("created", { name: values.first_name }),
+          isEdit
+            ? tf("updated", { name: values.first_name })
+            : tf("created", { name: values.first_name }),
         );
-        form.reset({ ...DEFAULT_VALUES, join_date: todayIso() });
+        if (!isEdit) {
+          form.reset(buildDefaults());
+        }
         setOpen(false);
       } else {
         toast.error(result.reason);
@@ -168,21 +294,27 @@ export function NewEmployeeSheet({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        render={
-          <Button size="sm">
-            <Plus className="size-4" />
-            {t("newEmployee")}
-          </Button>
-        }
-      />
+      {showTrigger ? (
+        <SheetTrigger
+          render={
+            <Button size="sm">
+              <Plus className="size-4" />
+              {t("newEmployee")}
+            </Button>
+          }
+        />
+      ) : null}
       <SheetContent
         side="right"
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"
       >
         <SheetHeader>
-          <SheetTitle>{tf("createTitle")}</SheetTitle>
-          <SheetDescription>{tf("createDescription")}</SheetDescription>
+          <SheetTitle>
+            {isEdit ? tf("editTitle") : tf("createTitle")}
+          </SheetTitle>
+          <SheetDescription>
+            {isEdit ? tf("editDescription") : tf("createDescription")}
+          </SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
@@ -384,7 +516,7 @@ export function NewEmployeeSheet({
                 control={form.control}
                 name="reports_to_employee_id"
                 render={({ field }) => {
-                  const noManagers = managerOptions.length === 0;
+                  const noManagers = filteredManagers.length === 0;
                   return (
                     <FormItem>
                       <FormLabel>{tf("reportsTo")}</FormLabel>
@@ -400,7 +532,7 @@ export function NewEmployeeSheet({
                             <SelectValue>
                               {(() => {
                                 if (!field.value) return tf("reportsToNone");
-                                const match = managerOptions.find(
+                                const match = filteredManagers.find(
                                   (m) => m.id === field.value,
                                 );
                                 return match?.full_name ?? tf("reportsToNone");
@@ -412,7 +544,7 @@ export function NewEmployeeSheet({
                           <SelectItem value={REPORTS_TO_NONE}>
                             {tf("reportsToNone")}
                           </SelectItem>
-                          {managerOptions.map((m) => (
+                          {filteredManagers.map((m) => (
                             <SelectItem key={m.id} value={m.id}>
                               {m.full_name}
                               <span className="ml-1 text-xs text-muted-foreground">

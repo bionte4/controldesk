@@ -3214,7 +3214,8 @@
       "employment": "Employment",
       "joinDate": "Join date",
       "endDate": "End date",
-      "availability": "Availability"
+      "availability": "Availability",
+      "actions": "Actions"
     },
     "employmentType": {
       "PERMANENT": "Permanent",
@@ -3245,6 +3246,11 @@
     "form": {
       "createTitle": "New employee",
       "createDescription": "You can add an employee before they activate a system account. Invite them later from the row menu.",
+      "editTitle": "Edit employee",
+      "editDescription": "Update this employee's details. Every change is recorded in the audit log.",
+      "edit": "Edit",
+      "rowActions": "Row actions",
+      "updated": "Employee {name} updated.",
       "firstName": "First name",
       "lastName": "Last name",
       "email": "Email",

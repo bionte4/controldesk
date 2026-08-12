@@ -3214,7 +3214,8 @@
       "employment": "Jenis kontrak",
       "joinDate": "Tanggal masuk",
       "endDate": "Tanggal akhir",
-      "availability": "Ketersediaan"
+      "availability": "Ketersediaan",
+      "actions": "Aksi"
     },
     "employmentType": {
       "PERMANENT": "Permanen",
@@ -3245,6 +3246,11 @@
     "form": {
       "createTitle": "Karyawan baru",
       "createDescription": "Karyawan baru bisa ditambahkan tanpa akun sistem. Undangan aktivasi akun bisa dikirim setelahnya.",
+      "editTitle": "Ubah karyawan",
+      "editDescription": "Perbarui data karyawan. Setiap perubahan tercatat di audit log.",
+      "edit": "Ubah",
+      "rowActions": "Aksi baris",
+      "updated": "Karyawan {name} berhasil diperbarui.",
       "firstName": "Nama depan",
       "lastName": "Nama belakang",
       "email": "Email",
