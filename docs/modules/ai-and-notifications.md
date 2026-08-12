@@ -146,11 +146,16 @@ Tiga surface paralel:
    `notifyRoles()` di `src/lib/notifications/service.ts`.
 2. **Telegram** — opt-in per user (`user_telegram_links`) via bot per
    tenant. Best-effort, tidak block server action kalau gagal.
-3. **Email** — via `email_outbox` + Nodemailer. Saat ini **hanya**
+3. **WhatsApp** — opt-in per user (`user_whatsapp_links`) via gateway
+   per tenant (Twilio, Fonnte, Meta Cloud — provider dipilih di
+   Settings → Integrations → WhatsApp). Best-effort, dispatch bareng
+   Telegram lewat `notifyUser()`; `NO_CONFIG` / `NO_LINK` di-log info
+   dan dilewati (bukan error).
+4. **Email** — via `email_outbox` + Nodemailer. Saat ini **hanya**
    dipakai oleh cron digest, settlement reminders, dan self-signup;
    server-action-driven notifications belum fan-out ke email (dilacak
    di [`../../TODO.md`](../../TODO.md)).
-4. **Realtime** — Supabase Realtime `postgres_changes` untuk
+5. **Realtime** — Supabase Realtime `postgres_changes` untuk
    auto-refresh UI notifikasi + approval inbox.
 
 Plus khusus untuk Client Portal: `portal_notifications` — surface
@@ -199,11 +204,18 @@ DIGEST_DAILY (aggregated)
 
 Postgres function: `public.enqueue_notification(user_id, kind, title, body, action_url, payload)`.
 
-Dipakai dari DB triggers + Server Actions. Fanned out via
-`notifications` INSERT + optional Telegram push (best-effort, gated
-oleh `user_notification_preferences`). Fan-out ke `email_outbox`
-**belum di-wire pada mutations** — cek "Writer semantics" di bagian
-Email outbox di bawah untuk daftar caller yang saat ini menulis outbox.
+Dipakai dari DB triggers + Server Actions. Fan-out otomatis via
+`notifications` INSERT (kanal `IN_APP`, source-of-truth) + optional
+Telegram push + optional WhatsApp push. Kedua kanal side-channel
+dieksekusi paralel oleh `notifyUser()` dan **best-effort** —
+kegagalan tidak pernah membatalkan Server Action yang memanggil
+(rules §20). Setiap side-channel di-gate oleh
+`user_notification_preferences` (kategori × kanal), fail-open kalau
+row preferensi tidak ada.
+
+Fan-out ke `email_outbox` **belum di-wire pada mutations** — cek
+"Writer semantics" di bagian Email outbox di bawah untuk daftar caller
+yang saat ini menulis outbox.
 
 Contoh trigger (approval state change):
 
