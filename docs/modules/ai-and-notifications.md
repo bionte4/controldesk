@@ -159,6 +159,30 @@ Tiga surface paralel:
    Timesheet dan bulk-import event tetap in-app only (tidak di allowlist).
    Cron digest + settlement reminders + self-signup masih menulis
    `email_outbox` sendiri dengan skeleton yang sama.
+
+   **Tenant isolation (kritikal)**: dispatcher pakai `createServiceRoleClient()`
+   untuk bisa jalan dari Server Action **dan** cron route yang tidak
+   punya session cookie. RLS di-bypass, jadi isolasi tenant di-enforce
+   oleh **3 layer eksplisit**:
+   (1) `.eq("tenant_id", input.tenantId)` di query `employees`;
+   (2) `.eq("id", input.tenantId)` di query `tenants`;
+   (3) sanity check `tenant.id === input.tenantId` post-load — bail
+   kalau row leak.
+   CTA URL selalu di-build dari `tenant.slug` yang di-fetch pakai
+   `input.tenantId`, bukan dari heuristik. Outbox row juga di-tag
+   dengan `input.tenantId`, bukan `tenant.id` dari row (defensive).
+   Cross-tenant regression test locked di
+   [`email-dispatcher.test.ts`](../../src/lib/notifications/email-dispatcher.test.ts).
+
+   `isChannelEnabled()` dan `loadEnabledMap()` di
+   [`preferences.ts`](../../src/lib/notifications/preferences.ts) juga
+   pakai `createServiceRoleClient()` — perlu supaya dispatcher bisa
+   baca preferensi user LAIN (approver, subordinate). Kalau pakai
+   session client, RLS scope `user_id = auth.uid()` bikin lookup
+   preferensi user lain balik null → fail-open → user yang opt-out
+   tetap dikirimi email (bug lama sebelum fix). Public UI reader
+   (`loadPreferencesForUser`) tetap pakai session client karena
+   hanya baca row user sendiri.
 5. **Realtime** — Supabase Realtime `postgres_changes` untuk
    auto-refresh UI notifikasi + approval inbox.
 

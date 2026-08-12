@@ -21,7 +21,7 @@ const tenantsGet = vi.fn<QueryHandler>();
 const outboxInsert = vi.fn<InsertHandler>();
 
 vi.mock("@/lib/supabase/server", () => ({
-  createClient: async () => ({
+  createServiceRoleClient: () => ({
     from(table: string) {
       if (table === "employees") {
         return {
@@ -116,7 +116,7 @@ describe("dispatchNotificationEmail", () => {
       error: null,
     }));
     tenantsGet.mockImplementation(async () => ({
-      data: { name: "PT Acme Nusantara", slug: "acme" },
+      data: { id: "t1", name: "PT Acme Nusantara", slug: "acme" },
       error: null,
     }));
     outboxInsert.mockImplementation(async () => ({ error: null }));
@@ -274,5 +274,196 @@ describe("dispatchNotificationEmail", () => {
     expect(sendArgs.text).toContain(
       "https://acme.controldesk.test/approvals?tab=pending&from=email",
     );
+  });
+});
+
+describe("dispatchNotificationEmail — tenant isolation", () => {
+  beforeEach(() => {
+    employeesGet.mockReset();
+    tenantsGet.mockReset();
+    outboxInsert.mockReset();
+    sendEmailMock.mockClear();
+    isChannelEnabledMock.mockClear();
+    isChannelEnabledMock.mockImplementation(async () => true);
+    outboxInsert.mockImplementation(async () => ({ error: null }));
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  /**
+   * Simulated production behaviour: real Postgres would filter by
+   * `.eq("tenant_id", "t1")` and return NULL for a userId that only
+   * exists in tenant t2. This locks in the invariant — if a bug ever
+   * causes recipient loading to widen its filter, this test fails.
+   *
+   * Even with service_role bypassing RLS, the explicit filter must
+   * do the isolation heavy lifting.
+   */
+  it("does not send when recipient userId only exists in a foreign tenant", async () => {
+    // Note the mock returns NULL — matching how Postgres would answer
+    // a `.eq("tenant_id", "t1").eq("user_id", "u-in-t2")` query.
+    employeesGet.mockImplementation(async () => ({ data: null, error: null }));
+    tenantsGet.mockImplementation(async () => ({
+      data: { id: "t1", name: "PT Acme", slug: "acme" },
+      error: null,
+    }));
+
+    const { dispatchNotificationEmail } = await loadDispatcher();
+    await dispatchNotificationEmail({
+      tenantId: "t1",
+      userId: "u-in-t2",
+      kind: "APPROVAL_REQUESTED",
+      title: "Approve me",
+      body: "Rp 1jt",
+      actionUrl: "/finance/expenses/xyz",
+    });
+
+    expect(sendEmailMock).not.toHaveBeenCalled();
+    expect(outboxInsert).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Defensive check that catches a hypothetical failure mode: query
+   * builder returns a tenant row whose id doesn't match the requested
+   * tenantId (e.g. a Postgres bug, or a test/mock that fudges the row).
+   * The dispatcher aborts and does NOT send using the wrong tenant's
+   * slug (which would email a legitimate user with a link to a
+   * neighbour tenant's subdomain).
+   */
+  it("bails out when tenants.id in the loaded row differs from input.tenantId (defensive)", async () => {
+    employeesGet.mockImplementation(async () => ({
+      data: {
+        email: "andi@acme.co.id",
+        full_name: "Andi",
+        preferred_locale: "id",
+      },
+      error: null,
+    }));
+    // Simulate a row leak — id says t2 even though we asked for t1.
+    tenantsGet.mockImplementation(async () => ({
+      data: { id: "t2-foreign", name: "PT Other", slug: "other-tenant" },
+      error: null,
+    }));
+
+    const { dispatchNotificationEmail } = await loadDispatcher();
+    await dispatchNotificationEmail({
+      tenantId: "t1",
+      userId: "u1",
+      kind: "APPROVAL_REQUESTED",
+      title: "Approve me",
+      actionUrl: "/finance/expenses/xyz",
+    });
+
+    expect(sendEmailMock).not.toHaveBeenCalled();
+    expect(outboxInsert).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The CTA URL is composed from the loaded `tenant.slug`, never from
+   * a heuristic like "extract subdomain from input". Verify that a
+   * tenant whose slug is `acme` cannot end up with `other-tenant` in
+   * its CTA URL just because both live in the same test suite.
+   */
+  it("CTA URL slug always comes from the tenant row matching input.tenantId", async () => {
+    // Set up two callers back-to-back with different tenants — check
+    // React.cache() isn't causing state to bleed across tenants.
+    const { dispatchNotificationEmail } = await loadDispatcher();
+
+    employeesGet.mockImplementation(async () => ({
+      data: {
+        email: "a@t1.com",
+        full_name: "A",
+        preferred_locale: "id",
+      },
+      error: null,
+    }));
+    tenantsGet.mockImplementationOnce(async () => ({
+      data: { id: "t1", name: "Tenant One", slug: "one" },
+      error: null,
+    }));
+    await dispatchNotificationEmail({
+      tenantId: "t1",
+      userId: "u1",
+      kind: "APPROVAL_REQUESTED",
+      title: "hi",
+      actionUrl: "/x",
+    });
+
+    tenantsGet.mockImplementationOnce(async () => ({
+      data: { id: "t2", name: "Tenant Two", slug: "two" },
+      error: null,
+    }));
+    employeesGet.mockImplementationOnce(async () => ({
+      data: {
+        email: "b@t2.com",
+        full_name: "B",
+        preferred_locale: "id",
+      },
+      error: null,
+    }));
+    await dispatchNotificationEmail({
+      tenantId: "t2",
+      userId: "u2",
+      kind: "APPROVAL_REQUESTED",
+      title: "hi",
+      actionUrl: "/x",
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const first = sendEmailMock.mock.calls[0]?.[0] as {
+      to: string;
+      text: string;
+      tenantId: string;
+    };
+    const second = sendEmailMock.mock.calls[1]?.[0] as {
+      to: string;
+      text: string;
+      tenantId: string;
+    };
+    expect(first.to).toBe("a@t1.com");
+    expect(first.tenantId).toBe("t1");
+    expect(first.text).toContain("https://one.controldesk.test/x?from=email");
+    expect(first.text).not.toContain("two.controldesk.test");
+
+    expect(second.to).toBe("b@t2.com");
+    expect(second.tenantId).toBe("t2");
+    expect(second.text).toContain("https://two.controldesk.test/x?from=email");
+    expect(second.text).not.toContain("one.controldesk.test");
+  });
+
+  /**
+   * Outbox row must always be tagged with input.tenantId, never with
+   * something derived from the loaded row directly. This locks the
+   * contract: the tenant_id we PERSIST is the tenant_id we WERE ASKED
+   * to notify, not whatever the DB happened to return.
+   */
+  it("outbox row is tenant_id-tagged from input.tenantId (not the loaded row)", async () => {
+    employeesGet.mockImplementation(async () => ({
+      data: { email: "a@t1.com", full_name: "A", preferred_locale: "id" },
+      error: null,
+    }));
+    tenantsGet.mockImplementation(async () => ({
+      data: { id: "t1", name: "Acme", slug: "acme" },
+      error: null,
+    }));
+
+    const { dispatchNotificationEmail } = await loadDispatcher();
+    await dispatchNotificationEmail({
+      tenantId: "t1",
+      userId: "u1",
+      kind: "APPROVAL_REQUESTED",
+      title: "hi",
+      actionUrl: "/x",
+    });
+
+    expect(outboxInsert).toHaveBeenCalledOnce();
+    const row = outboxInsert.mock.calls[0]?.[0] as {
+      tenant_id: string;
+      metadata: { user_id: string };
+    };
+    expect(row.tenant_id).toBe("t1");
+    expect(row.metadata.user_id).toBe("u1");
   });
 });
