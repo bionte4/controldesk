@@ -6,6 +6,7 @@ import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import { toLegacyDbRole, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
+import { notifyTimesheetSubmission } from "@/lib/timesheets/notify";
 import { canApproveWeek, nextWeekStatus } from "@/lib/timesheets/week-state";
 import {
   approveWeeklyTimesheetSchema,
@@ -130,6 +131,24 @@ export const submitWeeklyTimesheetAction = withSecureAction({
       from_status: fromStatus,
       to_status: "SUBMITTED",
       comment: input.notes ?? null,
+    });
+
+    // Fan out TIMESHEET_SUBMITTED to the submitter's direct supervisor
+    // (or fall back to tenant-wide approvers). Fire-and-forget — the
+    // packet is already persisted; a slow notification queue must not
+    // fail the SUBMIT.
+    void notifyTimesheetSubmission({
+      tenantId: ctx.actor.tenantId,
+      submitterEmployeeId: input.employee_id,
+      title: "Timesheet mingguan menunggu approval",
+      body: `Minggu mulai ${input.week_start_date} — ${totals.totalHours} jam menunggu review.`,
+      actionUrl: `/hr/timesheets/weekly/${input.week_start_date}`,
+      payload: {
+        timesheet_week_id: weekId,
+        week_start_date: input.week_start_date,
+        total_hours: totals.totalHours,
+        total_overtime: totals.totalOvertime,
+      },
     });
 
     revalidatePath("/hr/timesheets");

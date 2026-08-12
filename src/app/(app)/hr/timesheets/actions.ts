@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
+import { notifyTimesheetSubmission } from "@/lib/timesheets/notify";
 import { nextTimesheetStatus } from "@/lib/timesheets/state";
 import {
   approveTimesheetSchema,
@@ -36,6 +37,8 @@ export const submitTimesheetAction = withSecureAction({
       .eq("work_date", input.work_date)
       .maybeSingle();
 
+    let timesheetId: string;
+    let oldStatus: string | null = null;
     if (existing) {
       // Must be DRAFT or REJECTED to re-submit.
       nextTimesheetStatus({ current: existing.status, action: "SUBMIT" });
@@ -56,52 +59,60 @@ export const submitTimesheetAction = withSecureAction({
         .select("id")
         .single();
       if (error || !updated) throw new Error(error?.message ?? "Update failed.");
-
-      revalidatePath("/hr/timesheets");
-      return {
-        result: { id: updated.id, updated: true },
-        auditResourceId: updated.id,
-        auditOldValues: { status: existing.status },
-        auditNewValues: {
-          status: "SUBMITTED",
+      timesheetId = updated.id;
+      oldStatus = existing.status;
+    } else {
+      const { data: inserted, error } = await supabase
+        .from("timesheets")
+        .insert({
+          tenant_id: ctx.actor.tenantId,
+          employee_id: input.employee_id,
+          project_id: input.project_id ?? null,
+          roster_id: input.roster_id ?? null,
+          work_date: input.work_date,
           hours_worked: input.hours_worked,
           hours_overtime: input.hours_overtime,
-          project_id: input.project_id ?? null,
-        },
-      };
+          notes: input.notes ?? null,
+          status: "SUBMITTED",
+          submitted_at: new Date().toISOString(),
+          created_by: ctx.actor.employeeId,
+        })
+        .select("id")
+        .single();
+      if (error || !inserted) {
+        throw new Error(error?.message ?? "Failed to submit timesheet.");
+      }
+      timesheetId = inserted.id;
     }
 
-    const { data: inserted, error } = await supabase
-      .from("timesheets")
-      .insert({
-        tenant_id: ctx.actor.tenantId,
-        employee_id: input.employee_id,
-        project_id: input.project_id ?? null,
-        roster_id: input.roster_id ?? null,
+    // Fan out TIMESHEET_SUBMITTED to the submitter's direct supervisor
+    // (falling back to tenant-wide PM/Supervisor/Admin roles if the
+    // reports-to chain isn't wired). Fire-and-forget — a failed
+    // notification must never fail the submit.
+    void notifyTimesheetSubmission({
+      tenantId: ctx.actor.tenantId,
+      submitterEmployeeId: input.employee_id,
+      title: "Timesheet menunggu approval",
+      body: `Timesheet ${input.work_date} (${input.hours_worked} jam) menunggu review.`,
+      actionUrl: `/hr/timesheets/${timesheetId}`,
+      payload: {
+        timesheet_id: timesheetId,
         work_date: input.work_date,
         hours_worked: input.hours_worked,
-        hours_overtime: input.hours_overtime,
-        notes: input.notes ?? null,
-        status: "SUBMITTED",
-        submitted_at: new Date().toISOString(),
-        created_by: ctx.actor.employeeId,
-      })
-      .select("id")
-      .single();
-    if (error || !inserted) {
-      throw new Error(error?.message ?? "Failed to submit timesheet.");
-    }
+      },
+    });
 
     revalidatePath("/hr/timesheets");
     return {
-      result: { id: inserted.id, updated: false },
-      auditResourceId: inserted.id,
+      result: { id: timesheetId, updated: existing !== null },
+      auditResourceId: timesheetId,
+      auditOldValues: oldStatus ? { status: oldStatus } : null,
       auditNewValues: {
         status: "SUBMITTED",
         hours_worked: input.hours_worked,
         hours_overtime: input.hours_overtime,
         project_id: input.project_id ?? null,
-        work_date: input.work_date,
+        ...(existing ? {} : { work_date: input.work_date }),
       },
     };
   },
