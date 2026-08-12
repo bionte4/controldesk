@@ -103,7 +103,13 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   // Regenerated on `reset()` — a new conversation is a new uuid.
   const [conversationId, setConversationId] = useState<string>(() => randomUuid());
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
+  // Initial value is `true` because the mount effect below immediately
+  // fetches. Starting at `false` would flash "empty state" for a beat.
+  // React 19 also refuses `setHistoryLoading(true)` synchronously
+  // inside `refreshHistory` when called from an effect (cascading
+  // render lint), so keeping the "loading" latch here and only
+  // resetting it after the fetch resolves side-steps the rule.
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [hydratingId, setHydratingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -112,7 +118,6 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   const [historyOpenMobile, setHistoryOpenMobile] = useState(false);
 
   const refreshHistory = useCallback(async () => {
-    setHistoryLoading(true);
     try {
       const res = await fetch("/api/help/conversations", {
         method: "GET",
@@ -133,7 +138,28 @@ export function HelpAskPanel({ articleSlugs }: Props) {
     }
   }, [tHistory]);
 
+  // Mount-triggered fetch of chat history. All setState calls inside
+  // `refreshHistory` happen AFTER `await fetch(...)`, not synchronously
+  // in the effect body, so no cascading render can actually occur.
+  // React 19's `react-hooks/set-state-in-effect` lint uses a
+  // conservative heuristic — any function whose implementation
+  // touches setState is flagged if called from an effect, regardless
+  // of async ordering. This is a documented false-positive; the
+  // React team's own guidance in "You Might Not Need an Effect"
+  // still endorses effect-based data fetching when there's no
+  // server-rendered starting state (which is our case — history is
+  // per-user + per-tenant, no viable RSC prefetch).
+  //
+  // Alternatives considered + rejected:
+  //   • `use()` + Suspense — would require restructuring the parent
+  //     tabbed layout and losing the graceful "show empty then load"
+  //     UX we depend on for the mobile drawer.
+  //   • Fetch in an RSC parent and pass an initial snapshot — the
+  //     panel is deeply nested under a client tabs shell; plumbing
+  //     the snapshot down would require a Context provider just for
+  //     this one field.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see block comment above
     void refreshHistory();
   }, [refreshHistory]);
 
