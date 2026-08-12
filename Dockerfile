@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: base — pinned Node runtime + system deps + Corepack (pnpm).
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 RUN apk add --no-cache libc6-compat curl \
   && corepack enable
 WORKDIR /app
