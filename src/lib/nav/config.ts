@@ -299,6 +299,15 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Sparkles,
       },
       {
+        // In-app knowledge base — visible to every authenticated user
+        // for the same reason preferences is (universal, non-admin).
+        // Content is static from `docs/`; no RLS surface. See
+        // `src/lib/help/articles.ts` for the manifest.
+        titleKey: "help",
+        href: "/help",
+        icon: BookOpen,
+      },
+      {
         titleKey: "users",
         href: "/settings/users",
         icon: UserCog,

@@ -8,6 +8,13 @@ tetap sinkron dengan kode.
 Docs di tree ini menjelaskan "bagaimana" — cara menjalankan, mengembangkan,
 dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 
+> **End-user link**: Kalau Anda adalah pengguna aplikasi (bukan developer),
+> subset user-facing dari docs ini juga tersedia langsung di dalam aplikasi
+> pada route `/help` — search-friendly, tanpa perlu clone repo. Manifest-nya
+> di [`src/lib/help/articles.ts`](../src/lib/help/articles.ts). Untuk
+> menambah artikel baru: tulis Markdown-nya di `docs/`, lalu tambahkan
+> satu baris di manifest tersebut.
+
 ## Baca dulu berdasarkan role Anda
 
 | Role Anda                                    | Mulai di sini                                                                       |

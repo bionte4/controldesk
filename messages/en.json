@@ -78,6 +78,19 @@
     "name": "ControlDesk",
     "tagline": "One workspace for projects, people, cash, and clients."
   },
+  "help": {
+    "eyebrow": "Help Center",
+    "title": "Help & guides",
+    "subtitle": "Browse user guides, approval workflows, and module references. Content ships with the product and stays up to date.",
+    "searchPlaceholder": "Search articles — e.g. \"submit expense\", \"field ops cash advance\"...",
+    "clearSearch": "Clear search",
+    "searchResultsLabel": "Search results",
+    "noResults": "No results for \"{query}\". Try different keywords or browse the categories below.",
+    "readArticle": "Read article",
+    "backToIndex": "Back to Help Center",
+    "openFullGuide": "Open full guide",
+    "hintTrigger": "Show help: {title}"
+  },
   "profile": {
     "kicker": "My account",
     "form": {
@@ -366,7 +379,8 @@
       "integrations": "Integrations",
       "approvalThresholds": "Approval thresholds",
       "capabilities": "Capabilities",
-      "features": "Active features"
+      "features": "Active features",
+      "help": "Help"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",

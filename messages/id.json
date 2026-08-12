@@ -78,6 +78,19 @@
     "name": "ControlDesk",
     "tagline": "Ruang kerja tunggal untuk proyek, karyawan, keuangan, dan klien."
   },
+  "help": {
+    "eyebrow": "Pusat Bantuan",
+    "title": "Bantuan & panduan",
+    "subtitle": "Cari panduan penggunaan, alur persetujuan, dan referensi modul ControlDesk. Semua konten berbahasa Indonesia dan diperbarui bersama produk.",
+    "searchPlaceholder": "Cari artikel — misal \"submit expense\", \"kas bon field ops\"...",
+    "clearSearch": "Bersihkan pencarian",
+    "searchResultsLabel": "Hasil pencarian",
+    "noResults": "Tidak ada hasil untuk \"{query}\". Coba kata kunci lain atau lihat kategori di bawah.",
+    "readArticle": "Baca artikel",
+    "backToIndex": "Kembali ke Pusat Bantuan",
+    "openFullGuide": "Buka panduan lengkap",
+    "hintTrigger": "Tampilkan bantuan: {title}"
+  },
   "profile": {
     "kicker": "Akun saya",
     "form": {
@@ -366,7 +379,8 @@
       "integrations": "Integrasi",
       "approvalThresholds": "Ambang Approval",
       "capabilities": "Kapabilitas",
-      "features": "Fitur Aktif"
+      "features": "Fitur Aktif",
+      "help": "Bantuan"
     },
     "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
     "commandPlaceholder": "Cari perintah, lompat ke halaman…",
