@@ -723,6 +723,46 @@ tenant lain):
    `https://acme.controldesk.app/clients/{uuid_dari_demo}` — harus
    dapat **404 atau access-denied**, bukan data leak.
 
+**D. AI features — opsional, wajib untuk chatbot / copilot**:
+
+Tenant baru **tidak** dapat AI provider default. `provision_tenant()`
+sengaja tidak menulis row ke `tenant_ai_configs` — supaya setiap
+tenant sadar memilih provider mereka sendiri (compliance data + budget
+mereka). Fitur berikut butuh AI aktif:
+
+| Fitur | Endpoint | Perilaku tanpa AI config |
+|---|---|---|
+| Chatbot `/help?tab=ask` Level 1 (RAG docs) | `/api/help/ask` | HTTP 503 `ai_not_configured` |
+| Chatbot Level 2 (tool calling ke data tenant) | `/api/help/ask` (`useTools=true`) | HTTP 503 `ai_not_configured` |
+| Inline copilot di form (`Draft with AI`) | `/api/ai/copilot` | HTTP 503, tombol disabled |
+| Insight cards di dashboard | Vercel AI SDK `generateObject` | Fallback ke mock deterministic |
+
+**Cara mengaktifkan** (Tenant Admin):
+
+1. Login → `Settings → Integrations → AI`.
+2. Pilih provider: `GOOGLE` (Gemini), `OPENAI`, `ANTHROPIC`, atau
+   `OPENAI_COMPATIBLE` (Ollama / LM Studio / vLLM di private cloud).
+3. Isi `model_id`, `api_key`, dan `base_url` (khusus
+   `OPENAI_COMPATIBLE`). Field `api_key` di-encrypt AES-256-GCM di
+   database (rules §3).
+4. Simpan → refresh `/help?tab=ask`, ketik pertanyaan → response
+   streaming muncul dalam 1-3 detik.
+
+Fitur berikut **jalan tanpa** AI config (universal):
+
+- `/help` browse artikel + client-side fuzzy search
+- `<HelpHint>` popover kontekstual di semua form
+- Embeddings index (di-precompute di build-time, disimpan di app
+  bundle sebagai `src/lib/help/embeddings.json` — shared across
+  tenants, tidak leak antar-tenant karena embeddings hanya berisi
+  konten dokumentasi publik ControlDesk).
+
+**Locale hygiene**: Bahasa response AI mengikuti toggle
+`LanguageToggle` di topbar (cookie `NEXT_LOCALE`), bukan browser
+default. Jadi kalau tenant di Indonesia toggle ke English, chatbot &
+copilot pun ikut respond dalam English. Precedence:
+`NEXT_LOCALE` cookie → `Accept-Language` header → default `id`.
+
 ## Rollback
 
 **Penting — audit log immutability (rules §3)**: begitu ada row di

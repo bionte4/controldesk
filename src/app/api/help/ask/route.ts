@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
@@ -9,6 +10,7 @@ import { retrieveContext } from "@/lib/help/retrieval";
 import { resolveAiModel } from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { makeToolRegistry } from "@/lib/ai/tools";
+import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { toCanonicalRole } from "@/lib/rbac/roles";
 import { log } from "@/lib/observability/log";
 import { limit, RateLimitPresets } from "@/lib/security/rate-limit";
@@ -154,7 +156,10 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const locale = detectLocale(request.headers.get("accept-language"));
+  const locale = resolveRequestLocale({
+    cookies: await cookies(),
+    acceptLanguage: request.headers.get("accept-language"),
+  });
   const retrieved = await retrieveContext(lastUser.content, 3);
 
   // ------------------------------------------------------------------
@@ -337,9 +342,3 @@ function tooManyRequests(resetAt: number): Response {
   );
 }
 
-function detectLocale(header: string | null): "id" | "en" {
-  if (!header) return "id";
-  const first = header.split(",")[0]?.trim().toLowerCase() ?? "";
-  if (first.startsWith("en")) return "en";
-  return "id";
-}

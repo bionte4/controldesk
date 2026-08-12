@@ -68,47 +68,70 @@ const listPendingApprovalsInput = z.object({});
  * /approvals anyway, and see a wall of "you can't approve this"
  * items.
  */
+type ExpenseStatus =
+  | "PENDING_L1_SUPERVISOR"
+  | "PENDING_L2_PROJECT_MANAGER"
+  | "PENDING_L2_5_FINANCE"
+  | "PENDING_L3_OPERATIONS_MANAGER"
+  | "PENDING_L4_HEAD_MANAGER"
+  | "PENDING_L5_GENERAL_MANAGER";
+
+type CaStatus =
+  | "PENDING_L1_SUPERVISOR"
+  | "PENDING_L2_PROJECT_MANAGER"
+  | "PENDING_L2_5_FINANCE"
+  | "PENDING_L3_OPERATIONS_MANAGER"
+  | "PENDING_L4_HEAD_MANAGER"
+  | "PENDING_L5_GENERAL_MANAGER"
+  | "PENDING_SUPERVISOR"
+  | "PENDING_PM"
+  | "PENDING_FINANCE"
+  | "PENDING_OM"
+  | "PENDING_DIRECTOR";
+
 function statusesAwaiting(
   role: CanonicalRole,
 ): {
-  expense: readonly string[];
-  ca: readonly string[];
+  expense: readonly ExpenseStatus[];
+  ca: readonly CaStatus[];
 } {
   // Two schemas exist because CA got the canonical rename first
   // (PENDING_SUPERVISOR, etc.) — expense still uses the legacy
-  // Lnnn names.
+  // Lnnn names. `role` is the caller's *canonical* role
+  // (post-`toCanonicalRole()`); see rules §6 for the DB→canonical
+  // mapping.
   switch (role) {
     case "SUPERVISOR":
       return {
         expense: ["PENDING_L1_SUPERVISOR"],
         ca: ["PENDING_L1_SUPERVISOR", "PENDING_SUPERVISOR"],
       };
-    case "PROJECT_MANAGER":
+    case "PM":
       return {
         expense: ["PENDING_L2_PROJECT_MANAGER"],
         ca: ["PENDING_L2_PROJECT_MANAGER", "PENDING_PM"],
       };
-    case "LEAD_FINANCE":
+    case "FINANCE":
       return {
         expense: ["PENDING_L2_5_FINANCE"],
         ca: ["PENDING_L2_5_FINANCE", "PENDING_FINANCE"],
       };
-    case "OPERATIONS_MANAGER":
+    case "OM":
       return {
         expense: ["PENDING_L3_OPERATIONS_MANAGER"],
         ca: ["PENDING_L3_OPERATIONS_MANAGER", "PENDING_OM"],
       };
-    case "HEAD_MANAGER":
+    case "DIRECTOR":
+    case "ADMIN":
       return {
-        expense: ["PENDING_L4_HEAD_MANAGER"],
-        ca: ["PENDING_L4_HEAD_MANAGER"],
+        expense: ["PENDING_L4_HEAD_MANAGER", "PENDING_L5_GENERAL_MANAGER"],
+        ca: [
+          "PENDING_L4_HEAD_MANAGER",
+          "PENDING_L5_GENERAL_MANAGER",
+          "PENDING_DIRECTOR",
+        ],
       };
-    case "GENERAL_MANAGER":
-    case "TENANT_ADMIN":
-      return {
-        expense: ["PENDING_L5_GENERAL_MANAGER"],
-        ca: ["PENDING_L5_GENERAL_MANAGER", "PENDING_DIRECTOR"],
-      };
+    case "EMPLOYEE":
     default:
       return { expense: [], ca: [] };
   }

@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { streamText } from "ai";
 
@@ -9,6 +10,7 @@ import {
   copilotRequestSchema,
 } from "@/lib/ai/copilot-surfaces";
 import { resolveAiModel } from "@/lib/integrations/ai";
+import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { log } from "@/lib/observability/log";
 import { limit, RateLimitPresets } from "@/lib/security/rate-limit";
 
@@ -132,7 +134,10 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const locale = detectLocale(request.headers.get("accept-language"));
+  const locale = resolveRequestLocale({
+    cookies: await cookies(),
+    acceptLanguage: request.headers.get("accept-language"),
+  });
   const { system, user } = surface.buildPrompt({
     tenantName: tenantRow.name,
     locale,
@@ -192,9 +197,3 @@ function tooManyRequests(resetAt: number): Response {
   );
 }
 
-function detectLocale(header: string | null): "id" | "en" {
-  if (!header) return "id";
-  const first = header.split(",")[0]?.trim().toLowerCase() ?? "";
-  if (first.startsWith("en")) return "en";
-  return "id";
-}
