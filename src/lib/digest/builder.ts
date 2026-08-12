@@ -6,7 +6,17 @@
  * it queries data, hands it to `buildDigest`, and dispatches the emails.
  *
  * Tests exercise the builder directly with fabricated rows.
+ *
+ * Rendering is delegated to the shared `src/lib/notify/templates/skeleton.ts`
+ * so digest emails share the same visual identity (card + eyebrow + footer)
+ * as signup / reminder emails. If you touch the visual layout, update the
+ * skeleton — not this file.
  */
+
+import {
+  renderEmailBody,
+  type EmailSection,
+} from "@/lib/notify/templates/skeleton";
 
 export type Locale = "id-ID" | "en-US";
 
@@ -117,88 +127,64 @@ export function renderDigestSubject(bundle: DigestBundle, _locale: Locale = "id-
   return LABEL_ID.subject(bundle.tenant_name);
 }
 
+function buildDigestSections(bundle: DigestBundle): EmailSection[] {
+  return [
+    {
+      heading: LABEL_ID.sectionPending,
+      body:
+        bundle.pending_approvals.length === 0 ? LABEL_ID.none : undefined,
+      items:
+        bundle.pending_approvals.length > 0
+          ? bundle.pending_approvals.map((a) => LABEL_ID.approvalRow(a))
+          : undefined,
+    },
+    {
+      heading: LABEL_ID.sectionLowFund,
+      body:
+        bundle.petty_cash_low_funds.length === 0 ? LABEL_ID.none : undefined,
+      items:
+        bundle.petty_cash_low_funds.length > 0
+          ? bundle.petty_cash_low_funds.map((f) => LABEL_ID.lowFundRow(f))
+          : undefined,
+    },
+    {
+      heading: LABEL_ID.sectionSla,
+      body:
+        bundle.sla_breach_risks.length === 0 ? LABEL_ID.none : undefined,
+      items:
+        bundle.sla_breach_risks.length > 0
+          ? bundle.sla_breach_risks.map((s) => LABEL_ID.slaRow(s))
+          : undefined,
+    },
+  ];
+}
+
+function greetingFor(bundle: DigestBundle): string {
+  return bundle.role_audience === "HR_ADMIN"
+    ? LABEL_ID.greetingHr
+    : bundle.role_audience === "LEAD_FINANCE"
+      ? LABEL_ID.greetingFinance
+      : LABEL_ID.greetingOps;
+}
+
 export function renderDigestText(bundle: DigestBundle): string {
-  const parts: string[] = [];
-  const greeting =
-    bundle.role_audience === "HR_ADMIN"
-      ? LABEL_ID.greetingHr
-      : bundle.role_audience === "LEAD_FINANCE"
-        ? LABEL_ID.greetingFinance
-        : LABEL_ID.greetingOps;
-  parts.push(greeting, "");
-
-  parts.push(`## ${LABEL_ID.sectionPending}`);
-  if (bundle.pending_approvals.length === 0) {
-    parts.push(LABEL_ID.none);
-  } else {
-    for (const a of bundle.pending_approvals) {
-      parts.push(`  • ${LABEL_ID.approvalRow(a)}`);
-    }
-  }
-  parts.push("");
-
-  parts.push(`## ${LABEL_ID.sectionLowFund}`);
-  if (bundle.petty_cash_low_funds.length === 0) {
-    parts.push(LABEL_ID.none);
-  } else {
-    for (const f of bundle.petty_cash_low_funds) {
-      parts.push(`  • ${LABEL_ID.lowFundRow(f)}`);
-    }
-  }
-  parts.push("");
-
-  parts.push(`## ${LABEL_ID.sectionSla}`);
-  if (bundle.sla_breach_risks.length === 0) {
-    parts.push(LABEL_ID.none);
-  } else {
-    for (const s of bundle.sla_breach_risks) {
-      parts.push(`  • ${LABEL_ID.slaRow(s)}`);
-    }
-  }
-  parts.push("", LABEL_ID.footer);
-  return parts.join("\n");
+  return renderEmailBody({
+    tenantName: bundle.tenant_name,
+    title: LABEL_ID.subject(bundle.tenant_name),
+    greeting: greetingFor(bundle),
+    sections: buildDigestSections(bundle),
+    footerNote: LABEL_ID.footer,
+  }).text;
 }
 
 export function renderDigestHtml(bundle: DigestBundle): string {
-  const section = (title: string, rows: string[]) => `
-    <h2 style="font-size:14px;margin:24px 0 8px;color:#0f172a">${escapeHtml(title)}</h2>
-    ${
-      rows.length === 0
-        ? `<p style="color:#64748b;font-size:13px">${escapeHtml(LABEL_ID.none)}</p>`
-        : `<ul style="padding-left:18px;color:#0f172a;font-size:13px;line-height:1.6">${rows
-            .map((r) => `<li>${escapeHtml(r)}</li>`)
-            .join("")}</ul>`
-    }
-  `;
-
-  const greeting =
-    bundle.role_audience === "HR_ADMIN"
-      ? LABEL_ID.greetingHr
-      : bundle.role_audience === "LEAD_FINANCE"
-        ? LABEL_ID.greetingFinance
-        : LABEL_ID.greetingOps;
-
-  return `<!doctype html>
-<html lang="id"><body style="margin:0;background:#f8fafc;font-family:ui-sans-serif,system-ui,'Segoe UI',sans-serif">
-  <div style="max-width:640px;margin:24px auto;background:#ffffff;border-radius:16px;padding:28px;box-shadow:0 4px 24px rgba(15,23,42,0.06)">
-    <p style="color:#334155;font-size:13px;margin:0 0 4px;letter-spacing:0.06em;text-transform:uppercase">${escapeHtml(bundle.tenant_name)}</p>
-    <h1 style="font-size:20px;margin:0 0 16px;color:#0f172a">${escapeHtml(LABEL_ID.subject(bundle.tenant_name))}</h1>
-    <p style="color:#0f172a;font-size:14px;margin:0 0 12px">${escapeHtml(greeting)}</p>
-    ${section(
-      LABEL_ID.sectionPending,
-      bundle.pending_approvals.map((a) => LABEL_ID.approvalRow(a)),
-    )}
-    ${section(
-      LABEL_ID.sectionLowFund,
-      bundle.petty_cash_low_funds.map((f) => LABEL_ID.lowFundRow(f)),
-    )}
-    ${section(
-      LABEL_ID.sectionSla,
-      bundle.sla_breach_risks.map((s) => LABEL_ID.slaRow(s)),
-    )}
-    <p style="color:#94a3b8;font-size:11px;margin-top:24px">${escapeHtml(LABEL_ID.footer)}</p>
-  </div>
-</body></html>`;
+  return renderEmailBody({
+    tenantName: bundle.tenant_name,
+    title: LABEL_ID.subject(bundle.tenant_name),
+    greeting: greetingFor(bundle),
+    sections: buildDigestSections(bundle),
+    footerNote: LABEL_ID.footer,
+  }).html;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,13 +202,4 @@ function formatIdr(idr: number): string {
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(idr);
-}
-
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
