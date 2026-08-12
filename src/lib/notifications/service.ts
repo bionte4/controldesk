@@ -3,6 +3,8 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { sendTelegramMessage } from "@/lib/integrations/telegram/client";
 import { loadUserLink } from "@/lib/integrations/telegram/repository";
+import { sendWhatsAppMessage } from "@/lib/integrations/whatsapp/client";
+import { loadUserWhatsAppLink } from "@/lib/integrations/whatsapp/repository";
 import { log } from "@/lib/observability/log";
 import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import type { NotificationKind } from "@/types/database";
@@ -90,11 +92,15 @@ export async function notifyUser(input: {
     return { ok: false, error: error.message };
   }
 
-  // Best-effort Telegram fanout — only when the caller supplied
-  // tenantId (so we know which tenant's bot config to load) and
-  // the user opted into the TELEGRAM channel for this category.
+  // Best-effort out-of-band fan-out — only when the caller supplied
+  // tenantId (so we know which tenant's bot / gateway config to load)
+  // and the user opted into that specific channel for this category.
   // Failures never propagate — the in-app message is the source of
-  // truth; Telegram is just an out-of-band echo (rules §20).
+  // truth; Telegram and WhatsApp are just echoes (rules §20).
+  //
+  // Telegram and WhatsApp fire in parallel via `void`; a slow
+  // provider on one channel must never delay delivery on the other,
+  // nor block the caller's Server Action.
   if (input.tenantId) {
     void dispatchTelegram({
       tenantId: input.tenantId,
@@ -105,6 +111,18 @@ export async function notifyUser(input: {
       actionUrl: input.actionUrl,
     }).catch((err) => {
       log.warn("telegram_dispatch_failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
+    void dispatchWhatsApp({
+      tenantId: input.tenantId,
+      userId: input.recipient.userId,
+      kind: input.kind,
+      title: input.title,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    }).catch((err) => {
+      log.warn("whatsapp_dispatch_failed", {
         err: err instanceof Error ? err.message : String(err),
       });
     });
@@ -157,6 +175,73 @@ async function dispatchTelegram(input: {
     chatId: link.chatId,
     text: `<b>${title}</b>${bodyLine}${linkLine}`,
   });
+}
+
+/**
+ * Fire-and-forget WhatsApp dispatcher. Mirror of `dispatchTelegram`
+ * but talks to a Twilio/Fonnte/Meta gateway configured per-tenant.
+ *
+ * Formatting notes:
+ *   * WhatsApp does NOT render HTML — it uses its own light markup
+ *     (`*bold*`, `_italic_`, `~strike~`, `\`\`\`mono\`\`\``). We only
+ *     use bold for the title, plain text for the body, and append the
+ *     action URL as a bare link so the WhatsApp client autolinks it.
+ *   * No HTML escaping needed — payload lands as text/plain.
+ *   * If the user has no linked WA number (`user_whatsapp_links`),
+ *     silently exit; the linking flow lives in Preferences.
+ *   * If the tenant has no active gateway, `sendWhatsAppMessage`
+ *     returns `NO_CONFIG` which we log at info and drop — a tenant
+ *     that hasn't wired WhatsApp is not an error condition.
+ */
+async function dispatchWhatsApp(input: {
+  tenantId: string;
+  userId: string;
+  kind: NotificationKind;
+  title: string;
+  body?: string;
+  actionUrl?: string;
+}): Promise<void> {
+  const category = categoryForKind(input.kind);
+  const allowed = await isChannelEnabled({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    category,
+    channel: "WHATSAPP",
+  });
+  if (!allowed) return;
+
+  const link = await loadUserWhatsAppLink({
+    tenantId: input.tenantId,
+    userId: input.userId,
+  });
+  if (!link) return;
+
+  const bodyLine = input.body ? `\n${input.body}` : "";
+  const linkLine = input.actionUrl ? `\n\n${input.actionUrl}` : "";
+  const text = `*${input.title}*${bodyLine}${linkLine}`;
+
+  const res = await sendWhatsAppMessage({
+    tenantId: input.tenantId,
+    waId: link.waId,
+    text,
+  });
+  if (!res.ok) {
+    // NO_CONFIG is normal for tenants that have not enabled WA yet;
+    // TIMEOUT / PROVIDER_ERROR / HTTP are worth surfacing but not
+    // fatal — the in-app row is already persisted.
+    if (res.code === "NO_CONFIG" || res.code === "NO_LINK") {
+      log.info("whatsapp_dispatch_skipped", {
+        tenant_id: input.tenantId,
+        code: res.code,
+      });
+      return;
+    }
+    log.warn("whatsapp_dispatch_provider_error", {
+      tenant_id: input.tenantId,
+      code: res.code,
+      err: res.error,
+    });
+  }
 }
 
 /**
