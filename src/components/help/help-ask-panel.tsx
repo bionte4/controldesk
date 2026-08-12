@@ -71,6 +71,13 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   // set is stable per render anyway (props ref-equal for the panel's
   // lifetime).
   const slugSet = useMemo(() => new Set(articleSlugs), [articleSlugs]);
+  // A stable client-owned uuid that identifies THIS conversation
+  // across the send() cycle. The server upserts a conversation row
+  // keyed by this uuid on first message, so multi-turn threads
+  // persist to `tenant_chat_messages` under one parent id.
+  //
+  // Regenerated on `reset()` — a new conversation is a new uuid.
+  const [conversationId, setConversationId] = useState<string>(() => randomUuid());
 
   // Auto-scroll the log to the bottom on every new token so the user
   // sees the latest reply. `behavior: "auto"` (not "smooth") because
@@ -126,7 +133,14 @@ export function HelpAskPanel({ articleSlugs }: Props) {
         const res = await fetch("/api/help/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history }),
+          body: JSON.stringify({
+            messages: history,
+            conversationId,
+            // Opt into Level 2 tool calling. Server further guards
+            // by refusing tool access when conversationId is missing
+            // OR when the tenant lacks AI config (falls back to L1).
+            useTools: true,
+          }),
           signal: controller.signal,
         });
 
@@ -166,7 +180,7 @@ export function HelpAskPanel({ articleSlugs }: Props) {
         abortRef.current = null;
       }
     },
-    [messages, streaming],
+    [messages, streaming, conversationId],
   );
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -187,6 +201,9 @@ export function HelpAskPanel({ articleSlugs }: Props) {
     abortRef.current?.abort();
     setMessages([]);
     setError(null);
+    // Fresh conversation id → server creates a new parent row and
+    // history for the next turn stops carrying the prior context.
+    setConversationId(randomUuid());
   };
 
   return (
@@ -286,6 +303,25 @@ export function HelpAskPanel({ articleSlugs }: Props) {
       </form>
     </div>
   );
+}
+
+/**
+ * Small, dependency-free uuid v4 for conversation ids. `crypto.randomUUID`
+ * is available in all modern browsers; we don't import a lib just to
+ * generate a client-side id that only ever lives in memory.
+ */
+function randomUuid(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  // Fallback for very old runtimes / SSR (SSR-only rendering never
+  // actually gets here; useState initialiser runs client-side).
+  const hex = [
+    ...Array.from({ length: 8 }, () =>
+      Math.floor(Math.random() * 16).toString(16),
+    ),
+  ].join("");
+  return `${hex.slice(0, 8)}-${hex.slice(0, 4)}-4${hex.slice(1, 4)}-a${hex.slice(1, 4)}-${hex.slice(0, 12)}`;
 }
 
 function MessageBubble({

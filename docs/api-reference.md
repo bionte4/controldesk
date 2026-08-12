@@ -284,9 +284,11 @@ Response:
 
 ### `POST /api/help/ask`
 
-Streaming chatbot backend for the "Ask ControlDesk" tab at `/help`
-(chatbot Level 1 — docs-only RAG). Implementation:
-`src/app/api/help/ask/route.ts`.
+Streaming chatbot backend for the "Ask ControlDesk" tab at `/help`.
+Supports Level 1 (docs-only RAG) by default AND Level 2 ("Ask my
+data" — read-only tool calling) when the client opts in.
+Implementation: `src/app/api/help/ask/route.ts`. Full design:
+[docs/rfc/0001-ask-my-data.md](rfc/0001-ask-my-data.md).
 
 - **Auth** — requires an authenticated employee. Tenant scope is
   derived from `requireCurrentEmployee()` (never trusts request body).
@@ -297,10 +299,26 @@ Streaming chatbot backend for the "Ask ControlDesk" tab at `/help`
   tenant's daily AI budget BEFORE contacting the provider (rules §15).
   Returns 402 with the current used/cap on overshoot; refunds the
   reservation on provider failure.
-- **Body** — `{ messages: [{ role: 'user' | 'assistant', content }] }`,
-  1–20 messages, each 1–8000 chars.
+- **Body** — `{ messages, conversationId?, useTools? }`. `messages`
+  is 1–20 items of `{ role, content }`, each content ≤ 8000 chars.
+  Passing `conversationId` (uuid) + `useTools: true` opts into
+  Level 2; otherwise the route runs Level 1 unchanged.
 - **Response** — `text/plain; charset=utf-8` stream. Consume with
   `res.body.getReader()`.
+
+Level 2 additions (only when `conversationId` + `useTools` are set):
+
+- **History persisted** to `tenant_chat_messages` (RLS: owner-only,
+  tenant-scoped, see migration 0085). Each user turn is written
+  immediately; the assistant reply + `tool_calls` trace + retrieval
+  slugs are written at `onFinish`.
+- **Tool registry** (`src/lib/ai/tools/index.ts`) exposes 3 read-only
+  tools bound to the caller: `list_pending_approvals`, `my_projects`,
+  `expense_summary_this_month`. Every filter (tenant, employee, user)
+  comes from the session; model-supplied arguments cannot override.
+- **Bounded tool loop** — `stopWhen: stepCountIs(4)` caps the model
+  to at most 4 tool-call steps per turn. Combined with the 400-token
+  reservation, the request cost is deterministic per invocation.
 
 Error responses:
 

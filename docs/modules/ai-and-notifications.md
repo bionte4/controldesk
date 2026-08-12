@@ -137,13 +137,22 @@ sebelah notifikasi umum). Badge dot muncul kalau ada insight
 `/insights` adalah full page — filter by kind, severity, scope, date
 range. Mark-as-read individual atau bulk.
 
-### "Ask ControlDesk" chatbot (Level 1 — Fase 2)
+### "Ask ControlDesk" chatbot (Level 1 + Level 2 — Fase 2/3)
 
 Route: `/help?tab=ask`. API: `POST /api/help/ask` (streaming text).
 
-Chatbot Level-1 yang menjawab **HANYA** dari dokumentasi produk (subset
-`docs/` yang di-manifest di `src/lib/help/articles.ts`). Zero data-leak
-risk — tidak ada tool call, tidak ada akses ke tabel bisnis tenant.
+**Level 1 (docs-only)**: menjawab dari `docs/` yang di-manifest di
+`src/lib/help/articles.ts`. Zero data-leak risk — tidak ada tool
+call, tidak ada akses ke tabel bisnis tenant.
+
+**Level 2 ("Ask my data" — RFC 0001)**: unlocked ketika client
+mengirim `conversationId` + `useTools=true`. Model dapat memanggil
+3 tool read-only (`list_pending_approvals`, `my_projects`,
+`expense_summary_this_month`) di `src/lib/ai/tools/index.ts`. Setiap
+tool ABAC-scoped ke caller (tenantId + employeeId injected dari
+session, tidak bisa di-override lewat argumen model). Detail
+threat-model + tool inventory ada di
+[docs/rfc/0001-ask-my-data.md](../rfc/0001-ask-my-data.md).
 
 **Pipeline**:
 

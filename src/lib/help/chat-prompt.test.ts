@@ -104,4 +104,55 @@ describe("buildSystemPrompt", () => {
     // any actual data slug entry like "slug=overview".
     expect(prompt).not.toMatch(/slug=[a-z-]+/);
   });
+
+  it("does NOT emit the TOOLS block by default (Level 1 default is docs-only)", () => {
+    const prompt = buildSystemPrompt({
+      tenantName: "PT Foo",
+      locale: "id",
+      retrieved: baseRetrieved,
+    });
+    expect(prompt).not.toMatch(/TOOLS AVAILABLE/);
+    // Rule 8 / 9 are tool-specific and must not appear.
+    expect(prompt).not.toMatch(/Tools you can call/);
+  });
+
+  it("appends the TOOLS block AND tool-scoped rules only when toolsEnabled=true", () => {
+    const prompt = buildSystemPrompt({
+      tenantName: "PT Foo",
+      locale: "id",
+      retrieved: baseRetrieved,
+      toolsEnabled: true,
+    });
+    expect(prompt).toContain("TOOLS AVAILABLE");
+    // The three whitelisted tool names must be listed.
+    expect(prompt).toContain("list_pending_approvals()");
+    expect(prompt).toContain("my_projects()");
+    expect(prompt).toContain("expense_summary_this_month()");
+    // Argument-tampering guardrail explicitly present.
+    expect(prompt).toContain(
+      "MUST NOT try to pass tenant_id, user_id, employee_id",
+    );
+    // "Other user / other tenant" refusal guardrail present in
+    // the tool-enabled prompt.
+    expect(prompt).toContain(
+      "refuse and explain that you only see the current user's data",
+    );
+  });
+
+  it("carries the same read-only guardrail into the Level 2 prompt (regression)", () => {
+    const l2 = buildSystemPrompt({
+      tenantName: "PT Foo",
+      locale: "id",
+      retrieved: baseRetrieved,
+      toolsEnabled: true,
+    });
+    // The mutation-refusal guardrail is REQUIRED at Level 2 —
+    // Level 2 gets DB read access, so the "don't offer to change
+    // records" wording must still be right there in the system
+    // prompt. If a future refactor drops rule 4, we WANT this test
+    // to fail loudly.
+    expect(l2).toContain(
+      "NEVER offer to approve, reject, settle, or otherwise change any record",
+    );
+  });
 });

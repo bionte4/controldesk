@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { streamText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
@@ -8,46 +8,37 @@ import { buildSystemPrompt } from "@/lib/help/chat-prompt";
 import { retrieveContext } from "@/lib/help/retrieval";
 import { resolveAiModel } from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
+import { makeToolRegistry } from "@/lib/ai/tools";
+import { toCanonicalRole } from "@/lib/rbac/roles";
 import { log } from "@/lib/observability/log";
 import { limit, RateLimitPresets } from "@/lib/security/rate-limit";
 
 export const runtime = "nodejs";
-// The route streams tokens; caching is nonsensical and would break the
-// SSE headers Next.js writes.
 export const dynamic = "force-dynamic";
 
 /**
- * `POST /api/help/ask` — streaming endpoint for the "Ask ControlDesk"
- * chatbot on `/help`.
+ * `POST /api/help/ask` — streaming chatbot endpoint (Level 2).
  *
- * Contract:
- *   • Body: `{ messages: [{ role: 'user' | 'assistant', content: string }, ...] }`.
- *   • Auth: requires an authenticated employee (rules §17). The route
- *     inherits tenant isolation from `requireCurrentEmployee()` —
- *     tenant_slug and tenant_id are pulled from the session's employee
- *     row, never from the request body.
- *   • Rate limit: per-user + per-tenant (RateLimitPresets.helpChatPerUser
- *     / helpChatPerTenant). Exceeding either returns 429 with a
- *     `Retry-After` header.
- *   • Token cap: `reserve()` against the tenant's daily AI budget
- *     BEFORE invoking the LLM. Overshoot returns 402 (Payment
- *     Required-ish; keeps the failure semantics distinct from 429).
- *   • Response: plain text stream. Content-Type: `text/plain;
- *     charset=utf-8`. Consumers use `res.body.getReader()`.
+ * ## Levels
  *
- * ## Not in this route (deliberately)
+ *   • **Level 1** (docs-only RAG): stays the default when `useTools`
+ *     is false OR the client omits `conversationId`. Pure static
+ *     grounding — zero DB tool calls.
+ *   • **Level 2** ("Ask my data"): unlocked when `useTools=true` AND
+ *     `conversationId` is provided by the client. Adds:
+ *       - Persistent history in `tenant_chat_messages` (RLS-scoped,
+ *         see migration 0085).
+ *       - A closed-world tool registry (`makeToolRegistry`) that
+ *         gives the model 3 read-only tools. Each tool is scoped to
+ *         the caller by injection — model-supplied arguments cannot
+ *         override tenant / user / employee filters.
  *
- *   • No tool calling — Level 1 is docs-only. When we add "Ask my
- *     data" (Level 2, per the roadmap), tool call handling wires in
- *     here with a whitelist + per-call PDP.
- *   • No history persistence — history is ephemeral per user's Fase-2
- *     choice. The client is the source of truth for the message list.
- *     If we later add DB history, it lands in `tenant_chat_messages`
- *     tagged by tenant_id and RLS-guarded.
- *   • No `ai_insights` write — that table is for the 4 structured
- *     generators (predict-expense, analyze-resource, analyze-client,
- *     analyze-sla). Chat responses are freeform and don't fit that
- *     schema; we log a compact telemetry event via `log.info` instead.
+ * The route always accepts Level 1 request shapes for backward
+ * compatibility — omitting `conversationId` + `useTools` returns
+ * exactly the same behaviour as before.
+ *
+ * See docs/rfc/0001-ask-my-data.md for the threat model that
+ * motivates every guardrail below.
  */
 
 const messageSchema = z.object({
@@ -56,36 +47,51 @@ const messageSchema = z.object({
 });
 const bodySchema = z.object({
   messages: z.array(messageSchema).min(1).max(20),
+  /**
+   * Client-owned conversation id. Optional — if omitted, we run
+   * Level 1 (no history persistence, no tool access). The server
+   * accepts any UUID the client sends and creates the row lazily on
+   * first message; we do NOT let the client dictate the tenant_id
+   * or user_id — those come from the session.
+   */
+  conversationId: z.string().uuid().optional(),
+  /**
+   * Explicit opt-in for Level 2. Even when a conversationId is
+   * supplied, the client must acknowledge it wants tool access —
+   * this keeps the "old client + new server" upgrade path safe.
+   */
+  useTools: z.boolean().optional(),
 });
 
 const ESTIMATED_OUTPUT_TOKENS = 400;
+/**
+ * Hard ceilings for the tool loop. `stopWhen: stepCountIs(N)` forbids
+ * the model from chaining more than N steps (each step = one tool
+ * call round-trip + response). Combined with per-turn token cap this
+ * bounds cost per request even against a maximally chatty model.
+ */
+const MAX_STEPS = 4;
 
 export async function POST(request: Request): Promise<Response> {
   const employee = await requireCurrentEmployee();
   const tenantId = employee.tenant_id;
   const userId = employee.user_id;
+  const employeeId = employee.id;
 
-  // Per-user + per-tenant rate limits are cheap Redis operations; do
-  // them BEFORE any DB / LLM work so a locked-out user pays no cost.
   const userLimit = await limit(
     `help-chat:user:${userId}`,
     RateLimitPresets.helpChatPerUser(),
   );
-  if (!userLimit.allowed) {
-    return tooManyRequests(userLimit.resetAt);
-  }
+  if (!userLimit.allowed) return tooManyRequests(userLimit.resetAt);
   const tenantLimit = await limit(
     `help-chat:tenant:${tenantId}`,
     RateLimitPresets.helpChatPerTenant(),
   );
-  if (!tenantLimit.allowed) {
-    return tooManyRequests(tenantLimit.resetAt);
-  }
+  if (!tenantLimit.allowed) return tooManyRequests(tenantLimit.resetAt);
 
   let payload: z.infer<typeof bodySchema>;
   try {
-    const raw = await request.json();
-    payload = bodySchema.parse(raw);
+    payload = bodySchema.parse(await request.json());
   } catch (err) {
     return NextResponse.json(
       {
@@ -100,14 +106,11 @@ export async function POST(request: Request): Promise<Response> {
     .reverse()
     .find((m) => m.role === "user");
   if (!lastUser) {
-    return NextResponse.json(
-      { error: "no_user_message" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "no_user_message" }, { status: 400 });
   }
 
-  // Reserve tokens BEFORE contacting the provider. If the tenant is
-  // out of budget the model call never runs.
+  const useTools = payload.useTools === true && !!payload.conversationId;
+
   const reservation = await reserve({
     tenantId,
     estimatedOutputTokens: ESTIMATED_OUTPUT_TOKENS,
@@ -126,7 +129,6 @@ export async function POST(request: Request): Promise<Response> {
 
   const resolved = await resolveAiModel(tenantId);
   if (!resolved) {
-    // Roll back the reservation — we didn't actually spend anything.
     await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS });
     return NextResponse.json(
       {
@@ -138,13 +140,10 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  // Look up the tenant display name for the system prompt. Use the
-  // session-scoped client — the caller already belongs to this tenant
-  // by construction, and RLS on `tenants` grants SELECT to members.
   const supabase = await createClient();
   const { data: tenantRow } = await supabase
     .from("tenants")
-    .select("id, name, slug")
+    .select("id, name")
     .eq("id", tenantId)
     .maybeSingle();
   if (!tenantRow || tenantRow.id !== tenantId) {
@@ -157,16 +156,77 @@ export async function POST(request: Request): Promise<Response> {
 
   const locale = detectLocale(request.headers.get("accept-language"));
   const retrieved = await retrieveContext(lastUser.content, 3);
+
+  // ------------------------------------------------------------------
+  // Persistence: load or create conversation row + persist user turn.
+  // ------------------------------------------------------------------
+  let conversationId: string | null = null;
+  if (payload.conversationId) {
+    // Upsert conversation — creates on first message, no-ops after.
+    // RLS enforces {tenant_id, user_id} scope; if a different user
+    // somehow guessed a colleague's uuid, the upsert would fail with
+    // an RLS error and we'd fall back to Level 1.
+    const { data: convRow, error: convErr } = await supabase
+      .from("tenant_chat_conversations")
+      .upsert(
+        {
+          id: payload.conversationId,
+          tenant_id: tenantId,
+          user_id: userId,
+          employee_id: employeeId,
+        },
+        { onConflict: "id" },
+      )
+      .select("id")
+      .maybeSingle();
+    if (convErr || !convRow) {
+      // Continue as Level 1 rather than failing the whole request —
+      // history is a nice-to-have.
+      log.warn("help_chat_conversation_upsert_failed", {
+        tenant_id: tenantId,
+        user_id: userId,
+        error: convErr?.message,
+      });
+    } else {
+      conversationId = convRow.id;
+      // Persist the user's new turn immediately so it's captured even
+      // if the model call fails midway.
+      await supabase.from("tenant_chat_messages").insert({
+        tenant_id: tenantId,
+        conversation_id: conversationId,
+        user_id: userId,
+        role: "user",
+        content: lastUser.content,
+      });
+    }
+  }
+
   const system = buildSystemPrompt({
     tenantName: tenantRow.name,
     locale,
     retrieved,
+    toolsEnabled: useTools && !!conversationId,
   });
+
+  // Build the tool registry only when Level 2 is actually enabled.
+  // The AI SDK treats `undefined` tools same as no tools, so we're
+  // safe to omit the property entirely in Level 1.
+  const canonicalRole = toCanonicalRole(employee.role);
+  const registry =
+    useTools && conversationId
+      ? makeToolRegistry({
+          tenantId,
+          employeeId,
+          userId,
+          canonicalRole,
+          dbRole: employee.role,
+          locale,
+          supabase,
+        })
+      : null;
 
   const t0 = Date.now();
   try {
-    // `messages` from the client is [{role, content}]. `streamText`
-    // accepts this shape directly; we prepend the system prompt.
     const result = streamText({
       model: resolved.model as Parameters<typeof streamText>[0]["model"],
       system,
@@ -174,22 +234,68 @@ export async function POST(request: Request): Promise<Response> {
         role: m.role,
         content: m.content,
       })),
-      // Low temperature keeps the answer close to the CONTEXT above.
-      // Level 1 wants correctness > creativity.
       temperature: 0.2,
-      // Cap output so a runaway response can't nuke the daily budget.
-      // The reservation was for ESTIMATED_OUTPUT_TOKENS; we set the
-      // model ceiling to the same value.
       maxOutputTokens: ESTIMATED_OUTPUT_TOKENS,
-      onFinish: async ({ usage }) => {
-        // Commit the delta between the reservation and actual usage.
-        // Positive delta charges the tenant more; negative refunds.
+      // Only pass tools when Level 2 is enabled. Level 1 requests stay
+      // identical to the previous behaviour.
+      ...(registry
+        ? {
+            tools: registry.tools,
+            // stopWhen caps the tool-loop depth; the AI SDK stops
+            // taking further steps once this returns true.
+            stopWhen: stepCountIs(MAX_STEPS),
+          }
+        : {}),
+      onFinish: async ({ usage, text }) => {
         const output = usage?.outputTokens ?? ESTIMATED_OUTPUT_TOKENS;
         const delta = output - ESTIMATED_OUTPUT_TOKENS;
         if (delta !== 0) await commit({ tenantId, delta });
+
+        // Persist the assistant reply (and any tool traces) if we
+        // have a conversation to attach them to.
+        if (conversationId) {
+          try {
+            // Cast trace + retrieval arrays through JSON — they're
+            // plain-object shaped so the round-trip through Supabase's
+            // `Json` type is lossless, but the compiler needs a hint.
+            const toolCallsJson = registry
+              ? (JSON.parse(JSON.stringify(registry.traces)) as unknown)
+              : null;
+            const retrievalJson = JSON.parse(
+              JSON.stringify(
+                retrieved.map((r) => ({
+                  slug: r.slug,
+                  mode: r.retrievalMode,
+                })),
+              ),
+            ) as unknown;
+            await supabase.from("tenant_chat_messages").insert({
+              tenant_id: tenantId,
+              conversation_id: conversationId,
+              user_id: userId,
+              role: "assistant",
+              content: text ?? "",
+              tool_calls: toolCallsJson as never,
+              retrieval: retrievalJson as never,
+            });
+            await supabase
+              .from("tenant_chat_conversations")
+              .update({ updated_at: new Date().toISOString() })
+              .eq("id", conversationId);
+          } catch (err) {
+            log.warn("help_chat_persist_reply_failed", {
+              tenant_id: tenantId,
+              conversation_id: conversationId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
         log.info("help_chat_reply", {
           tenant_id: tenantId,
           user_id: userId,
+          conversation_id: conversationId,
+          level: registry ? 2 : 1,
           model_id: resolved.modelId,
           input_tokens: usage?.inputTokens ?? null,
           output_tokens: output,
@@ -198,6 +304,13 @@ export async function POST(request: Request): Promise<Response> {
             slug: r.slug,
             mode: r.retrievalMode,
           })),
+          tool_calls: registry
+            ? registry.traces.map((t) => ({
+                name: t.name,
+                ok: t.ok,
+                duration_ms: t.duration_ms,
+              }))
+            : [],
         });
       },
     });
@@ -224,11 +337,6 @@ function tooManyRequests(resetAt: number): Response {
   );
 }
 
-/**
- * Pick "id" or "en" from the browser's Accept-Language. Defaults to
- * "id" because the docs are Indonesian-first. Small helper — not
- * worth pulling in a full negotiation library for two locales.
- */
 function detectLocale(header: string | null): "id" | "en" {
   if (!header) return "id";
   const first = header.split(",")[0]?.trim().toLowerCase() ?? "";
