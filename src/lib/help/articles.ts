@@ -6,6 +6,8 @@ import path from "node:path";
 import matter from "gray-matter";
 import { cache } from "react";
 
+import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
+
 // Pure-data taxonomy lives in a client-safe sibling so client
 // components (`help-search.tsx`, etc.) can `import` it without
 // dragging the "server-only" fs code down with them. Re-exported
@@ -194,6 +196,15 @@ export const HELP_MANIFEST: readonly HelpArticleManifestEntry[] = [
  * Fully-hydrated article — manifest entry + parsed markdown source
  * + derived title/summary. Never sent as-is to the client; the route
  * strips the raw markdown before serialising.
+ *
+ * ## Locale fallback
+ *
+ * `sourceLocale` is the locale actually served (may differ from the
+ * requested locale when a translation is missing). `translated` is
+ * `true` iff the loader found a file for the requested locale. UI
+ * uses these to decide whether to show a "translation not available"
+ * banner. `id` (Indonesian) is the canonical source of truth; any
+ * additional locale is opt-in via a `.{locale}.md` sibling.
  */
 export type HelpArticle = {
   slug: string;
@@ -202,18 +213,28 @@ export type HelpArticle = {
   summary: string;
   markdown: string;
   source: string;
+  sourceLocale: Locale;
+  translated: boolean;
 };
 
 /**
  * Load one article by slug — returns null (not throws) for unknown
  * slugs so the route can render a proper 404 instead of a 500.
  * Memoised so the listing + article page don't double-read files.
+ *
+ * `locale` selects the preferred translation. When missing we fall
+ * back to the base (Indonesian) file — hence the boolean surface on
+ * the returned article. The cache key includes locale so different
+ * locales don't stomp each other's cached shape.
  */
 export const loadHelpArticle = cache(
-  async (slug: string): Promise<HelpArticle | null> => {
+  async (
+    slug: string,
+    locale: Locale = DEFAULT_LOCALE,
+  ): Promise<HelpArticle | null> => {
     const entry = HELP_MANIFEST.find((e) => e.slug === slug);
     if (!entry) return null;
-    return hydrate(entry);
+    return hydrate(entry, locale);
   },
 );
 
@@ -221,14 +242,52 @@ export const loadHelpArticle = cache(
  * Load all articles. Called by the index page + the search-index
  * build step. Files are read in parallel; for ~15 files this is
  * ~5ms cold on any machine.
+ *
+ * The retrieval pipeline (`src/lib/help/retrieval.ts`) still calls
+ * this without a locale — search must always index the canonical
+ * (Indonesian) content so no article becomes invisible when a
+ * translation is missing. The chatbot prompt already instructs the
+ * model to answer in the user's UI locale, so grounding on ID docs
+ * is fine.
  */
-export const loadAllHelpArticles = cache(async (): Promise<HelpArticle[]> => {
-  return await Promise.all(HELP_MANIFEST.map(hydrate));
-});
+export const loadAllHelpArticles = cache(
+  async (locale: Locale = DEFAULT_LOCALE): Promise<HelpArticle[]> => {
+    return await Promise.all(HELP_MANIFEST.map((e) => hydrate(e, locale)));
+  },
+);
 
-async function hydrate(entry: HelpArticleManifestEntry): Promise<HelpArticle> {
-  const absPath = path.join(process.cwd(), entry.source);
-  const raw = await readFile(absPath, "utf8");
+/**
+ * Build the on-disk path for a locale-suffixed variant. `id` uses
+ * the base filename (no suffix) because Indonesian is the canonical
+ * source; every other locale looks for `foo.{locale}.md`.
+ *
+ * Kept exported for tests so we don't have to duplicate the naming
+ * rule.
+ */
+export function localeVariantPath(base: string, locale: Locale): string {
+  if (locale === DEFAULT_LOCALE) return base;
+  const dot = base.lastIndexOf(".");
+  if (dot < 0) return `${base}.${locale}`;
+  return `${base.slice(0, dot)}.${locale}${base.slice(dot)}`;
+}
+
+async function hydrate(
+  entry: HelpArticleManifestEntry,
+  locale: Locale,
+): Promise<HelpArticle> {
+  const requestedSource = localeVariantPath(entry.source, locale);
+  let resolvedSource = requestedSource;
+  let raw: string;
+  let translated = true;
+  try {
+    raw = await readFile(path.join(process.cwd(), requestedSource), "utf8");
+  } catch {
+    if (locale === DEFAULT_LOCALE) throw new Error(`Missing help article file: ${entry.source}`);
+    // Locale variant absent — fall back to canonical (Indonesian).
+    raw = await readFile(path.join(process.cwd(), entry.source), "utf8");
+    resolvedSource = entry.source;
+    translated = false;
+  }
   const parsed = matter(raw);
   const frontmatterTitle =
     typeof parsed.data.title === "string" ? parsed.data.title : undefined;
@@ -250,7 +309,9 @@ async function hydrate(entry: HelpArticleManifestEntry): Promise<HelpArticle> {
     title,
     summary,
     markdown: parsed.content,
-    source: entry.source,
+    source: resolvedSource,
+    sourceLocale: translated ? locale : DEFAULT_LOCALE,
+    translated,
   };
 }
 

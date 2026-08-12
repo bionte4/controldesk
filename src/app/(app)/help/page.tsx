@@ -13,6 +13,7 @@ import {
   type HelpArticle,
   type HelpCategoryId,
 } from "@/lib/help/articles";
+import { isLocale } from "@/lib/i18n/config";
 
 export const metadata: Metadata = { title: "Help" };
 
@@ -38,10 +39,16 @@ export default async function HelpIndexPage({
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [t, locale, articles, resolvedParams] = await Promise.all([
+  const localeRaw = await getLocale();
+  const locale = isLocale(localeRaw) ? localeRaw : undefined;
+  const [t, articles, resolvedParams] = await Promise.all([
     getTranslations("help"),
-    getLocale(),
-    loadAllHelpArticles(),
+    // Feed the index the same locale as the article page so titles /
+    // summaries come from the translated file when it exists. Fuse
+    // search still uses this locale-aware bundle — no dedicated ID
+    // index — because keyword-relevance on the reader's own language
+    // beats forcing them onto a canonical index.
+    loadAllHelpArticles(locale),
     (searchParams ?? Promise.resolve({})) as Promise<
       Record<string, string | string[] | undefined>
     >,

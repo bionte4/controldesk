@@ -5,6 +5,7 @@ import {
   HELP_MANIFEST,
   loadAllHelpArticles,
   loadHelpArticle,
+  localeVariantPath,
 } from "./articles";
 
 describe("help article manifest", () => {
@@ -92,5 +93,53 @@ describe("loadAllHelpArticles", () => {
       expect(a.title.length, `empty title on ${a.slug}`).toBeGreaterThan(0);
       expect(a.markdown.length, `empty body on ${a.slug}`).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("localeVariantPath", () => {
+  it("returns the base filename for the default locale (id) — no suffix", () => {
+    // ID is canonical; we don't want an `.id.md` sibling to be
+    // required for every article.
+    expect(localeVariantPath("docs/product/overview.md", "id")).toBe(
+      "docs/product/overview.md",
+    );
+  });
+
+  it("inserts the locale before the extension for non-default locales", () => {
+    expect(localeVariantPath("docs/product/overview.md", "en")).toBe(
+      "docs/product/overview.en.md",
+    );
+  });
+
+  it("handles files with no extension by appending the locale", () => {
+    // Defensive — no manifest entry hits this today, but we don't
+    // want a follow-up "README" article to blow up.
+    expect(localeVariantPath("docs/integrations/README", "en")).toBe(
+      "docs/integrations/README.en",
+    );
+  });
+});
+
+describe("locale-aware fallback", () => {
+  it("falls back to the base file when the requested locale variant is missing (translated=false)", async () => {
+    // None of the current manifest entries has a `.en.md` sibling
+    // yet, so requesting locale=en for any of them must hydrate the
+    // canonical ID file and flag the article as untranslated.
+    const first = HELP_MANIFEST[0]!;
+    const article = await loadHelpArticle(first.slug, "en");
+    expect(article).not.toBeNull();
+    expect(article!.translated).toBe(false);
+    expect(article!.sourceLocale).toBe("id");
+    // The `source` field must point at the file we actually opened,
+    // so the UI + audit trails stay honest about what was rendered.
+    expect(article!.source.endsWith(".en.md")).toBe(false);
+  });
+
+  it("marks the article as translated when requested locale is the canonical (id)", async () => {
+    const first = HELP_MANIFEST[0]!;
+    const article = await loadHelpArticle(first.slug, "id");
+    expect(article).not.toBeNull();
+    expect(article!.translated).toBe(true);
+    expect(article!.sourceLocale).toBe("id");
   });
 });

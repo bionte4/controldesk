@@ -92,6 +92,7 @@
     "hintTrigger": "Show help: {title}",
     "tabBrowse": "Browse articles",
     "tabAsk": "Ask AI",
+    "translationFallback": "This article is not yet available in English — showing the Indonesian version. Ask your admin to contribute a translation via a pull request against docs/…",
     "ask": {
       "welcomeTitle": "Hi! I'm the ControlDesk documentation assistant.",
       "welcomeBody": "I only answer from product docs — not from your project or finance data. Great for 'how do I…' and 'what is…' questions.",

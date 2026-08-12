@@ -92,6 +92,7 @@
     "hintTrigger": "Tampilkan bantuan: {title}",
     "tabBrowse": "Telusuri artikel",
     "tabAsk": "Tanya AI",
+    "translationFallback": "Artikel ini belum tersedia dalam bahasa yang Anda pilih — menampilkan versi Bahasa Indonesia. Minta admin Anda untuk membuat terjemahan lewat pull request ke docs/…",
     "ask": {
       "welcomeTitle": "Halo! Saya asisten dokumentasi ControlDesk.",
       "welcomeBody": "Saya menjawab hanya dari dokumentasi produk — tidak dari data proyek/keuangan Anda. Cocok untuk pertanyaan 'bagaimana cara…' dan 'apa itu…'.",
