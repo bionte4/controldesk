@@ -9,7 +9,7 @@ import {
   COPILOT_SURFACES,
   copilotRequestSchema,
 } from "@/lib/ai/copilot-surfaces";
-import { resolveAiModel } from "@/lib/integrations/ai";
+import { resolveAiCapContext, resolveAiModel } from "@/lib/integrations/ai";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { log } from "@/lib/observability/log";
 import { limit, RateLimitPresets } from "@/lib/security/rate-limit";
@@ -90,10 +90,15 @@ export async function POST(request: Request): Promise<Response> {
     }
   }
 
-  // Reserve tokens before hitting the LLM.
+  // Load cap + bypass flag once. `bypass=true` for OPENAI_COMPATIBLE
+  // (Ollama / LM Studio / vLLM) — see cost-cap.ts + resolver.ts.
+  const { cap: tenantCap, bypass } = await resolveAiCapContext(tenantId);
+
   const reservation = await reserve({
     tenantId,
     estimatedOutputTokens: surface.maxOutputTokens,
+    cap: tenantCap ?? undefined,
+    bypass,
   });
   if (!reservation.ok) {
     return NextResponse.json(
@@ -109,7 +114,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const resolved = await resolveAiModel(tenantId);
   if (!resolved) {
-    await commit({ tenantId, delta: -surface.maxOutputTokens });
+    await commit({ tenantId, delta: -surface.maxOutputTokens, bypass });
     return NextResponse.json(
       {
         error: "ai_not_configured",
@@ -127,7 +132,7 @@ export async function POST(request: Request): Promise<Response> {
     .eq("id", tenantId)
     .maybeSingle();
   if (!tenantRow || tenantRow.id !== tenantId) {
-    await commit({ tenantId, delta: -surface.maxOutputTokens });
+    await commit({ tenantId, delta: -surface.maxOutputTokens, bypass });
     return NextResponse.json(
       { error: "tenant_lookup_failed" },
       { status: 500 },
@@ -159,7 +164,7 @@ export async function POST(request: Request): Promise<Response> {
       onFinish: async ({ usage }) => {
         const output = usage?.outputTokens ?? surface.maxOutputTokens;
         const delta = output - surface.maxOutputTokens;
-        if (delta !== 0) await commit({ tenantId, delta });
+        if (delta !== 0) await commit({ tenantId, delta, bypass });
         log.info("ai_copilot_reply", {
           tenant_id: tenantId,
           user_id: userId,
@@ -175,7 +180,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return result.toTextStreamResponse();
   } catch (err) {
-    await commit({ tenantId, delta: -surface.maxOutputTokens });
+    await commit({ tenantId, delta: -surface.maxOutputTokens, bypass });
     log.warn("ai_copilot_error", {
       tenant_id: tenantId,
       user_id: userId,

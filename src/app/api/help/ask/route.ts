@@ -8,7 +8,7 @@ import { requireCurrentEmployee } from "@/lib/auth/session";
 import { buildSystemPrompt } from "@/lib/help/chat-prompt";
 import { retrieveContext } from "@/lib/help/retrieval";
 import { deriveTitle } from "@/lib/help/title";
-import { resolveAiModel } from "@/lib/integrations/ai";
+import { resolveAiCapContext, resolveAiModel } from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { makeToolRegistry } from "@/lib/ai/tools";
 import { isFeatureEnabled } from "@/lib/ops/feature-flags";
@@ -133,9 +133,18 @@ export async function POST(request: Request): Promise<Response> {
     });
   }
 
+  // Load cap + bypass flag once. `bypass=true` for OPENAI_COMPATIBLE
+  // (Ollama / LM Studio / vLLM) — those requests cost $0 so the cap
+  // is disabled to avoid artificial friction. Every subsequent
+  // `commit()` call below must forward the same `bypass` so the
+  // Redis counter stays clean.
+  const { cap: tenantCap, bypass } = await resolveAiCapContext(tenantId);
+
   const reservation = await reserve({
     tenantId,
     estimatedOutputTokens: ESTIMATED_OUTPUT_TOKENS,
+    cap: tenantCap ?? undefined,
+    bypass,
   });
   if (!reservation.ok) {
     return NextResponse.json(
@@ -151,7 +160,7 @@ export async function POST(request: Request): Promise<Response> {
 
   const resolved = await resolveAiModel(tenantId);
   if (!resolved) {
-    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS });
+    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS, bypass });
     return NextResponse.json(
       {
         error: "ai_not_configured",
@@ -169,7 +178,7 @@ export async function POST(request: Request): Promise<Response> {
     .eq("id", tenantId)
     .maybeSingle();
   if (!tenantRow || tenantRow.id !== tenantId) {
-    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS });
+    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS, bypass });
     return NextResponse.json(
       { error: "tenant_lookup_failed" },
       { status: 500 },
@@ -300,7 +309,7 @@ export async function POST(request: Request): Promise<Response> {
       onFinish: async ({ usage, text }) => {
         const output = usage?.outputTokens ?? ESTIMATED_OUTPUT_TOKENS;
         const delta = output - ESTIMATED_OUTPUT_TOKENS;
-        if (delta !== 0) await commit({ tenantId, delta });
+        if (delta !== 0) await commit({ tenantId, delta, bypass });
 
         // Persist the assistant reply (and any tool traces) if we
         // have a conversation to attach them to.
@@ -367,7 +376,7 @@ export async function POST(request: Request): Promise<Response> {
     });
     return result.toTextStreamResponse();
   } catch (err) {
-    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS });
+    await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS, bypass });
     log.warn("help_chat_error", {
       tenant_id: tenantId,
       user_id: userId,

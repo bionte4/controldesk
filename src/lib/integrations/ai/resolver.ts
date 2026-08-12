@@ -273,3 +273,43 @@ export async function resolveDailyTokenCap(
     return null;
   }
 }
+
+/**
+ * Extended cap-resolution helper that ALSO decides whether the daily
+ * token cap should be enforced for this tenant.
+ *
+ * Rationale: the cap exists as a cost-control safety net for cloud
+ * providers where every output token costs real money (Gemini, GPT-4o,
+ * Claude, …). For an `OPENAI_COMPATIBLE` provider — i.e. an on-prem
+ * LLM like Ollama, LM Studio, or vLLM served from a private LAN — the
+ * marginal cost of a request is $0. Enforcing the same 10k daily cap
+ * on those tenants creates artificial friction (users hitting cap on a
+ * free local model, having to raise the number manually, or reset the
+ * Redis counter). We bypass the cap for on-prem providers instead.
+ *
+ * Cloud providers still use the cap (or the tenant's override) as
+ * before — no change in behaviour for GOOGLE / OPENAI / ANTHROPIC.
+ *
+ * `DISABLED` and "no config" tenants keep the cap because they fall
+ * back to the env-level provider (see `envConfig()` above), which is
+ * almost always a cloud provider in practice.
+ *
+ * Returns `{ cap: null, bypass: false }` when tenantId is missing —
+ * caller decides what to do (typically fall back to
+ * `DEFAULT_DAILY_TOKEN_CAP`).
+ */
+export async function resolveAiCapContext(
+  tenantId: string | undefined,
+): Promise<{ cap: number | null; bypass: boolean }> {
+  if (!tenantId) return { cap: null, bypass: false };
+  try {
+    const row = await loadTenantAiConfig(tenantId);
+    if (!row || !row.isActive) return { cap: null, bypass: false };
+    return {
+      cap: row.dailyTokenCap,
+      bypass: row.provider === "OPENAI_COMPATIBLE",
+    };
+  } catch {
+    return { cap: null, bypass: false };
+  }
+}

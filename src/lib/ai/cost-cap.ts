@@ -100,6 +100,16 @@ export type ReserveOptions = {
   tenantId: string;
   estimatedOutputTokens: number;
   cap?: number;
+  /**
+   * Skip cap enforcement entirely — used for on-prem / self-hosted
+   * providers (Ollama, LM Studio, vLLM, …) where the marginal cost of
+   * a request is $0, so the daily quota is only artificial friction.
+   * The `resolveAiCapContext` helper in
+   * `src/lib/integrations/ai/resolver.ts` sets this to `true` when
+   * the tenant's provider is `OPENAI_COMPATIBLE`. Cloud providers
+   * (`GOOGLE` / `OPENAI` / `ANTHROPIC`) continue to enforce the cap.
+   */
+  bypass?: boolean;
 };
 
 export type ReservationResult =
@@ -110,9 +120,17 @@ export type ReservationResult =
  * Reserve `estimatedOutputTokens` against today's tenant cap. Returns a
  * decision object; the caller MUST refuse to invoke the LLM when
  * `ok === false`.
+ *
+ * When `bypass === true`, this function short-circuits with a
+ * successful no-op — the Redis counter is not touched, and `used /
+ * cap / remaining` all reflect a zero-usage state so log lines don't
+ * mislead. See `ReserveOptions.bypass` for the rationale.
  */
 export async function reserve(opts: ReserveOptions): Promise<ReservationResult> {
   const cap = opts.cap ?? DEFAULT_DAILY_TOKEN_CAP;
+  if (opts.bypass) {
+    return { ok: true, used: 0, cap, remaining: cap };
+  }
   if (opts.estimatedOutputTokens <= 0) {
     return { ok: true, used: 0, cap, remaining: cap };
   }
@@ -136,11 +154,16 @@ export async function reserve(opts: ReserveOptions): Promise<ReservationResult> 
 /**
  * Commit the delta between the reservation and the actual usage. Positive
  * `delta` charges the tenant more; negative `delta` refunds the tenant.
+ *
+ * When `bypass === true` this is a no-op — mirrors `reserve()` above
+ * so on-prem providers don't leak partial counter increments.
  */
 export async function commit(opts: {
   tenantId: string;
   delta: number;
+  bypass?: boolean;
 }): Promise<void> {
+  if (opts.bypass) return;
   if (opts.delta === 0) return;
   const key = todayKey(opts.tenantId);
   const ttl = nextMidnightSec() - Math.floor(Date.now() / 1000);
