@@ -47,6 +47,12 @@ function CommandDialog({
   showCloseButton?: boolean
   children: React.ReactNode
 }) {
+  // Children (CommandInput, CommandList, CommandItem, …) rely on a
+  // React Context provided by the `<Command>` (CommandPrimitive) root.
+  // Rendering them directly inside <DialogContent> without that root
+  // makes cmdk's internal `useSyncExternalStore(store.subscribe, …)`
+  // read `undefined.subscribe` on interaction, throwing
+  // "Cannot read properties of undefined (reading 'subscribe')".
   return (
     <Dialog {...props}>
       <DialogHeader className="sr-only">
@@ -60,7 +66,7 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        <Command>{children}</Command>
       </DialogContent>
     </Dialog>
   )
