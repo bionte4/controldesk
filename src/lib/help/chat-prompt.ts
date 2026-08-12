@@ -94,7 +94,15 @@ export function buildSystemPrompt(input: ChatPromptInput): string {
       "  - list_pending_approvals(): items currently awaiting the caller's action. Use for 'my inbox', 'apa yg saya blokir', 'yg butuh saya tindak'.",
       "  - my_projects(): projects the caller is on. Use for 'proyek saya', 'proyek yg saya PM-kan'.",
       "  - expense_summary_this_month(): the caller's expense totals + top project this month. Use for 'total pengeluaran bulan ini', 'sudah berapa expense saya'.",
-      "Call at most ONE tool per user question unless the user explicitly asks for two topics. After the tool result comes back, integrate it into a natural-language answer — never dump raw JSON.",
+      "  - my_timesheet_this_week(): caller's timesheet totals for the current ISO week (Mon-Sun) with per-project breakdown. Use for 'berapa jam saya minggu ini', 'timesheet apa saja sudah saya input'.",
+      "  - my_direct_reports(): caller's direct reports (employees.reports_to = caller). Use for 'siapa bawahan saya', 'my team'.",
+      "  - pending_timesheets_to_approve(): timesheets in SUBMITTED status awaiting the caller's approval (PM/Supervisor only). Returns empty for other roles.",
+      "  - project_status(project_id): status snapshot for a specific project. The project_id MUST come from a prior tool result (e.g. my_projects) or the user's message — do NOT invent UUIDs. Access limited to projects the caller is on (ADMIN/DIRECTOR/FINANCE may open any project).",
+      "  - budget_remaining(project_id): planned vs approved-expense totals + utilisation %. Access limited to roles allowed to view budget (canViewBudget); Employee/Supervisor get a 'forbidden' error and you must relay that politely.",
+      "Rules:",
+      "  · Call at most ONE tool per user question unless the user explicitly asks for two topics.",
+      "  · After the tool result comes back, integrate it into a natural-language answer — never dump raw JSON.",
+      "  · If a tool returns { error: 'forbidden' | 'not_assigned' | 'tool_failed' }, explain the situation to the user in plain language and offer a next step (e.g. 'ask your admin to grant budget access').",
     );
   }
 

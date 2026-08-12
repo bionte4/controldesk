@@ -195,23 +195,48 @@ own view.
 
 ## Scope of first implementation (ship-vs-defer)
 
-**In this PR / commit series:**
+**In this PR / commit series (Aug 2026 — shipped):**
 
-- Data model migration (`0083_tenant_chat.sql`).
-- Tool registry with **3 tools** listed above.
+- Data model migration (`0085_tenant_chat_history.sql`).
+- Tool registry with **8 tools** — the original 3
+  (`list_pending_approvals`, `my_projects`,
+  `expense_summary_this_month`) plus 5 daily-question tools shipped
+  in the follow-up:
+    - `my_timesheet_this_week` — ISO-week hours + per-project split.
+      No arguments; scoped to caller's employee_id.
+    - `my_direct_reports` — employees whose `reports_to_employee_id`
+      equals the caller. No arguments.
+    - `pending_timesheets_to_approve` — SUBMITTED timesheets awaiting
+      caller's approval. PM sees timesheets on their projects; SPV
+      sees direct reports'; ADMIN sees all; every other role
+      fast-returns empty (no DB call).
+    - `project_status(project_id)` — snapshot of one project. Requires
+      the caller to be on the project (or hold
+      ADMIN/DIRECTOR/FINANCE). Model can only pass a `project_id` it
+      obtained from a prior tool call or the user's message; the
+      guard is a set-membership check against
+      `loadCallerProjectIds()`.
+    - `budget_remaining(project_id)` — planned vs approved-expense
+      totals. Additionally gated by `canViewBudget(dbRole)` —
+      Employee/Supervisor receive `{ error: "forbidden" }` without a
+      DB read. Same project-membership check as `project_status`.
 - `/api/help/ask` upgraded to accept `conversationId`, load history,
-  execute tools, persist assistant + tool rows.
+  execute tools, persist assistant + tool rows. Auto-derives sidebar
+  titles via `deriveTitle()` on first user message.
 - Prompt injection tests + tenant isolation regression tests.
-- UI: hydrates from persisted history on open (single conversation
-  per user for now — "new conversation" button clears the current
-  server-side row and starts fresh).
+- UI: chat history sidebar (up to 10 conversations, resume/delete),
+  with a per-user `New conversation` button that mints a fresh
+  server-side row.
 
 **Deferred (follow-up RFCs):**
 
-- Multi-conversation history browser ("earlier chats" list).
 - Streaming tool-call traces to the client mid-response.
-- More tools (`my_recent_expenses`, `sla_status`, etc) — each new
-  tool needs its own PDP + shape review, best done one-by-one.
+- Tool-specific rate-limit buckets (right now the per-turn user + tenant
+  windows are the whole budget). Consider `budget_remaining` and
+  `project_status` as heavier if they end up called at scale.
+- More tools (`my_recent_expenses`, `sla_status`,
+  `active_incidents_on_my_projects`) — each new tool needs its own
+  PDP + shape review, best done one-by-one.
 
 ## Testing strategy
 

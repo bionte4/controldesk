@@ -312,10 +312,18 @@ Level 2 additions (only when `conversationId` + `useTools` are set):
   tenant-scoped, see migration 0085). Each user turn is written
   immediately; the assistant reply + `tool_calls` trace + retrieval
   slugs are written at `onFinish`.
-- **Tool registry** (`src/lib/ai/tools/index.ts`) exposes 3 read-only
+- **Tool registry** (`src/lib/ai/tools/index.ts`) exposes 8 read-only
   tools bound to the caller: `list_pending_approvals`, `my_projects`,
-  `expense_summary_this_month`. Every filter (tenant, employee, user)
-  comes from the session; model-supplied arguments cannot override.
+  `expense_summary_this_month`, `my_timesheet_this_week`,
+  `my_direct_reports`, `pending_timesheets_to_approve`,
+  `project_status(project_id)`, `budget_remaining(project_id)`.
+  Every user/tenant filter comes from the session; model-supplied
+  arguments cannot override. Tools that take a `project_id` verify
+  the caller is on that project before reading it (ADMIN, DIRECTOR
+  and FINANCE roles may open any project in the tenant); tools that
+  return budget data additionally check `canViewBudget(dbRole)` and
+  return `{ error: "forbidden" }` without touching the DB for
+  Employee/Supervisor.
 - **Bounded tool loop** — `stopWhen: stepCountIs(4)` caps the model
   to at most 4 tool-call steps per turn. Combined with the 400-token
   reservation, the request cost is deterministic per invocation.

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeToolContext, makeToolRegistry } from "./index";
+import { makeToolContext, makeToolRegistry, projectIdInput } from "./index";
 
 /**
  * Level 2 tool registry — safety-first tests.
@@ -85,6 +85,10 @@ const stubClient = () => {
     cash_advances: [],
     project_pm_assignments: [],
     project_employee_assignments: [],
+    timesheets: [],
+    employees: [],
+    projects: [],
+    budgets: [],
   };
   const client = {
     from: (table: string) => {
@@ -118,15 +122,20 @@ const stubClient = () => {
 };
 
 describe("makeToolRegistry — Level 2 safety guardrails", () => {
-  it("exposes exactly the three whitelisted tools — no accidental extras", () => {
+  it("exposes exactly the eight whitelisted tools — no accidental extras", () => {
     const supabase = stubClient();
     const ctx = makeToolContext({ supabase });
     const { tools } = makeToolRegistry(ctx);
     expect(Object.keys(tools).sort()).toEqual(
       [
+        "budget_remaining",
         "expense_summary_this_month",
         "list_pending_approvals",
+        "my_direct_reports",
         "my_projects",
+        "my_timesheet_this_week",
+        "pending_timesheets_to_approve",
+        "project_status",
       ].sort(),
     );
   });
@@ -210,9 +219,80 @@ describe("makeToolRegistry — Level 2 safety guardrails", () => {
       "cash_advances",
       "project_pm_assignments",
       "project_employee_assignments",
+      "timesheets",
+      "employees",
+      "projects",
+      "budgets",
     ]);
     const unexpected = scopeCalls.filter((t) => !allowedTables.has(t));
     expect(unexpected).toEqual([]);
+  });
+
+  it("budget_remaining refuses to run for a role without canViewBudget()", async () => {
+    const supabase = stubClient();
+    const ctx = makeToolContext({
+      supabase,
+      dbRole: "EMPLOYEE",
+    });
+    const { tools } = makeToolRegistry(ctx);
+    const budget = tools.budget_remaining as unknown as {
+      execute: (input: unknown) => Promise<{ error?: string; message?: string }>;
+    };
+    const result = await budget.execute({
+      project_id: "11111111-1111-1111-1111-111111111111",
+    });
+    expect(result.error).toBe("forbidden");
+    // Fast path — no budget read attempted when the role can't see it.
+    expect(scopeCalls).not.toContain("budgets");
+  });
+
+  it("project_status refuses when the caller is not assigned to the project (non-admin roles)", async () => {
+    const supabase = stubClient();
+    const ctx = makeToolContext({
+      supabase,
+      dbRole: "EMPLOYEE",
+      employeeId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    });
+    const { tools } = makeToolRegistry(ctx);
+    const status = tools.project_status as unknown as {
+      execute: (input: unknown) => Promise<{ error?: string; message?: string }>;
+    };
+    const result = await status.execute({
+      project_id: "99999999-9999-9999-9999-999999999999",
+    });
+    expect(result.error).toBe("not_assigned");
+  });
+
+  it("pending_timesheets_to_approve fast-returns empty for roles that can't approve timesheets", async () => {
+    const supabase = stubClient();
+    const ctx = makeToolContext({
+      supabase,
+      dbRole: "EMPLOYEE",
+    });
+    const { tools } = makeToolRegistry(ctx);
+    const pending = tools.pending_timesheets_to_approve as unknown as {
+      execute: (input: unknown) => Promise<{ total: number; items: unknown[] }>;
+    };
+    const result = await pending.execute({});
+    expect(result.total).toBe(0);
+    expect(result.items).toEqual([]);
+    expect(scopeCalls).not.toContain("timesheets");
+  });
+
+  it("project_id-taking tools reject arguments that aren't UUIDs (schema-level)", () => {
+    // Zod runs *before* our execute() sees the args (the AI SDK
+    // validates model output against the tool's inputSchema first),
+    // so a malformed UUID never reaches the query builder.
+    expect(projectIdInput.safeParse({ project_id: "not-a-uuid" }).success).toBe(
+      false,
+    );
+    expect(projectIdInput.safeParse({}).success).toBe(false);
+    // Proper UUIDv4 with the version+variant bits Zod expects.
+    expect(
+      projectIdInput.safeParse({
+        project_id: "11111111-1111-4111-9111-111111111111",
+      }).success,
+    ).toBe(true);
   });
 
   it("captures a trace entry per tool call for audit", async () => {
