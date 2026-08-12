@@ -176,6 +176,17 @@ export default async function EmployeesPage() {
           <NewEmployeeSheet
             departmentOptions={departmentOptions.map((o) => o.label)}
             positionOptions={positionOptions.map((o) => o.label)}
+            /* All directory rows are viable "reports_to" candidates —
+               there is intentionally NO role-level restriction here, so
+               tenants can model both flat teams (everyone reports to
+               Admin) and deep hierarchies (Employee → Supervisor → PM
+               → OM). The Zod schema still validates the referenced UUID
+               exists at commit time via the FK constraint. */
+            managerOptions={rows.map((row) => ({
+              id: row.id,
+              full_name: row.full_name,
+              role: row.role,
+            }))}
           />
         ) : null}
       </header>

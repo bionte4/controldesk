@@ -3230,6 +3230,18 @@
       "ON_LEAVE": "Cuti",
       "INACTIVE": "Nonaktif"
     },
+    "role": {
+      "EMPLOYEE": "Employee",
+      "SUPERVISOR": "Supervisor",
+      "PROJECT_MANAGER": "Project Manager",
+      "OPERATIONS_MANAGER": "Operations Manager",
+      "HEAD_MANAGER": "Head Manager",
+      "GENERAL_MANAGER": "General Manager",
+      "PETTY_CASH_CUSTODIAN": "Petty Cash Custodian",
+      "LEAD_FINANCE": "Lead Finance",
+      "HR_ADMIN": "HR Admin",
+      "TENANT_ADMIN": "Tenant Admin"
+    },
     "form": {
       "createTitle": "Karyawan baru",
       "createDescription": "Karyawan baru bisa ditambahkan tanpa akun sistem. Undangan aktivasi akun bisa dikirim setelahnya.",
@@ -3241,6 +3253,12 @@
       "selectDepartment": "Pilih departemen…",
       "position": "Jabatan",
       "selectPosition": "Pilih jabatan…",
+      "role": "Peran (RBAC)",
+      "roleHint": "Menentukan chain approval, capability gate, dan scope dashboard. Perubahan akan tercatat di audit log.",
+      "reportsTo": "Melapor kepada",
+      "reportsToNone": "— Tidak ada atasan",
+      "reportsToHint": "Opsional. Dipakai untuk tampilan org-chart dan dashboard scope manager (cascade OM).",
+      "reportsToEmptyHint": "Belum ada karyawan untuk dipilih sebagai atasan — tambahkan manager dulu, atau biarkan kosong.",
       "joinDate": "Tanggal masuk",
       "employment": "Jenis kontrak",
       "endDate": "Tanggal akhir",

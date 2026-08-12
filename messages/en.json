@@ -3230,6 +3230,18 @@
       "ON_LEAVE": "On leave",
       "INACTIVE": "Inactive"
     },
+    "role": {
+      "EMPLOYEE": "Employee",
+      "SUPERVISOR": "Supervisor",
+      "PROJECT_MANAGER": "Project Manager",
+      "OPERATIONS_MANAGER": "Operations Manager",
+      "HEAD_MANAGER": "Head Manager",
+      "GENERAL_MANAGER": "General Manager",
+      "PETTY_CASH_CUSTODIAN": "Petty Cash Custodian",
+      "LEAD_FINANCE": "Lead Finance",
+      "HR_ADMIN": "HR Admin",
+      "TENANT_ADMIN": "Tenant Admin"
+    },
     "form": {
       "createTitle": "New employee",
       "createDescription": "You can add an employee before they activate a system account. Invite them later from the row menu.",
@@ -3241,6 +3253,12 @@
       "selectDepartment": "Select department…",
       "position": "Position",
       "selectPosition": "Select position…",
+      "role": "Role (RBAC)",
+      "roleHint": "Drives approval chains, capability gates, and dashboard scope. Change later carries an audit-log entry.",
+      "reportsTo": "Reports to",
+      "reportsToNone": "— No manager",
+      "reportsToHint": "Optional. Used for org-chart views and the manager-scope dashboard (OM cascade).",
+      "reportsToEmptyHint": "No existing employees to report to yet — add managers first, or leave blank.",
       "joinDate": "Join date",
       "employment": "Employment",
       "endDate": "End date",
