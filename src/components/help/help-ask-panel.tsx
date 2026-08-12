@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -65,7 +66,11 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   const [error, setError] = useState<ErrorKind>(null);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const slugSet = useRef(new Set(articleSlugs));
+  // Slug allowlist derives from the prop — not a ref, since useRef
+  // access during render trips the react-compiler lint rule and the
+  // set is stable per render anyway (props ref-equal for the panel's
+  // lifetime).
+  const slugSet = useMemo(() => new Set(articleSlugs), [articleSlugs]);
 
   // Auto-scroll the log to the bottom on every new token so the user
   // sees the latest reply. `behavior: "auto"` (not "smooth") because
@@ -220,7 +225,7 @@ export function HelpAskPanel({ articleSlugs }: Props) {
               <MessageBubble
                 key={m.id}
                 message={m}
-                slugAllowlist={slugSet.current}
+                slugAllowlist={slugSet}
                 streaming={
                   streaming && m.role === "assistant" && m.id === messages.at(-1)?.id
                 }

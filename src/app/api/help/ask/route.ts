@@ -194,7 +194,10 @@ export async function POST(request: Request): Promise<Response> {
           input_tokens: usage?.inputTokens ?? null,
           output_tokens: output,
           latency_ms: Date.now() - t0,
-          retrieved: retrieved.map((r) => r.slug),
+          retrieved: retrieved.map((r) => ({
+            slug: r.slug,
+            mode: r.retrievalMode,
+          })),
         });
       },
     });

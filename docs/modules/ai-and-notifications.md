@@ -147,8 +147,14 @@ risk — tidak ada tool call, tidak ada akses ke tabel bisnis tenant.
 
 **Pipeline**:
 
-1. **Retrieval** — `src/lib/help/retrieval.ts`. Fuse.js keyword search
-   di server, top-3 artikel yang paling relevan dijadikan CONTEXT.
+1. **Retrieval** — `src/lib/help/retrieval.ts`. Two-tier: embedding-first,
+   keyword fallback. Query dikirim ke `gemini-embedding-001` (768-dim
+   Matryoshka), cosine similarity vs index statis di
+   `src/lib/help/embeddings.json` yang di-precompute via `pnpm
+   help:reindex`. Kalau API key kosong / provider gagal / index kosong,
+   fallback ke Fuse.js keyword search. Top-3 artikel jadi CONTEXT.
+   Setiap hit di-tag `retrievalMode: "embedding" | "keyword" |
+   "manifest"` untuk observability.
 2. **Prompt** — `src/lib/help/chat-prompt.ts`. Sistem prompt tersegel
    dengan guardrail: locale-aware refusal, cross-tenant isolation
    ("NEVER discuss any tenant other than X"), no mutation offers, dan
@@ -174,9 +180,18 @@ di manifest tetap ditampilkan sebagai teks polos, tidak jadi link
 mati.
 
 **Telemetry**: `log.info("help_chat_reply", {...})` per reply — model
-id, input/output tokens, latency, dan daftar slug yang di-retrieve.
-Tidak menyentuh `ai_insights` (schema itu untuk 4 structured
-generator, bukan chat).
+id, input/output tokens, latency, dan daftar slug yang di-retrieve
+plus retrieval mode-nya. `log.info("help_retrieval_embedding", {...})`
+di-log setiap kali embedding tier berhasil, dengan hit scores untuk
+audit relevansi. Tidak menyentuh `ai_insights` (schema itu untuk 4
+structured generator, bukan chat).
+
+**Reindex embeddings**: setiap kali `HELP_MANIFEST` atau isi markdown
+di `docs/` berubah, jalankan `pnpm help:reindex` (butuh
+`HELP_EMBEDDING_API_KEY` atau `GOOGLE_GENERATIVE_AI_API_KEY`).
+Content-hashed jadi idempotent — hanya artikel yang berubah yang di-
+embed ulang. Output ke `src/lib/help/embeddings.json` (~400 KB, 16
+artikel × 768 dims). Commit bersama perubahan doc.
 
 ## Part 2 — Notifications system
 

@@ -10,6 +10,7 @@ describe("buildSystemPrompt", () => {
       category: "getting-started" as const,
       excerpt: "ControlDesk is a multi-tenant ERP",
       source: "docs/product/overview.md",
+      retrievalMode: "keyword" as const,
     },
     {
       slug: "approval-workflows",
@@ -17,6 +18,7 @@ describe("buildSystemPrompt", () => {
       category: "approvals" as const,
       excerpt: "Threshold-based approval chains",
       source: "docs/product/approval-workflows.md",
+      retrievalMode: "keyword" as const,
     },
   ];
 
