@@ -115,6 +115,23 @@
       }
     }
   },
+  "aiCopilot": {
+    "triggerLabel": "Draft dengan AI",
+    "title": "AI copilot",
+    "streaming": "Menyusun…",
+    "thinking": "Menunggu AI menyusun saran…",
+    "emptyPreview": "Belum ada saran.",
+    "cancel": "Batal",
+    "regenerate": "Coba lagi",
+    "accept": "Pakai ini",
+    "footerHint": "AI menyusun draft dari teks yang sudah Anda ketik dan konteks form. Selalu verifikasi sebelum menyimpan.",
+    "error": {
+      "rate_limited": "Terlalu banyak request AI dalam waktu singkat. Tunggu sebentar.",
+      "quota_exceeded": "Tenant ini sudah mencapai batas token AI hari ini.",
+      "not_configured": "AI belum diaktifkan untuk workspace ini. Minta admin mengaktifkan di Settings → Integrations → AI.",
+      "network": "Tidak dapat mencapai layanan AI. Coba lagi."
+    }
+  },
   "profile": {
     "kicker": "Akun saya",
     "form": {

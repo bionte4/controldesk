@@ -322,6 +322,43 @@ Isolation guarantees:
 - Telemetry via `log.info("help_chat_reply", …)` — never persists user
   content, only slug hits, latency, and token counts.
 
+### `POST /api/ai/copilot`
+
+Streaming per-field inline AI copilot (Level 3). Implementation:
+`src/app/api/ai/copilot/route.ts`.
+
+- **Auth** — requires an authenticated employee. Tenant scope from
+  session (never body).
+- **Rate limit** — 12/min per user (`aiCopilotPerUser`) + 120/min
+  per tenant (`aiCopilotPerTenant`).
+- **Token cap** — reserves `surface.maxOutputTokens` (≤ 240 today)
+  against the tenant's daily budget before hitting the LLM.
+- **Body** — `{ surface, input, context }` per
+  `copilotRequestSchema` in `src/lib/ai/copilot-surfaces.ts`.
+- **Response** — `text/plain; charset=utf-8` stream.
+
+Surface allowlist (see `COPILOT_SURFACES`):
+
+| Surface | Wired form field | Whitelisted context keys |
+| --- | --- | --- |
+| `ca_purpose` | CA General → `purpose` | `amount`, `project_name`, `expected_settlement_date` |
+| `field_ops_justification` | CA FieldOps → `justification` | `project_name`, `area`, `tujuan`, `ticket_number`, `transport_need`, `pic_name` |
+| `expense_description` | Project Expense → `notes` | `amount`, `project_name`, `vendor`, `category` |
+| `project_description` | Project wizard → `description` | `project_name`, `client_name`, `start_date`, `end_date`, `contract_value` |
+
+Any context key **not** in the whitelist for the requested surface is
+silently dropped BEFORE the prompt is built. This makes it safe for
+the client to pass any form values as context — the server enforces
+the allowlist, not the caller.
+
+Isolation guarantees:
+
+- Same tenant-lookup pattern as `/api/help/ask` (session `.eq`).
+- No DB reads for user data — client passes context values it
+  already displays; nothing is fetched cross-form.
+- Telemetry via `log.info("ai_copilot_reply", …)` — never persists
+  user content, only surface, tokens, latency, and context key names.
+
 ## Observability endpoints
 
 ### `POST /api/observability/report`

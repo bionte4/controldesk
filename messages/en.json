@@ -115,6 +115,23 @@
       }
     }
   },
+  "aiCopilot": {
+    "triggerLabel": "Draft with AI",
+    "title": "AI copilot",
+    "streaming": "Drafting…",
+    "thinking": "Waiting for the AI to compose a suggestion…",
+    "emptyPreview": "No suggestion yet.",
+    "cancel": "Cancel",
+    "regenerate": "Regenerate",
+    "accept": "Use this",
+    "footerHint": "The AI drafts from what you've already typed and the form context. Verify before saving.",
+    "error": {
+      "rate_limited": "Too many AI requests in a short time. Please wait a moment.",
+      "quota_exceeded": "This workspace has hit today's AI token cap.",
+      "not_configured": "AI is not configured for this workspace yet. Ask an admin to enable it in Settings → Integrations → AI.",
+      "network": "Couldn't reach the AI service. Please try again."
+    }
+  },
   "profile": {
     "kicker": "My account",
     "form": {

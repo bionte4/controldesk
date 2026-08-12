@@ -155,6 +155,13 @@ export const RateLimitPresets = {
   // one power user.
   helpChatPerUser: (): RateLimitOptions => ({ max: 6, windowSeconds: 60 }),
   helpChatPerTenant: (): RateLimitOptions => ({ max: 60, windowSeconds: 60 }),
+  // Inline AI copilot (Level 3 — refines free-text fields in forms).
+  // Cheaper prompt + shorter output than the chatbot, but hit more
+  // often since it's one-tap in the form. Tight per-user cap to
+  // discourage spammy clicking, generous per-tenant since a busy day
+  // could see multiple users refining descriptions simultaneously.
+  aiCopilotPerUser: (): RateLimitOptions => ({ max: 12, windowSeconds: 60 }),
+  aiCopilotPerTenant: (): RateLimitOptions => ({ max: 120, windowSeconds: 60 }),
   publicApi: (): RateLimitOptions => ({ max: 60, windowSeconds: 60 }),
   // Report exports are heavy (multi-page PDFs can hit 5+ MB) — cap
   // per-user to 20 exports per minute. Preview requests hit the RSC

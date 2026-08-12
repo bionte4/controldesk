@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Info, Loader2, Lock, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { AiCopilot } from "@/components/ai/ai-copilot";
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -460,19 +461,35 @@ export function NewCashAdvanceSheet({
               <FormField
                 control={form.control}
                 name="purpose"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{tf("purposeLabel")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={3}
-                        {...field}
-                        placeholder={tf("purposePlaceholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedProject = projects.find(
+                    (p) => p.id === form.watch("project_id"),
+                  );
+                  return (
+                    <FormItem>
+                      <div className="flex items-center justify-between gap-2">
+                        <FormLabel>{tf("purposeLabel")}</FormLabel>
+                        <AiCopilot
+                          surface="ca_purpose"
+                          currentValue={field.value}
+                          onAccept={(suggestion) => field.onChange(suggestion)}
+                          context={{
+                            amount: form.watch("amount_idr"),
+                            project_name: selectedProject?.label,
+                          }}
+                        />
+                      </div>
+                      <FormControl>
+                        <Textarea
+                          rows={3}
+                          {...field}
+                          placeholder={tf("purposePlaceholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {canPickCoa ? (

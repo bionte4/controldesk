@@ -22,6 +22,7 @@ import {
 } from "@/lib/attachments/constants";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AiCopilot } from "@/components/ai/ai-copilot";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Form,
@@ -501,19 +502,41 @@ export function NewFieldOpsSheet({
                 <FormField
                   control={form.control}
                   name="justification"
-                  render={({ field }) => (
-                    <FormItem className="min-w-0 @md:col-span-2">
-                      <FormLabel>{tf("justification")}</FormLabel>
-                      <FormControl>
-                        <Textarea
-                          rows={2}
-                          placeholder={tf("justificationPlaceholder")}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    const selectedProject = projects.find(
+                      (p) => p.id === form.watch("project_id"),
+                    );
+                    return (
+                      <FormItem className="min-w-0 @md:col-span-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <FormLabel>{tf("justification")}</FormLabel>
+                          <AiCopilot
+                            surface="field_ops_justification"
+                            currentValue={field.value ?? ""}
+                            onAccept={(suggestion) =>
+                              field.onChange(suggestion)
+                            }
+                            context={{
+                              project_name: selectedProject?.label,
+                              area: form.watch("area"),
+                              tujuan: form.watch("tujuan"),
+                              ticket_number: form.watch("ticket_number"),
+                              transport_need: form.watch("transport_need"),
+                              pic_name: form.watch("pic_name"),
+                            }}
+                          />
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            rows={2}
+                            placeholder={tf("justificationPlaceholder")}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField

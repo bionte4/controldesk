@@ -193,6 +193,41 @@ Content-hashed jadi idempotent — hanya artikel yang berubah yang di-
 embed ulang. Output ke `src/lib/help/embeddings.json` (~400 KB, 16
 artikel × 768 dims). Commit bersama perubahan doc.
 
+### Inline AI copilot (Level 3 — Fase 2)
+
+Route: `POST /api/ai/copilot`. Reusable client: `<AiCopilot>` di
+`src/components/ai/ai-copilot.tsx`.
+
+"AI-assist" per-field untuk form. Tombol Sparkles kecil di sebelah
+label textarea → popover streaming saran → Accept / Regenerate /
+Cancel. Wired ke 4 surface:
+
+| Surface | Field | Konteks yang dikirim |
+|---|---|---|
+| `ca_purpose` | Cash Advance General → `purpose` | amount, project_name |
+| `field_ops_justification` | Cash Advance FieldOps → `justification` | project, area, tujuan, ticket, transport, PIC |
+| `expense_description` | Project Expense → `notes` | amount, project, category |
+| `project_description` | Project Wizard → `description` | project, client, dates, contract value |
+
+Registry per-surface di `src/lib/ai/copilot-surfaces.ts` — masing-
+masing punya prompt template, allowlist context keys, dan
+`maxOutputTokens` (≤ 240). Server-side memfilter context keys sebelum
+di-render ke prompt: apa pun di luar allowlist di-drop diam-diam
+(tidak diteruskan ke LLM).
+
+**Isolation**: tenant di-pull dari session, tidak bisa di-override
+lewat body. Copilot **tidak** melakukan DB read tambahan — client
+mengirimkan value yang sudah dilihat user di form. Kalau tidak
+kelihatan di form, LLM tidak dapat.
+
+**Rate limit**: `aiCopilotPerUser` (12/menit) +
+`aiCopilotPerTenant` (120/menit). Cost cap sama dengan chatbot —
+`reserve()` sebelum call, commit delta di `onFinish`.
+
+**Telemetry**: `log.info("ai_copilot_reply", {...})` per reply —
+surface, model, input/output tokens, latency, user draft length, dan
+context keys yang lolos filter.
+
 ## Part 2 — Notifications system
 
 Tiga surface paralel:
