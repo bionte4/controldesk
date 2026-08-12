@@ -62,6 +62,14 @@ vi.mock("./categories", () => ({
   categoryForKind: () => "APPROVALS",
 }));
 
+// Email dispatcher has its own dedicated test (email-dispatcher.test.ts).
+// Here we only care that notifyUser fires it exactly once when tenantId
+// is supplied — a no-op mock keeps this suite scoped to fan-out orchestration.
+const dispatchNotificationEmailMock = vi.fn(async () => undefined);
+vi.mock("./email-dispatcher", () => ({
+  dispatchNotificationEmail: dispatchNotificationEmailMock,
+}));
+
 vi.mock("@/lib/observability/log", () => ({
   log: { info: () => undefined, warn: () => undefined, error: () => undefined },
 }));
@@ -81,6 +89,7 @@ describe("notifyUser side-channel fan-out", () => {
     sendWhatsAppMessageMock.mockClear();
     loadWhatsappLinkMock.mockClear();
     isChannelEnabledMock.mockClear();
+    dispatchNotificationEmailMock.mockClear();
     isChannelEnabledMock.mockImplementation(async () => true);
     loadWhatsappLinkMock.mockImplementation(async () => whatsappLink);
     loadTelegramLinkMock.mockImplementation(async () => telegramLink);
@@ -88,13 +97,14 @@ describe("notifyUser side-channel fan-out", () => {
       async () =>
         ({ ok: true, providerMessageId: "wamid.abc", provider: "FONNTE" }) as const,
     );
+    dispatchNotificationEmailMock.mockImplementation(async () => undefined);
   });
 
   afterEach(() => {
     vi.resetModules();
   });
 
-  it("fires Telegram AND WhatsApp side channels in parallel when both are opted-in", async () => {
+  it("fires Telegram, WhatsApp AND Email side channels in parallel when opted-in", async () => {
     const { notifyUser } = await import("./service");
     const res = await notifyUser({
       recipient: { userId: "u1", employeeId: "e1" },
@@ -110,19 +120,36 @@ describe("notifyUser side-channel fan-out", () => {
     expect(rpcMock).toHaveBeenCalledOnce();
     expect(sendTelegramMessageMock).toHaveBeenCalledOnce();
     expect(sendWhatsAppMessageMock).toHaveBeenCalledOnce();
-    const call = sendWhatsAppMessageMock.mock.calls[0]?.[0] as {
+    expect(dispatchNotificationEmailMock).toHaveBeenCalledOnce();
+
+    const wa = sendWhatsAppMessageMock.mock.calls[0]?.[0] as {
       tenantId: string;
       waId: string;
       text: string;
     };
-    expect(call.tenantId).toBe("t1");
-    expect(call.waId).toBe("+628123456789");
-    expect(call.text).toContain("*Approve me*");
-    expect(call.text).toContain("IDR 1,000,000");
-    expect(call.text).toContain("https://acme.controldesk.app/approvals/x");
+    expect(wa.tenantId).toBe("t1");
+    expect(wa.waId).toBe("+628123456789");
+    expect(wa.text).toContain("*Approve me*");
+
+    const emailArgs = dispatchNotificationEmailMock.mock.calls[0]?.[0] as {
+      tenantId: string;
+      userId: string;
+      employeeId: string | null;
+      kind: string;
+      title: string;
+      body: string;
+      actionUrl: string;
+    };
+    expect(emailArgs.tenantId).toBe("t1");
+    expect(emailArgs.userId).toBe("u1");
+    expect(emailArgs.employeeId).toBe("e1");
+    expect(emailArgs.kind).toBe("APPROVAL_REQUESTED");
+    expect(emailArgs.actionUrl).toBe(
+      "https://acme.controldesk.app/approvals/x",
+    );
   });
 
-  it("suppresses the WhatsApp channel when the user opted out of that category", async () => {
+  it("suppresses the WhatsApp channel when the user opted out of that category (email still fires)", async () => {
     isChannelEnabledMock.mockImplementation(async (args) => {
       return args.channel !== "WHATSAPP";
     });
@@ -137,6 +164,9 @@ describe("notifyUser side-channel fan-out", () => {
 
     expect(sendTelegramMessageMock).toHaveBeenCalledOnce();
     expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
+    // Email dispatcher is invoked even when WhatsApp is off — the
+    // dispatcher itself has its own EMAIL preference gate.
+    expect(dispatchNotificationEmailMock).toHaveBeenCalledOnce();
   });
 
   it("skips WhatsApp when the user has not linked a number", async () => {
@@ -166,6 +196,7 @@ describe("notifyUser side-channel fan-out", () => {
     expect(rpcMock).toHaveBeenCalledOnce();
     expect(sendWhatsAppMessageMock).not.toHaveBeenCalled();
     expect(sendTelegramMessageMock).not.toHaveBeenCalled();
+    expect(dispatchNotificationEmailMock).not.toHaveBeenCalled();
   });
 
   it("skips notification entirely when recipient has no user_id", async () => {

@@ -112,6 +112,58 @@ export function categoryForKind(kind: NotificationKind): NotificationCategory {
 }
 
 /**
+ * Kinds that trigger a per-item email dispatch through
+ * `dispatchNotificationEmail()`. Deliberately narrower than the full
+ * kind enum so we don't spam approvers with every timesheet /
+ * bulk-import event. Two rules apply for a kind to land here:
+ *
+ *   1. **Actionable** — recipient can do something (approve, review a
+ *      client submission, chase an overdue settlement). Cosmetic
+ *      state-change echoes stay in-app only.
+ *   2. **Time-sensitive** — approvals older than a day already get
+ *      picked up by the daily digest + hourly idle-nudge cron. This
+ *      allowlist covers the "we want the approver to hear about this
+ *      now, not tomorrow morning" cases.
+ *
+ * The per-user `user_notification_preferences.EMAIL` toggle still gates
+ * delivery on top of this — the allowlist is authoritative, not the
+ * default (i.e. adding a kind here does NOT force-email a user who
+ * opted out of the category).
+ *
+ * Every listed kind must map to a category that already exists in
+ * `KIND_CATEGORY` so the preference gate has a category to consult.
+ */
+export const EMAIL_ELIGIBLE_KINDS: ReadonlySet<NotificationKind> = new Set([
+  // Approval chain events — the whole reason we're sending email at all.
+  "APPROVAL_REQUESTED",
+  "APPROVAL_APPROVED",
+  "APPROVAL_REJECTED",
+  // Settlement chase — user needs to file receipts before SLA breach.
+  "SETTLEMENT_DUE_SOON",
+  "SETTLEMENT_OVERDUE",
+  // Cash flow lifecycle — money moved out / stale draft blocks tenant.
+  "CASH_ADVANCE_DISBURSED",
+  "EXPENSE_DRAFT_STALE",
+  "EXPENSE_INCURRED_STALE",
+  // Timely lifecycle warnings from the cron system.
+  "SLA_BREACH_WARNING",
+  "PROJECT_CONTRACT_EXPIRING",
+  "EMPLOYEE_CONTRACT_EXPIRING",
+  // Client-facing monthly reports — external stakeholders don't watch
+  // the in-app bell, so email is the primary channel.
+  "MONTHLY_REPORT_SENT_TO_CLIENT",
+  "MONTHLY_REPORT_APPROVED_BY_CLIENT",
+  "MONTHLY_REPORT_REJECTED_BY_CLIENT",
+  // Handovers — new PM should know before opening the app tomorrow.
+  "PROJECT_HANDOVER",
+]);
+
+/** True when the caller should fire `dispatchNotificationEmail()` for this kind. */
+export function isEmailEligibleKind(kind: NotificationKind): boolean {
+  return EMAIL_ELIGIBLE_KINDS.has(kind);
+}
+
+/**
  * Human-friendly labels (English) for use in tests and as fallbacks
  * when i18n hasn't hydrated yet. The UI should still prefer
  * `useTranslations("profile.preferences.categories.*")`.

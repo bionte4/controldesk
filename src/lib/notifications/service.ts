@@ -10,6 +10,7 @@ import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import type { NotificationKind } from "@/types/database";
 
 import { categoryForKind } from "./categories";
+import { dispatchNotificationEmail } from "./email-dispatcher";
 import { isChannelEnabled } from "./preferences";
 
 /**
@@ -93,13 +94,14 @@ export async function notifyUser(input: {
   }
 
   // Best-effort out-of-band fan-out — only when the caller supplied
-  // tenantId (so we know which tenant's bot / gateway config to load)
-  // and the user opted into that specific channel for this category.
-  // Failures never propagate — the in-app message is the source of
-  // truth; Telegram and WhatsApp are just echoes (rules §20).
+  // tenantId (so we know which tenant's bot / gateway / email config
+  // to load) and the user opted into that specific channel for this
+  // category. Failures never propagate — the in-app message is the
+  // source of truth; Telegram / WhatsApp / Email are just echoes
+  // (rules §20).
   //
-  // Telegram and WhatsApp fire in parallel via `void`; a slow
-  // provider on one channel must never delay delivery on the other,
+  // All three side channels fire in parallel via `void`; a slow
+  // provider on one channel must never delay delivery on the others,
   // nor block the caller's Server Action.
   if (input.tenantId) {
     void dispatchTelegram({
@@ -123,6 +125,19 @@ export async function notifyUser(input: {
       actionUrl: input.actionUrl,
     }).catch((err) => {
       log.warn("whatsapp_dispatch_failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
+    void dispatchNotificationEmail({
+      tenantId: input.tenantId,
+      userId: input.recipient.userId,
+      employeeId: input.recipient.employeeId ?? null,
+      kind: input.kind,
+      title: input.title,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    }).catch((err) => {
+      log.warn("email_dispatch_failed", {
         err: err instanceof Error ? err.message : String(err),
       });
     });

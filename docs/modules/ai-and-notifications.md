@@ -151,10 +151,14 @@ Tiga surface paralel:
    Settings → Integrations → WhatsApp). Best-effort, dispatch bareng
    Telegram lewat `notifyUser()`; `NO_CONFIG` / `NO_LINK` di-log info
    dan dilewati (bukan error).
-4. **Email** — via `email_outbox` + Nodemailer. Saat ini **hanya**
-   dipakai oleh cron digest, settlement reminders, dan self-signup;
-   server-action-driven notifications belum fan-out ke email (dilacak
-   di [`../../TODO.md`](../../TODO.md)).
+4. **Email** — via `email_outbox` + Nodemailer. Per-item fan-out
+   sekarang **aktif** untuk approval-relevant kinds (allowlist di
+   `src/lib/notifications/categories.ts` → `EMAIL_ELIGIBLE_KINDS`).
+   Dispatcher: `src/lib/notifications/email-dispatcher.ts` — dipanggil
+   dari `notifyUser()` bareng Telegram + WhatsApp, best-effort, non-blocking.
+   Timesheet dan bulk-import event tetap in-app only (tidak di allowlist).
+   Cron digest + settlement reminders + self-signup masih menulis
+   `email_outbox` sendiri dengan skeleton yang sama.
 5. **Realtime** — Supabase Realtime `postgres_changes` untuk
    auto-refresh UI notifikasi + approval inbox.
 
@@ -213,9 +217,15 @@ kegagalan tidak pernah membatalkan Server Action yang memanggil
 `user_notification_preferences` (kategori × kanal), fail-open kalau
 row preferensi tidak ada.
 
-Fan-out ke `email_outbox` **belum di-wire pada mutations** — cek
-"Writer semantics" di bagian Email outbox di bawah untuk daftar caller
-yang saat ini menulis outbox.
+Fan-out ke `email_outbox` **aktif** untuk approval-relevant kinds
+lewat `dispatchNotificationEmail()`. Kind allowlist di
+`categories.ts::EMAIL_ELIGIBLE_KINDS` bertindak sebagai gate yang
+lebih ketat dari user preference — kinds di luar allowlist tidak
+pernah kirim email meskipun user opt-in EMAIL untuk kategori itu.
+Kalau ingin nambah kind ke email (misal `PETTY_CASH_LOW_BALANCE`),
+edit `EMAIL_ELIGIBLE_KINDS` di file itu dan tambahkan unit test.
+Lihat "Writer semantics" di bawah untuk daftar caller lain yang
+menulis outbox langsung (cron digest, settlement reminders, self-signup).
 
 Contoh trigger (approval state change):
 
@@ -261,9 +271,13 @@ yang saat ini sudah patuh:
 - `POST /api/cron/digest` — insert baris `status='SENT'`/`'FAILED'` per
   penerima.
 - `POST /api/cron/settlement-reminders` — insert per notification email
-  yang dikirim.
+  yang dikirim (skeleton HTML + text).
 - `POST /register-org` (verify + confirmation) — insert setelah signup
-  step.
+  step (skeleton HTML + text).
+- `notifyUser()` via `dispatchNotificationEmail()` — per-item fan-out
+  untuk `EMAIL_ELIGIBLE_KINDS` (approvals, settlement chase, contract
+  expiring, monthly report ke klien, dsb.). Baris outbox berisi
+  `metadata.source='notify_user'` supaya filter ops bisa memisahkan.
 
 **Tidak ada retry cron** saat ini. `SKIPPED` = SMTP belum
 dikonfigurasikan; `FAILED` = transient error yang tidak di-retry
@@ -271,10 +285,16 @@ otomatis (ops harus resend manual dari UI, atau kirim ulang dari cron).
 Baseline yang berlaku, bukan aspirational. Retry loop / bounce
 detection direncanakan sebagai backlog di [`../../TODO.md`](../../TODO.md).
 
-**Templates**: Bahasa Indonesia default, dikonstruksi inline oleh
-helper renderer per-kind (mis. `renderSignupVerificationEmail()`,
-`renderDigestEmail()`) — bukan lewat i18n JSON. Deep-link URL selalu
-absolute per tenant subdomain (`https://{slug}.controldesk.app/...`).
+**Templates**: Bahasa Indonesia default, dikonstruksi via
+`renderEmailBody()` di [`src/lib/notify/templates/skeleton.ts`](../../src/lib/notify/templates/skeleton.ts)
+— satu skeleton produce `text/plain` + `text/html` sekaligus, dengan
+HTML escaping, branding eyebrow, CTA button, dan preheader. Deep-link
+URL selalu absolute per tenant subdomain
+(`https://{slug}.{ROOT_DOMAIN}/...`) dan `?from=email` di-append oleh
+`dispatchNotificationEmail()` supaya server action approver bisa log
+`via_email=true` di audit trail (Pola A one-click login-first — Pola B
+signed-token magic-link belum diimplementasikan; lihat
+[`../../TODO.md`](../../TODO.md) bila ingin lanjut).
 
 ### Realtime
 
