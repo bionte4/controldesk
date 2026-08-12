@@ -306,7 +306,11 @@ Implementation: `src/app/api/help/ask/route.ts`. Full design:
 - **Response** — `text/plain; charset=utf-8` stream. Consume with
   `res.body.getReader()`.
 
-Level 2 additions (only when `conversationId` + `useTools` are set):
+Level 2 additions (only when `conversationId` + `useTools` are set
+AND the `ai_chatbot_tools` feature flag is enabled for the tenant —
+defaults ON; platform admins can turn it OFF via
+`/super-admin/features` to degrade the chatbot back to docs-only RAG
+without an app deploy):
 
 - **History persisted** to `tenant_chat_messages` (RLS: owner-only,
   tenant-scoped, see migration 0085). Each user turn is written

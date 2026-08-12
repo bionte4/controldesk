@@ -223,6 +223,7 @@ gating feature per tenant. Registry key feature ada di
 | `whatsapp_notifications`   | ✗ off   | Forward notifications via Fonnte / Twilio (butuh SMTP config di tenant)   |
 | `bulk_import`              | ✓ on    | CSV import clients/projects/employees                                     |
 | `advanced_reports`         | ✓ on    | Monthly reports PDF export (slice B)                                       |
+| `ai_chatbot_tools`         | ✓ on    | Level 2 tool-calling di `/help?tab=ask`. OFF = chatbot degrade ke Level 1 (docs-only RAG). Berguna untuk tenant yang tidak mau AI menyentuh DB mereka. |
 
 **Kontract**: missing row = fallback ke `defaultEnabled` di registry.
 `enabled=false` = OFF. `enabled=true` = ON. Fail-open — kalau DB

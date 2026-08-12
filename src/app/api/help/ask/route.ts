@@ -11,6 +11,7 @@ import { deriveTitle } from "@/lib/help/title";
 import { resolveAiModel } from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { makeToolRegistry } from "@/lib/ai/tools";
+import { isFeatureEnabled } from "@/lib/ops/feature-flags";
 import { resolveRequestLocale } from "@/lib/i18n/request-locale";
 import { toCanonicalRole } from "@/lib/rbac/roles";
 import { log } from "@/lib/observability/log";
@@ -112,7 +113,25 @@ export async function POST(request: Request): Promise<Response> {
     return NextResponse.json({ error: "no_user_message" }, { status: 400 });
   }
 
-  const useTools = payload.useTools === true && !!payload.conversationId;
+  // Level 2 is opt-in by the client (`useTools + conversationId`) AND
+  // opt-in by the tenant (`ai_chatbot_tools` feature flag, default
+  // ON). Turning the flag OFF for a tenant silently degrades the
+  // chatbot to Level 1 (docs-only RAG) — the composer keeps working,
+  // history still persists, but the model has no tool-calling surface.
+  // This gives platform admins a per-tenant kill-switch for the
+  // heavier data surface without an app deploy.
+  const clientRequestedTools =
+    payload.useTools === true && !!payload.conversationId;
+  const toolsFlagEnabled = clientRequestedTools
+    ? await isFeatureEnabled(tenantId, "ai_chatbot_tools")
+    : false;
+  const useTools = clientRequestedTools && toolsFlagEnabled;
+  if (clientRequestedTools && !toolsFlagEnabled) {
+    log.info("help_chat_tools_flag_off", {
+      tenant_id: tenantId,
+      user_id: userId,
+    });
+  }
 
   const reservation = await reserve({
     tenantId,
