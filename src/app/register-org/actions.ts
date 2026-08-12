@@ -184,6 +184,7 @@ export async function requestSignupAction(
     to: parsed.data.adminEmail,
     subject: email.subject,
     text: email.text,
+    html: email.html,
     metadata: { kind: "signup_verify", slug },
   });
   if (sendRes.status === "FAILED") {
@@ -211,7 +212,7 @@ export async function requestSignupAction(
       "ControlDesk <no-reply@controldesk.app>",
     subject: email.subject,
     body_text: email.text,
-    body_html: null,
+    body_html: email.html,
     status: sendRes.status,
     provider: sendRes.provider,
     provider_message_id: sendRes.providerMessageId ?? null,
@@ -424,6 +425,7 @@ export async function verifySignupAction(
     to: reqRow.data.admin_email,
     subject: confirmation.subject,
     text: confirmation.text,
+    html: confirmation.html,
     metadata: {
       kind: "signup_confirmation",
       slug: reqRow.data.slug,
@@ -449,7 +451,7 @@ export async function verifySignupAction(
       "ControlDesk <no-reply@controldesk.app>",
     subject: confirmation.subject,
     body_text: confirmation.text,
-    body_html: null,
+    body_html: confirmation.html,
     status: emailRes.status,
     provider: emailRes.provider,
     provider_message_id: emailRes.providerMessageId ?? null,

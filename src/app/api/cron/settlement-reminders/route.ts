@@ -7,6 +7,7 @@ import { parseMoneyFromDb } from "@/lib/format/money";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/i18n/config";
 import { log } from "@/lib/observability/log";
 import { sendEmail } from "@/lib/notify/mailer";
+import { renderEmailBody } from "@/lib/notify/templates/skeleton";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import type {
   AnyDbEmployeeRole,
@@ -242,16 +243,35 @@ async function sendReminderEmail(
   supabase: ReturnType<typeof createServiceRoleClient>,
   input: {
     tenantId: string;
+    tenantName: string;
     to: string;
+    recipientName: string;
     subject: string;
-    text: string;
+    /**
+     * Free-form body copy from the i18n bundle. May span multiple lines. Rendered
+     * as a plain paragraph in the skeleton (line breaks preserved).
+     */
+    body: string;
+    ctaLabel: string;
     actionUrl: string;
+    /** Attached to `email_outbox.metadata` so ops can filter per reminder kind. */
+    reminderKind: string;
   },
 ): Promise<void> {
+  const { text, html } = renderEmailBody({
+    tenantName: input.tenantName,
+    title: input.subject,
+    preheader: input.body.slice(0, 90),
+    greeting: `Halo ${input.recipientName},`,
+    sections: [{ body: input.body }],
+    cta: { label: input.ctaLabel, url: input.actionUrl },
+  });
+
   const result = await sendEmail({
     to: input.to,
     subject: input.subject,
-    text: input.text + `\n\n${input.actionUrl}`,
+    text,
+    html,
     tenantId: input.tenantId,
   });
   await supabase.from("email_outbox").insert({
@@ -262,14 +282,15 @@ async function sendReminderEmail(
       process.env.SMTP_FROM ??
       "ControlDesk <no-reply@controldesk.app>",
     subject: input.subject,
-    body_text: input.text,
-    body_html: null,
+    body_text: text,
+    body_html: html,
     status: result.status,
     provider: result.provider,
     provider_message_id: result.providerMessageId ?? null,
     error_message: result.error ?? null,
     metadata: {
       source: "settlement-reminders",
+      reminder_kind: input.reminderKind,
       config_source: result.configSource ?? null,
     },
     sent_at: result.status === "SENT" ? new Date().toISOString() : null,
@@ -410,10 +431,14 @@ export async function POST(request: Request) {
           if (submitter.email) {
             await sendReminderEmail(supabase, {
               tenantId: tenant.id,
+              tenantName: tenant.name,
               to: submitter.email,
+              recipientName: submitter.full_name,
               subject: title,
-              text: body,
+              body,
+              ctaLabel: t("email.ctaOpenCashAdvance"),
               actionUrl,
+              reminderKind: `cash_advance:${rule.reminderKind}`,
             });
             stats.ca_emails += 1;
           }
@@ -547,10 +572,14 @@ export async function POST(request: Request) {
           if (submitter.email) {
             await sendReminderEmail(supabase, {
               tenantId: tenant.id,
+              tenantName: tenant.name,
               to: submitter.email,
+              recipientName: submitter.full_name,
               subject: title,
-              text: body,
+              body,
+              ctaLabel: t("email.ctaOpenExpense"),
               actionUrl,
+              reminderKind: "expense_draft:DRAFT_STALE",
             });
             stats.expense_draft_emails += 1;
           }

@@ -13,6 +13,8 @@
 
 import { createHash, randomBytes } from "node:crypto";
 
+import { renderEmailBody } from "@/lib/notify/templates/skeleton";
+
 /**
  * Trial length applied to every self-signup tenant. Enforced by the
  * DB function `complete_tenant_signup` (migration 0078). Keep in sync
@@ -88,31 +90,40 @@ export type SignupEmailInput = {
   ttlHours?: number;
 };
 
-export type RenderedEmail = { subject: string; text: string };
+export type RenderedEmail = { subject: string; text: string; html: string };
 
 export function renderSignupVerificationEmail(
   input: SignupEmailInput,
 ): RenderedEmail {
   const ttl = input.ttlHours ?? SIGNUP_TOKEN_TTL_HOURS;
   const subject = `Konfirmasi pendaftaran ${input.tenantName} di ControlDesk`;
-  const text = [
-    `Halo ${input.adminName},`,
-    "",
-    `Terima kasih sudah mendaftarkan ${input.tenantName} (slug: ${input.slug})`,
-    "ke ControlDesk. Untuk menyelesaikan pendaftaran, klik link di bawah:",
-    "",
-    input.verifyUrl,
-    "",
-    `Link ini kadaluarsa dalam ${ttl} jam. Setelah verifikasi, workspace Anda`,
-    `siap di ${input.slug}.controldesk.app dan uji coba 14 hari otomatis aktif.`,
-    "",
-    "Kalau bukan Anda yang mendaftar, abaikan email ini — tanpa klik verifikasi,",
-    "workspace tidak akan dibuat dan permintaan otomatis kadaluarsa.",
-    "",
-    "Salam,",
-    "Tim ControlDesk",
-  ].join("\n");
-  return { subject, text };
+  const { text, html } = renderEmailBody({
+    title: subject,
+    preheader: `Klik untuk verifikasi ${input.tenantName} — link ${ttl} jam.`,
+    greeting: `Halo ${input.adminName},`,
+    sections: [
+      {
+        body: `Terima kasih sudah mendaftarkan ${input.tenantName} (slug: ${input.slug}) ke ControlDesk. Klik tombol di bawah untuk menyelesaikan verifikasi email Anda.`,
+      },
+      {
+        heading: "Detail",
+        items: [
+          `Nama workspace: ${input.tenantName}`,
+          `Alamat login: ${input.slug}.controldesk.app`,
+          `Masa uji coba setelah verifikasi: ${SELF_SIGNUP_TRIAL_DAYS} hari`,
+          `Link kadaluarsa dalam: ${ttl} jam`,
+        ],
+      },
+      {
+        body: "Kalau bukan Anda yang mendaftar, cukup abaikan email ini — tanpa klik verifikasi, workspace tidak akan dibuat dan permintaan otomatis kadaluarsa.",
+      },
+    ],
+    cta: {
+      label: "Verifikasi email saya",
+      url: input.verifyUrl,
+    },
+  });
+  return { subject, text, html };
 }
 
 export type SignupConfirmationEmailInput = {
@@ -136,33 +147,50 @@ export function renderSignupConfirmationEmail(
 ): RenderedEmail {
   const trial = input.trialDays ?? SELF_SIGNUP_TRIAL_DAYS;
   const subject = `Workspace ${input.tenantName} siap — kredensial admin`;
-  const text = [
-    `Halo ${input.adminName},`,
-    "",
-    `Workspace ControlDesk untuk ${input.tenantName} sudah aktif.`,
-    "",
-    "Login admin:",
-    `  URL:      ${input.loginUrl}`,
-    `  Email:    ${input.adminEmail}`,
-    `  Password: ${input.adminPassword}`,
-    "",
-    `Anda mendapat uji coba ${trial} hari — semua fitur terbuka.`,
-    "Setelah masa uji coba, hubungi sales@controldesk.app untuk lanjut ke",
-    "paket berbayar. Data Anda aman dan tetap tersimpan.",
-    "",
-    "Langkah lanjut yang kami rekomendasikan setelah login:",
-    "  1. Ganti password default (Profile menu).",
-    "  2. Undang tim Anda (Settings → Users).",
-    "  3. Setup SMTP tenant (Settings → Integrations → Email).",
-    "",
-    "Bahan bacaan:",
-    "  - Panduan pengguna:    https://docs.controldesk.app/user-guides/internal-users",
-    "  - Alur kerja per role: https://docs.controldesk.app/training/user-guide-workflows",
-    "",
-    "Salam,",
-    "Tim ControlDesk",
+  const credentialsBlock = [
+    `URL      : ${input.loginUrl}`,
+    `Email    : ${input.adminEmail}`,
+    `Password : ${input.adminPassword}`,
   ].join("\n");
-  return { subject, text };
+  const { text, html } = renderEmailBody({
+    tenantName: input.tenantName,
+    title: subject,
+    preheader: `Login admin siap. Uji coba ${trial} hari aktif otomatis.`,
+    greeting: `Halo ${input.adminName},`,
+    sections: [
+      {
+        body: `Workspace ControlDesk untuk ${input.tenantName} sudah aktif. Simpan kredensial di bawah dengan aman — password ini hanya ditampilkan sekali.`,
+      },
+      {
+        heading: "Kredensial admin",
+        body: "Password wajib diganti dari menu Profile setelah login pertama.",
+      },
+      {
+        preformatted: credentialsBlock,
+      },
+      {
+        heading: "Langkah selanjutnya",
+        items: [
+          "Login pakai kredensial di atas dan ganti password default.",
+          "Undang tim Anda dari Settings → Users.",
+          "Setup SMTP tenant di Settings → Integrations → Email supaya notifikasi ke domain sendiri.",
+          `Uji coba ${trial} hari aktif — semua fitur terbuka. Setelah itu hubungi sales@controldesk.app untuk paket berbayar.`,
+        ],
+      },
+      {
+        heading: "Bahan bacaan",
+        items: [
+          "Panduan pengguna: https://docs.controldesk.app/user-guides/internal-users",
+          "Alur kerja per role: https://docs.controldesk.app/training/user-guide-workflows",
+        ],
+      },
+    ],
+    cta: {
+      label: "Buka workspace",
+      url: input.loginUrl,
+    },
+  });
+  return { subject, text, html };
 }
 
 // ---------------------------------------------------------------------------

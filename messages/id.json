@@ -490,6 +490,10 @@
           "title": "Nota terlambat di-flag ke approver",
           "body": "IDR {amount} — nota berusia {days} wd saat submit. Justifikasi: {reason}"
         }
+      },
+      "email": {
+        "ctaOpenCashAdvance": "Buka cash advance",
+        "ctaOpenExpense": "Buka draft biaya"
       }
     },
     "evaluations": {

@@ -221,6 +221,54 @@ describe("renderSignupConfirmationEmail", () => {
     expect(email.text).toContain("https://acme.controldesk.app/login");
     expect(email.text).toContain("14 hari"); // default trial
   });
+
+  it("renders an HTML body that contains the credentials + CTA URL", () => {
+    const email = renderSignupConfirmationEmail({
+      tenantName: "PT Acme",
+      slug: "acme",
+      adminName: "Budi",
+      adminEmail: "admin@acme.co.id",
+      adminPassword: "s3cretP@ssword",
+      loginUrl: "https://acme.controldesk.app/login",
+    });
+    expect(email.html).toContain("<!doctype html>");
+    expect(email.html).toContain("admin@acme.co.id");
+    expect(email.html).toContain("s3cretP@ssword");
+    expect(email.html).toContain("https://acme.controldesk.app/login");
+    // Confirmation is scoped to the tenant, so the eyebrow should appear.
+    expect(email.html).toContain("PT Acme");
+  });
+
+  it("escapes user-provided strings in the HTML body", () => {
+    const email = renderSignupConfirmationEmail({
+      tenantName: "PT <Evil>",
+      slug: "evil",
+      adminName: "<script>",
+      adminEmail: "x@y.co",
+      adminPassword: "pw",
+      loginUrl: "https://evil.controldesk.app/login",
+    });
+    expect(email.html).not.toContain("<script>");
+    expect(email.html).toContain("&lt;script&gt;");
+    expect(email.html).toContain("PT &lt;Evil&gt;");
+  });
+});
+
+describe("renderSignupVerificationEmail (HTML)", () => {
+  it("renders an HTML body with the verify URL in the CTA", () => {
+    const email = renderSignupVerificationEmail({
+      tenantName: "PT Acme",
+      slug: "acme",
+      adminName: "Budi",
+      verifyUrl:
+        "https://controldesk.app/register-org/verify/abc123DEF-_ghi",
+    });
+    expect(email.html).toContain("<!doctype html>");
+    expect(email.html).toContain(
+      "https://controldesk.app/register-org/verify/abc123DEF-_ghi",
+    );
+    expect(email.html).toContain("Verifikasi email saya");
+  });
 });
 
 describe("computeTrialStatus", () => {

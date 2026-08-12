@@ -506,6 +506,10 @@
           "title": "Late-submitted receipt flagged",
           "body": "IDR {amount} — receipt is {days} wd old at submit time. Justification: {reason}"
         }
+      },
+      "email": {
+        "ctaOpenCashAdvance": "Open cash advance",
+        "ctaOpenExpense": "Open draft expense"
       }
     },
     "evaluations": {
