@@ -278,3 +278,117 @@ describe("recordAudit — RPC error surface", () => {
     ).rejects.toThrow(/audit log write failed: policy denied/);
   });
 });
+
+describe("recordAudit — via_email auto-tag (Pola A)", () => {
+  it("stamps via_email:true when Referer contains ?from=email", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/approvals/exp-1?from=email"
+        : name === "user-agent"
+          ? "Mozilla"
+          : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+      resourceId: "exp-1",
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    const meta = call["p_metadata"] as Record<string, unknown>;
+    expect(meta.via_email).toBe(true);
+  });
+
+  it("merges via_email:true into caller-supplied metadata", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/finance/expenses/xyz?from=email&tab=approvals"
+        : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+      metadata: { note: "OK per SLA" },
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    const meta = call["p_metadata"] as Record<string, unknown>;
+    expect(meta.note).toBe("OK per SLA");
+    expect(meta.via_email).toBe(true);
+  });
+
+  it("omits via_email entirely when Referer has no from=email marker", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/approvals/exp-1?tab=history"
+        : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    // No metadata tag at all — we don't stamp `via_email:false` on
+    // routine in-app audit rows to keep the JSON payload lean.
+    expect(call["p_metadata"]).toBeUndefined();
+  });
+
+  it("does not false-match on paths that contain 'from=email' as a substring", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/reports/from=email-comparison"
+        : null,
+    );
+    await recordAudit({
+      actionType: "EXPORT",
+      resourceName: "reports",
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    expect(call["p_metadata"]).toBeUndefined();
+  });
+
+  it("respects caller-supplied via_email:false (opt-out wins)", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/approvals/exp-1?from=email"
+        : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+      metadata: { via_email: false, note: "manual override" },
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    const meta = call["p_metadata"] as Record<string, unknown>;
+    expect(meta.via_email).toBe(false);
+    expect(meta.note).toBe("manual override");
+  });
+
+  it("matches ?from=email at end of URL (no trailing ampersand)", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/approvals/exp-1?from=email"
+        : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    const meta = call["p_metadata"] as Record<string, unknown>;
+    expect(meta.via_email).toBe(true);
+  });
+
+  it("matches from=email even in fragment/hash boundary", async () => {
+    headersGetMock.mockImplementation((name: string) =>
+      name === "referer"
+        ? "https://acme.controldesk.app/approvals/exp-1?tab=x&from=email#top"
+        : null,
+    );
+    await recordAudit({
+      actionType: "APPROVE",
+      resourceName: "expenses",
+    });
+    const call = rpcMock.mock.calls[0]![1] as Record<string, unknown>;
+    const meta = call["p_metadata"] as Record<string, unknown>;
+    expect(meta.via_email).toBe(true);
+  });
+});

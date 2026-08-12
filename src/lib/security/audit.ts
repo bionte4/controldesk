@@ -73,6 +73,7 @@ function redact(value: unknown): Json {
 async function inferRequestContext(): Promise<{
   ip: string | null;
   userAgent: string | null;
+  viaEmail: boolean;
 }> {
   try {
     const h = await headers();
@@ -82,15 +83,54 @@ async function inferRequestContext(): Promise<{
       h.get("x-real-ip") ||
       h.get("cf-connecting-ip") ||
       null;
-    return { ip, userAgent: h.get("user-agent") };
+    // Approval-via-email audit tag (Pola A).
+    //
+    // `dispatchNotificationEmail()` appends `?from=email` to every CTA URL
+    // it embeds in outbound notifications. When the approver clicks the
+    // link they land on the approval page, and any subsequent Server
+    // Action they run from that page ships a `Referer` header pointing
+    // back at the same URL. Detecting the marker here means every
+    // downstream `recordAudit()` call auto-tags `via_email: true` in
+    // `security_audit_logs.metadata` — zero touch on the ~40+ existing
+    // callers of `recordAudit()`.
+    //
+    // We anchor with `[?&]` to avoid false positives from paths like
+    // `/reports/from=email-comparison`, and cap referer read at 4kB to
+    // sidestep pathological headers.
+    const referer = h.get("referer") ?? "";
+    const viaEmail = /[?&]from=email(?:$|&|#)/.test(referer.slice(0, 4096));
+    return { ip, userAgent: h.get("user-agent"), viaEmail };
   } catch {
-    return { ip: null, userAgent: null };
+    return { ip: null, userAgent: null, viaEmail: false };
   }
+}
+
+/**
+ * Merge caller-supplied metadata with the auto-detected `via_email` tag.
+ * Caller-supplied `via_email` (either value) wins over auto-detection so
+ * tests + explicit opt-outs behave predictably. When neither the caller
+ * nor the referer indicates an email origin the field is omitted entirely
+ * — no need to store `via_email: false` on the ~99% of audit rows that
+ * come from the in-app UI.
+ */
+function mergeAuditMetadata(
+  callerMetadata: Record<string, unknown> | null | undefined,
+  viaEmail: boolean,
+): Record<string, unknown> | null {
+  const hasCallerViaEmail =
+    callerMetadata != null &&
+    Object.prototype.hasOwnProperty.call(callerMetadata, "via_email");
+  if (!viaEmail && !callerMetadata) return null;
+  if (!viaEmail) return callerMetadata ?? null;
+  if (hasCallerViaEmail) return callerMetadata ?? null;
+  return { ...(callerMetadata ?? {}), via_email: true };
 }
 
 export async function recordAudit(input: RecordAuditInput): Promise<void> {
   const supabase = await createClient();
-  const { ip, userAgent } = await inferRequestContext();
+  const { ip, userAgent, viaEmail } = await inferRequestContext();
+
+  const metadata = mergeAuditMetadata(input.metadata, viaEmail);
 
   const { error } = await supabase.rpc("record_audit_log", {
     p_action_type: input.actionType,
@@ -98,7 +138,7 @@ export async function recordAudit(input: RecordAuditInput): Promise<void> {
     p_resource_id: input.resourceId ?? undefined,
     p_old_values: input.oldValues ? redact(input.oldValues) : undefined,
     p_new_values: input.newValues ? redact(input.newValues) : undefined,
-    p_metadata: input.metadata ? (redact(input.metadata) as Json) : undefined,
+    p_metadata: metadata ? (redact(metadata) as Json) : undefined,
     p_ip_address: ip ?? undefined,
     p_user_agent: userAgent ?? undefined,
   });

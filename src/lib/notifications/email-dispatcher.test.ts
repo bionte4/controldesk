@@ -238,4 +238,41 @@ describe("dispatchNotificationEmail", () => {
     expect(sendArgs.html).not.toContain("Buka di ControlDesk");
     expect(sendArgs.html).not.toContain("from=email");
   });
+
+  it("inserts ?from=email BEFORE the URL fragment (budget-request deep-links)", async () => {
+    // Budget request notifyRoles calls ship URLs like
+    //   `/finance/budgets/{id}#br-{brid}`
+    // Naively appending `?from=email` at the end produces
+    //   `/finance/budgets/{id}#br-{brid}?from=email`
+    // where the query becomes part of the fragment and never lands as
+    // Referer. The audit auto-tag in `recordAudit()` would then miss.
+    const { dispatchNotificationEmail } = await loadDispatcher();
+    await dispatchNotificationEmail({
+      ...baseCall,
+      actionUrl: "/finance/budgets/bud-1#br-2",
+    });
+
+    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as { html: string };
+    expect(sendArgs.html).toContain(
+      "https://acme.controldesk.test/finance/budgets/bud-1?from=email#br-2",
+    );
+    // Sanity: the malformed form must NOT appear.
+    expect(sendArgs.html).not.toContain("#br-2?from=email");
+  });
+
+  it("appends with & when actionUrl already has a query string", async () => {
+    const { dispatchNotificationEmail } = await loadDispatcher();
+    await dispatchNotificationEmail({
+      ...baseCall,
+      actionUrl: "/approvals?tab=pending",
+    });
+
+    // Check the plain-text body — HTML would escape `&` to `&amp;`,
+    // and we care that the URL is well-formed at the wire level, not
+    // its DOM escaping.
+    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as { text: string };
+    expect(sendArgs.text).toContain(
+      "https://acme.controldesk.test/approvals?tab=pending&from=email",
+    );
+  });
 });

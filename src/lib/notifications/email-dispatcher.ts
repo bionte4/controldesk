@@ -202,9 +202,17 @@ const loadTenantMeta = cache(
 );
 
 /**
- * Turn a relative `actionUrl` (e.g. `/finance/cash-advances/xxx`) into
- * an absolute one on the tenant's subdomain. Adds `?from=email` so
- * approval Server Actions can log `via_email=true` audit context.
+ * Turn a relative `actionUrl` (e.g. `/finance/cash-advances/xxx` or
+ * `/finance/budgets/xxx#br-yyy`) into an absolute one on the tenant's
+ * subdomain. Adds `?from=email` before any `#fragment` so approval
+ * Server Actions can log `via_email=true` audit context.
+ *
+ * URL RFC 3986 order: `path[?query][#fragment]`. Callers pass paths
+ * with pre-existing fragments (e.g. budget request deep links) so we
+ * must split on `#` first, insert the query, then re-append the fragment.
+ * Otherwise we produce malformed URLs like `/foo#bar?from=email` where
+ * the query is treated as part of the fragment and never sent to the
+ * server as Referer.
  *
  * Returns undefined when there's no action to link to — the skeleton
  * hides the CTA in that case.
@@ -219,6 +227,9 @@ function buildAbsoluteActionUrl(input: {
   // In staging/prod, always HTTPS.
   const proto = root.startsWith("localhost") ? "http" : "https";
   const base = `${proto}://${input.slug}.${root}`;
-  const sep = input.path.includes("?") ? "&" : "?";
-  return `${base}${input.path}${sep}from=email`;
+  const hashIdx = input.path.indexOf("#");
+  const pathAndQuery = hashIdx >= 0 ? input.path.slice(0, hashIdx) : input.path;
+  const fragment = hashIdx >= 0 ? input.path.slice(hashIdx) : "";
+  const sep = pathAndQuery.includes("?") ? "&" : "?";
+  return `${base}${pathAndQuery}${sep}from=email${fragment}`;
 }
