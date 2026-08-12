@@ -53,13 +53,35 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-const sendEmailMock = vi.fn(async () => ({
-  status: "SENT" as const,
-  provider: "smtp" as const,
-  from: "ControlDesk <no-reply@acme.controldesk.app>",
-  providerMessageId: "msg-1",
-  configSource: "tenant" as const,
-}));
+// Loose types so `mockImplementationOnce` can override with the FAILED
+// shape in the "still persists a FAILED outbox row" test below, and so
+// `.mock.calls[0][0]` is typed as the payload object (not `undefined`
+// via an empty-tuple `[]`).
+type MailerArgs = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  tenantId?: string;
+  metadata?: Record<string, unknown>;
+};
+type MailerResult = {
+  status: "SENT" | "FAILED" | "SKIPPED" | "PENDING";
+  provider: "smtp" | "noop";
+  from?: string;
+  providerMessageId?: string;
+  configSource?: "tenant" | "env";
+  error?: string;
+};
+const sendEmailMock = vi.fn<(input: MailerArgs) => Promise<MailerResult>>(
+  async () => ({
+    status: "SENT",
+    provider: "smtp",
+    from: "ControlDesk <no-reply@acme.controldesk.app>",
+    providerMessageId: "msg-1",
+    configSource: "tenant",
+  }),
+);
 vi.mock("@/lib/notify/mailer", () => ({
   sendEmail: sendEmailMock,
 }));
@@ -131,7 +153,7 @@ describe("dispatchNotificationEmail", () => {
     await dispatchNotificationEmail(baseCall);
 
     expect(sendEmailMock).toHaveBeenCalledOnce();
-    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as {
+    const sendArgs = sendEmailMock.mock.calls[0]![0] as {
       to: string;
       subject: string;
       html: string;
@@ -149,7 +171,7 @@ describe("dispatchNotificationEmail", () => {
     );
 
     expect(outboxInsert).toHaveBeenCalledOnce();
-    const outboxRow = outboxInsert.mock.calls[0]?.[0] as {
+    const outboxRow = outboxInsert.mock.calls[0]![0] as {
       tenant_id: string;
       to_address: string;
       status: string;
@@ -220,7 +242,7 @@ describe("dispatchNotificationEmail", () => {
     await dispatchNotificationEmail(baseCall);
 
     expect(outboxInsert).toHaveBeenCalledOnce();
-    const outboxRow = outboxInsert.mock.calls[0]?.[0] as {
+    const outboxRow = outboxInsert.mock.calls[0]![0] as {
       status: string;
       error_message: string;
       sent_at: string | null;
@@ -234,7 +256,7 @@ describe("dispatchNotificationEmail", () => {
     const { dispatchNotificationEmail } = await loadDispatcher();
     await dispatchNotificationEmail({ ...baseCall, actionUrl: undefined });
 
-    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as { html: string };
+    const sendArgs = sendEmailMock.mock.calls[0]![0] as { html: string };
     expect(sendArgs.html).not.toContain("Buka di ControlDesk");
     expect(sendArgs.html).not.toContain("from=email");
   });
@@ -252,7 +274,7 @@ describe("dispatchNotificationEmail", () => {
       actionUrl: "/finance/budgets/bud-1#br-2",
     });
 
-    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as { html: string };
+    const sendArgs = sendEmailMock.mock.calls[0]![0] as { html: string };
     expect(sendArgs.html).toContain(
       "https://acme.controldesk.test/finance/budgets/bud-1?from=email#br-2",
     );
@@ -270,7 +292,7 @@ describe("dispatchNotificationEmail", () => {
     // Check the plain-text body — HTML would escape `&` to `&amp;`,
     // and we care that the URL is well-formed at the wire level, not
     // its DOM escaping.
-    const sendArgs = sendEmailMock.mock.calls[0]?.[0] as { text: string };
+    const sendArgs = sendEmailMock.mock.calls[0]![0] as { text: string };
     expect(sendArgs.text).toContain(
       "https://acme.controldesk.test/approvals?tab=pending&from=email",
     );
@@ -412,12 +434,12 @@ describe("dispatchNotificationEmail — tenant isolation", () => {
     });
 
     expect(sendEmailMock).toHaveBeenCalledTimes(2);
-    const first = sendEmailMock.mock.calls[0]?.[0] as {
+    const first = sendEmailMock.mock.calls[0]![0] as {
       to: string;
       text: string;
       tenantId: string;
     };
-    const second = sendEmailMock.mock.calls[1]?.[0] as {
+    const second = sendEmailMock.mock.calls[1]![0] as {
       to: string;
       text: string;
       tenantId: string;
@@ -459,7 +481,7 @@ describe("dispatchNotificationEmail — tenant isolation", () => {
     });
 
     expect(outboxInsert).toHaveBeenCalledOnce();
-    const row = outboxInsert.mock.calls[0]?.[0] as {
+    const row = outboxInsert.mock.calls[0]![0] as {
       tenant_id: string;
       metadata: { user_id: string };
     };

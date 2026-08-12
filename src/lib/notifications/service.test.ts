@@ -33,27 +33,55 @@ vi.mock("@/lib/integrations/telegram/repository", () => ({
   loadUserLink: loadTelegramLinkMock,
 }));
 
-const sendWhatsAppMessageMock = vi.fn(
-  async () =>
-    ({ ok: true, providerMessageId: "wamid.abc", provider: "FONNTE" }) as const,
-);
+type WhatsAppSendArgs = { tenantId: string; waId: string; text: string };
+type WhatsAppSendResult = {
+  ok: boolean;
+  providerMessageId: string;
+  provider: string;
+};
+const sendWhatsAppMessageMock = vi.fn<
+  (args: WhatsAppSendArgs) => Promise<WhatsAppSendResult>
+>(async () => ({
+  ok: true,
+  providerMessageId: "wamid.abc",
+  provider: "FONNTE",
+}));
 vi.mock("@/lib/integrations/whatsapp/client", () => ({
   sendWhatsAppMessage: sendWhatsAppMessageMock,
 }));
 
-const whatsappLink = {
+type WhatsappLink = {
+  tenantId: string;
+  userId: string;
+  waId: string;
+  displayName: string | null;
+  profileName: string | null;
+};
+const whatsappLink: WhatsappLink = {
   tenantId: "t1",
   userId: "u1",
   waId: "+628123456789",
   displayName: null,
   profileName: null,
 };
-const loadWhatsappLinkMock = vi.fn(async () => whatsappLink);
+const loadWhatsappLinkMock = vi.fn<() => Promise<WhatsappLink | null>>(
+  async () => whatsappLink,
+);
 vi.mock("@/lib/integrations/whatsapp/repository", () => ({
   loadUserWhatsAppLink: loadWhatsappLinkMock,
 }));
 
-const isChannelEnabledMock = vi.fn(async () => true);
+// Signature mirrors `isChannelEnabled` — tests below inspect args to
+// suppress a specific channel while leaving the others intact.
+type IsChannelEnabledArgs = {
+  tenantId: string;
+  userId: string;
+  category: string;
+  channel: string;
+};
+const isChannelEnabledMock = vi.fn<
+  (args: IsChannelEnabledArgs) => Promise<boolean>
+>(async () => true);
 vi.mock("./preferences", () => ({
   isChannelEnabled: isChannelEnabledMock,
 }));
@@ -65,7 +93,18 @@ vi.mock("./categories", () => ({
 // Email dispatcher has its own dedicated test (email-dispatcher.test.ts).
 // Here we only care that notifyUser fires it exactly once when tenantId
 // is supplied — a no-op mock keeps this suite scoped to fan-out orchestration.
-const dispatchNotificationEmailMock = vi.fn(async () => undefined);
+type DispatchEmailArgs = {
+  tenantId: string;
+  userId: string;
+  employeeId?: string | null;
+  kind: string;
+  title: string;
+  body?: string;
+  actionUrl?: string;
+};
+const dispatchNotificationEmailMock = vi.fn<
+  (args: DispatchEmailArgs) => Promise<void>
+>(async () => undefined);
 vi.mock("./email-dispatcher", () => ({
   dispatchNotificationEmail: dispatchNotificationEmailMock,
 }));
@@ -122,7 +161,7 @@ describe("notifyUser side-channel fan-out", () => {
     expect(sendWhatsAppMessageMock).toHaveBeenCalledOnce();
     expect(dispatchNotificationEmailMock).toHaveBeenCalledOnce();
 
-    const wa = sendWhatsAppMessageMock.mock.calls[0]?.[0] as {
+    const wa = sendWhatsAppMessageMock.mock.calls[0]![0] as {
       tenantId: string;
       waId: string;
       text: string;
@@ -131,7 +170,7 @@ describe("notifyUser side-channel fan-out", () => {
     expect(wa.waId).toBe("+628123456789");
     expect(wa.text).toContain("*Approve me*");
 
-    const emailArgs = dispatchNotificationEmailMock.mock.calls[0]?.[0] as {
+    const emailArgs = dispatchNotificationEmailMock.mock.calls[0]![0] as {
       tenantId: string;
       userId: string;
       employeeId: string | null;

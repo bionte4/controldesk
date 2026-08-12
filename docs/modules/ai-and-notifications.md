@@ -137,6 +137,47 @@ sebelah notifikasi umum). Badge dot muncul kalau ada insight
 `/insights` adalah full page — filter by kind, severity, scope, date
 range. Mark-as-read individual atau bulk.
 
+### "Ask ControlDesk" chatbot (Level 1 — Fase 2)
+
+Route: `/help?tab=ask`. API: `POST /api/help/ask` (streaming text).
+
+Chatbot Level-1 yang menjawab **HANYA** dari dokumentasi produk (subset
+`docs/` yang di-manifest di `src/lib/help/articles.ts`). Zero data-leak
+risk — tidak ada tool call, tidak ada akses ke tabel bisnis tenant.
+
+**Pipeline**:
+
+1. **Retrieval** — `src/lib/help/retrieval.ts`. Fuse.js keyword search
+   di server, top-3 artikel yang paling relevan dijadikan CONTEXT.
+2. **Prompt** — `src/lib/help/chat-prompt.ts`. Sistem prompt tersegel
+   dengan guardrail: locale-aware refusal, cross-tenant isolation
+   ("NEVER discuss any tenant other than X"), no mutation offers, dan
+   citation contract (`[slug]` → link ke `/help/{slug}`).
+3. **Model** — resolve via `resolveAiModel(tenantId)` yang sudah
+   dipakai insight generator, jadi tenant AI config di
+   `/settings/integrations/ai` langsung berlaku untuk chatbot.
+4. **Streaming** — `streamText()` dari Vercel AI SDK, di-return sebagai
+   `text/plain` SSE. Client (`HelpAskPanel`) baca via
+   `res.body.getReader()` tanpa dep `@ai-sdk/react`.
+5. **Rate limit + cost cap** — dua Redis buckets:
+   `helpChatPerUser` (6/menit) + `helpChatPerTenant` (60/menit). Token
+   reservasi via `reserve()` (rules §15), commit delta pada
+   `onFinish`.
+
+**Ephemeral by design**: chat history tidak disimpan ke DB (per pilihan
+user Fase 2). Message list hidup di client state; refresh → wipe.
+
+**Citation rewrite**: assistant reply yang menulis `[overview]` di-
+render sebagai link `<Link href="/help/overview">`. Slug allowlist
+diambil dari manifest RSC — hallucination `[foo-bar]` yang tidak ada
+di manifest tetap ditampilkan sebagai teks polos, tidak jadi link
+mati.
+
+**Telemetry**: `log.info("help_chat_reply", {...})` per reply — model
+id, input/output tokens, latency, dan daftar slug yang di-retrieve.
+Tidak menyentuh `ai_insights` (schema itu untuk 4 structured
+generator, bukan chat).
+
 ## Part 2 — Notifications system
 
 Tiga surface paralel:

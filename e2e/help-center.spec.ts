@@ -72,4 +72,22 @@ test.describe("Help center — knowledge base", () => {
     // At least one result link visible in the results region.
     await expect(results.getByRole("link").first()).toBeVisible();
   });
+
+  test("Ask AI tab shows welcome + input when opened via ?tab=ask", async ({
+    page,
+  }) => {
+    await loginAs(page, "employee");
+    // Deep-link straight into the chat tab — the RSC page honours
+    // `?tab=ask` as the initial selected tab.
+    await page.goto("/help?tab=ask");
+
+    // Welcome card is rendered before the user sends anything.
+    await expect(
+      page.getByText(/asisten dokumentasi ControlDesk|documentation assistant/i),
+    ).toBeVisible();
+    // Composer textarea is present and enabled.
+    const composer = page.getByRole("textbox");
+    await expect(composer).toBeVisible();
+    await expect(composer).toBeEnabled();
+  });
 });

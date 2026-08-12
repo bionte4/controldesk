@@ -89,7 +89,31 @@
     "readArticle": "Baca artikel",
     "backToIndex": "Kembali ke Pusat Bantuan",
     "openFullGuide": "Buka panduan lengkap",
-    "hintTrigger": "Tampilkan bantuan: {title}"
+    "hintTrigger": "Tampilkan bantuan: {title}",
+    "tabBrowse": "Telusuri artikel",
+    "tabAsk": "Tanya AI",
+    "ask": {
+      "welcomeTitle": "Halo! Saya asisten dokumentasi ControlDesk.",
+      "welcomeBody": "Saya menjawab hanya dari dokumentasi produk — tidak dari data proyek/keuangan Anda. Cocok untuk pertanyaan 'bagaimana cara…' dan 'apa itu…'.",
+      "suggestion1": "Bagaimana cara submit expense dan alur approval-nya?",
+      "suggestion2": "Apa perbedaan kas bon General dan Field Ops?",
+      "suggestion3": "Siapa yang bisa approve budget request di atas Rp 50 juta?",
+      "inputPlaceholder": "Ketik pertanyaan Anda… (Enter untuk kirim, Shift+Enter untuk baris baru)",
+      "footerHint": "Jawaban berbasis dokumentasi. Verifikasi via link kutipan di jawaban.",
+      "send": "Kirim",
+      "sending": "Mengirim…",
+      "reset": "Percakapan baru",
+      "error": {
+        "rate_limitedTitle": "Terlalu cepat",
+        "rate_limitedBody": "Anda mengirim pesan terlalu banyak dalam waktu singkat. Coba lagi dalam 1 menit.",
+        "quota_exceededTitle": "Kuota AI harian tercapai",
+        "quota_exceededBody": "Tenant ini sudah mencapai batas token AI hari ini. Hubungi admin untuk menaikkan kuota, atau coba lagi besok.",
+        "not_configuredTitle": "AI belum dikonfigurasi",
+        "not_configuredBody": "Admin belum mengaktifkan AI di Settings → Integrations → AI. Minta admin untuk mengaturnya terlebih dahulu.",
+        "networkTitle": "Koneksi bermasalah",
+        "networkBody": "Tidak dapat mencapai layanan AI. Cek koneksi internet Anda dan coba lagi."
+      }
+    }
   },
   "profile": {
     "kicker": "Akun saya",

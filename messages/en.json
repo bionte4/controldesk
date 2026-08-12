@@ -89,7 +89,31 @@
     "readArticle": "Read article",
     "backToIndex": "Back to Help Center",
     "openFullGuide": "Open full guide",
-    "hintTrigger": "Show help: {title}"
+    "hintTrigger": "Show help: {title}",
+    "tabBrowse": "Browse articles",
+    "tabAsk": "Ask AI",
+    "ask": {
+      "welcomeTitle": "Hi! I'm the ControlDesk documentation assistant.",
+      "welcomeBody": "I only answer from product docs — not from your project or finance data. Great for 'how do I…' and 'what is…' questions.",
+      "suggestion1": "How do I submit an expense and what's the approval flow?",
+      "suggestion2": "What's the difference between General and Field Ops cash advances?",
+      "suggestion3": "Who can approve a budget request over IDR 50 million?",
+      "inputPlaceholder": "Type your question… (Enter to send, Shift+Enter for a new line)",
+      "footerHint": "Answers come from the docs. Verify via the citation links in each reply.",
+      "send": "Send",
+      "sending": "Sending…",
+      "reset": "New conversation",
+      "error": {
+        "rate_limitedTitle": "Slow down",
+        "rate_limitedBody": "You've sent too many messages in a short time. Please wait a minute and try again.",
+        "quota_exceededTitle": "Daily AI quota reached",
+        "quota_exceededBody": "This workspace has hit today's AI token cap. Ask your admin to raise the quota, or try again tomorrow.",
+        "not_configuredTitle": "AI is not configured",
+        "not_configuredBody": "An admin has not enabled AI in Settings → Integrations → AI. Ask them to configure it first.",
+        "networkTitle": "Connection problem",
+        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again."
+      }
+    }
   },
   "profile": {
     "kicker": "My account",

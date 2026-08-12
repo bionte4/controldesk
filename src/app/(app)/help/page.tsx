@@ -4,6 +4,7 @@ import { ArrowRight, BookOpen } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { HelpSearch } from "@/components/help/help-search";
+import { HelpTabs } from "@/components/help/help-tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   HELP_CATEGORY_META,
@@ -16,39 +17,72 @@ import {
 export const metadata: Metadata = { title: "Help" };
 
 /**
- * `/help` index — landing page for the in-app knowledge base.
+ * `/help` — in-app knowledge base + chatbot landing.
  *
- * Layout:
- *   1. Hero + search bar (top) — client component wraps fuse.js over
- *      the full article index. Filters by title + summary + slug.
- *   2. Category groups (bottom) — one Card per category, each showing
- *      the articles that belong to it. Server-rendered from
- *      `HELP_MANIFEST` order (see `lib/help/articles.ts`).
+ * Two tabs (rules §17 + user's Fase 2 pick):
+ *   1. **Browse** — the RSC-rendered content produced here (search
+ *      bar + category cards). All data is derived from
+ *      `HELP_MANIFEST` at request time, memoised via `React.cache()`
+ *      so re-reads within a request are free.
+ *   2. **Ask ControlDesk** — RAG chatbot, mounted lazily by the
+ *      `<HelpTabs>` client component. Keyword retrieval + tenant's
+ *      own AI config; ephemeral history; details in
+ *      `src/app/api/help/ask/route.ts`.
  *
- * All data is derived from the manifest at request time, memoised via
- * `React.cache()` — one filesystem read per request regardless of how
- * many components consume it. No DB, no RLS to worry about; content
- * comes from the repo, not per-tenant storage (rules §17).
+ * Deep links: `/help?tab=ask` opens directly on the chat tab, useful
+ * for CTAs in transactional emails and cross-page prompts ("Try the
+ * new AI assistant"). Query param is validated below.
  */
-export default async function HelpIndexPage() {
-  const [t, locale, articles] = await Promise.all([
+export default async function HelpIndexPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [t, locale, articles, resolvedParams] = await Promise.all([
     getTranslations("help"),
     getLocale(),
     loadAllHelpArticles(),
+    (searchParams ?? Promise.resolve({})) as Promise<
+      Record<string, string | string[] | undefined>
+    >,
   ]);
 
+  const rawTab = resolvedParams["tab"];
+  const tabParam = Array.isArray(rawTab) ? rawTab[0] : rawTab;
+  const defaultTab: "browse" | "ask" = tabParam === "ask" ? "ask" : "browse";
+
   const grouped = groupByCategory(articles);
-  // Trim payload before sending to the client search index — the raw
-  // markdown body is unnecessary and would balloon the JS bundle.
   const searchIndex = articles.map((a) => ({
     slug: a.slug,
     title: a.title,
     summary: a.summary,
     category: a.category,
-    // A short, non-formatted preview of the body for search matching —
-    // strip fences/headings so hits are readable.
     preview: previewFor(a),
   }));
+
+  const browseSlot = (
+    <div className="flex flex-col gap-6">
+      <HelpSearch
+        articles={searchIndex}
+        locale={locale === "en" ? "en" : "id"}
+      />
+      <div className="grid gap-6 lg:grid-cols-2">
+        {HELP_CATEGORY_ORDER.map((catId) => {
+          const items = grouped.get(catId) ?? [];
+          if (items.length === 0) return null;
+          return (
+            <CategoryCard
+              key={catId}
+              category={catId}
+              articles={items}
+              locale={locale === "en" ? "en" : "id"}
+              readLabel={t("readArticle")}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -67,26 +101,11 @@ export default async function HelpIndexPage() {
         </div>
       </header>
 
-      <HelpSearch
-        articles={searchIndex}
-        locale={locale === "en" ? "en" : "id"}
+      <HelpTabs
+        browseSlot={browseSlot}
+        articleSlugs={articles.map((a) => a.slug)}
+        defaultTab={defaultTab}
       />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        {HELP_CATEGORY_ORDER.map((catId) => {
-          const items = grouped.get(catId) ?? [];
-          if (items.length === 0) return null;
-          return (
-            <CategoryCard
-              key={catId}
-              category={catId}
-              articles={items}
-              locale={locale === "en" ? "en" : "id"}
-              readLabel={t("readArticle")}
-            />
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -151,11 +170,6 @@ function groupByCategory(
   return out;
 }
 
-/**
- * Strip markdown syntax + limit length so the client-side search has
- * a compact string to index. Real markdown rendering happens on the
- * article page — this is just for haystack matching.
- */
 function previewFor(a: HelpArticle): string {
   const stripped = a.markdown
     .replace(/```[\s\S]*?```/g, " ")

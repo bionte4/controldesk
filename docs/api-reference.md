@@ -280,6 +280,48 @@ Response:
 }
 ```
 
+## Help center endpoints
+
+### `POST /api/help/ask`
+
+Streaming chatbot backend for the "Ask ControlDesk" tab at `/help`
+(chatbot Level 1 — docs-only RAG). Implementation:
+`src/app/api/help/ask/route.ts`.
+
+- **Auth** — requires an authenticated employee. Tenant scope is
+  derived from `requireCurrentEmployee()` (never trusts request body).
+- **Rate limit** — two Redis buckets: 6 messages/min per user
+  (`helpChatPerUser`) + 60 messages/min per tenant
+  (`helpChatPerTenant`). 429 with `Retry-After` header on breach.
+- **Token cap** — `reserve(ESTIMATED_OUTPUT_TOKENS)` against the
+  tenant's daily AI budget BEFORE contacting the provider (rules §15).
+  Returns 402 with the current used/cap on overshoot; refunds the
+  reservation on provider failure.
+- **Body** — `{ messages: [{ role: 'user' | 'assistant', content }] }`,
+  1–20 messages, each 1–8000 chars.
+- **Response** — `text/plain; charset=utf-8` stream. Consume with
+  `res.body.getReader()`.
+
+Error responses:
+
+| Status | Meaning                                                                       |
+| ------ | ----------------------------------------------------------------------------- |
+| 400    | `invalid_body` — Zod schema failed OR no user message in `messages`.          |
+| 402    | `daily_ai_budget_exceeded` — tenant token cap reached today.                  |
+| 429    | `rate_limited` — per-user or per-tenant window exceeded.                      |
+| 500    | `tenant_lookup_failed` — defensive; the session's tenant_id can't be resolved.|
+| 502    | `llm_failed` — provider returned an error mid-stream.                         |
+| 503    | `ai_not_configured` — tenant has no active AI config; admin must set one.     |
+
+Isolation guarantees:
+
+- The tenant name that lands in the system prompt is loaded via
+  `.eq("id", tenantId)` where `tenantId` comes from the session.
+- Retrieval reads `docs/`-derived static content only — no tenant DB
+  reads, so nothing to leak across tenants.
+- Telemetry via `log.info("help_chat_reply", …)` — never persists user
+  content, only slug hits, latency, and token counts.
+
 ## Observability endpoints
 
 ### `POST /api/observability/report`
