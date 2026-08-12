@@ -53,7 +53,7 @@ jobs:
       # in package.json — do NOT pass a `version:` here or the action
       # errors with "Multiple versions of pnpm specified".
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: actions/setup-node@v4
