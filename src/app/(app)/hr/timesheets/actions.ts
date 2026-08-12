@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import { nextTimesheetStatus } from "@/lib/timesheets/state";
@@ -120,7 +121,7 @@ export const approveTimesheetAction = withSecureAction({
     const supabase = await createClient();
     const { data: current, error: readErr } = await supabase
       .from("timesheets")
-      .select("id, status, employee_id")
+      .select("id, status, employee_id, work_date")
       .eq("id", input.id)
       .eq("tenant_id", ctx.actor.tenantId)
       .maybeSingle();
@@ -142,6 +143,30 @@ export const approveTimesheetAction = withSecureAction({
       .eq("id", current.id)
       .eq("tenant_id", ctx.actor.tenantId);
     if (error) throw new Error(error.message);
+
+    // Notify the submitter so they know their timesheet was accepted.
+    // `notifyUser()` fans out to in-app + Telegram + WhatsApp based on
+    // the recipient's per-category preferences. Best-effort — a failed
+    // notification must never roll back a successful approval.
+    const { data: submitter } = await supabase
+      .from("employees")
+      .select("id, user_id")
+      .eq("id", current.employee_id)
+      .maybeSingle();
+    if (submitter?.user_id) {
+      void notifyUser({
+        recipient: { userId: submitter.user_id, employeeId: submitter.id },
+        kind: "TIMESHEET_APPROVED",
+        title: "Timesheet disetujui",
+        body:
+          input.comment && input.comment.trim().length > 0
+            ? `Timesheet ${current.work_date} disetujui. Catatan approver: ${input.comment.trim()}`
+            : `Timesheet ${current.work_date} disetujui.`,
+        actionUrl: `/hr/timesheets/${current.id}`,
+        payload: { timesheet_id: current.id, work_date: current.work_date },
+        tenantId: ctx.actor.tenantId,
+      });
+    }
 
     revalidatePath("/hr/timesheets");
     return {
@@ -167,7 +192,7 @@ export const rejectTimesheetAction = withSecureAction({
     const supabase = await createClient();
     const { data: current, error: readErr } = await supabase
       .from("timesheets")
-      .select("id, status")
+      .select("id, status, employee_id, work_date")
       .eq("id", input.id)
       .eq("tenant_id", ctx.actor.tenantId)
       .maybeSingle();
@@ -188,6 +213,30 @@ export const rejectTimesheetAction = withSecureAction({
       .eq("id", current.id)
       .eq("tenant_id", ctx.actor.tenantId);
     if (error) throw new Error(error.message);
+
+    // Notify the submitter that changes are needed so the timesheet
+    // doesn't sit in REJECTED indefinitely (submitter can `SUBMIT`
+    // again after fixing). Same fan-out semantics as APPROVE.
+    const { data: submitter } = await supabase
+      .from("employees")
+      .select("id, user_id")
+      .eq("id", current.employee_id)
+      .maybeSingle();
+    if (submitter?.user_id) {
+      void notifyUser({
+        recipient: { userId: submitter.user_id, employeeId: submitter.id },
+        kind: "TIMESHEET_REJECTED",
+        title: "Timesheet perlu revisi",
+        body: `Timesheet ${current.work_date} dikembalikan. Alasan: ${input.reason}`,
+        actionUrl: `/hr/timesheets/${current.id}`,
+        payload: {
+          timesheet_id: current.id,
+          work_date: current.work_date,
+          rejection_reason: input.reason,
+        },
+        tenantId: ctx.actor.tenantId,
+      });
+    }
 
     revalidatePath("/hr/timesheets");
     return {

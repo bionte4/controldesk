@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import { toLegacyDbRole, type AnyDbEmployeeRole } from "@/lib/rbac/roles";
@@ -223,6 +224,34 @@ export const approveWeeklyTimesheetAction = withSecureAction({
       comment: input.comment ?? null,
     });
 
+    // Only ping the submitter on the terminal APPROVED state, not on
+    // interim states like PENDING_LEAD → PENDING_HR. This matches the
+    // in-app UX: users hear back once their week is fully approved.
+    if (next === "APPROVED") {
+      const { data: submitter } = await supabase
+        .from("employees")
+        .select("id, user_id")
+        .eq("id", current.employee_id)
+        .maybeSingle();
+      if (submitter?.user_id) {
+        void notifyUser({
+          recipient: { userId: submitter.user_id, employeeId: submitter.id },
+          kind: "TIMESHEET_APPROVED",
+          title: "Timesheet mingguan disetujui",
+          body:
+            input.comment && input.comment.trim().length > 0
+              ? `Minggu mulai ${current.week_start_date} disetujui. Catatan: ${input.comment.trim()}`
+              : `Minggu mulai ${current.week_start_date} disetujui.`,
+          actionUrl: `/hr/timesheets/weekly/${current.week_start_date}`,
+          payload: {
+            timesheet_week_id: current.id,
+            week_start_date: current.week_start_date,
+          },
+          tenantId: ctx.actor.tenantId,
+        });
+      }
+    }
+
     revalidatePath("/hr/timesheets");
     revalidatePath("/hr/timesheets/weekly");
     revalidatePath(`/hr/timesheets/weekly/${current.week_start_date}`);
@@ -293,6 +322,30 @@ export const rejectWeeklyTimesheetAction = withSecureAction({
       .eq("tenant_id", ctx.actor.tenantId)
       .eq("week_id", current.id);
     if (dayCascade.error) throw new Error(dayCascade.error.message);
+
+    // Notify the submitter so they can act on the feedback quickly.
+    // Reject fires from any status, so no `next === "REJECTED"` guard
+    // is needed here — the state machine can only land on REJECTED.
+    const { data: submitter } = await supabase
+      .from("employees")
+      .select("id, user_id")
+      .eq("id", current.employee_id)
+      .maybeSingle();
+    if (submitter?.user_id) {
+      void notifyUser({
+        recipient: { userId: submitter.user_id, employeeId: submitter.id },
+        kind: "TIMESHEET_REJECTED",
+        title: "Timesheet mingguan perlu revisi",
+        body: `Minggu mulai ${current.week_start_date} dikembalikan. Alasan: ${input.reason}`,
+        actionUrl: `/hr/timesheets/weekly/${current.week_start_date}`,
+        payload: {
+          timesheet_week_id: current.id,
+          week_start_date: current.week_start_date,
+          rejection_reason: input.reason,
+        },
+        tenantId: ctx.actor.tenantId,
+      });
+    }
 
     await supabase.from("timesheet_week_approval_logs").insert({
       tenant_id: ctx.actor.tenantId,

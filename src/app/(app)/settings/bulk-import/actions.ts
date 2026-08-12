@@ -15,6 +15,7 @@ import {
   isImportResource,
   type ImportResource,
 } from "@/lib/import/types";
+import { notifyUser } from "@/lib/notifications/service";
 import { recordAudit } from "@/lib/security/audit";
 import { authorize } from "@/lib/security/pdp";
 import { RateLimitPresets, limit } from "@/lib/security/rate-limit";
@@ -362,6 +363,32 @@ export async function runImportAction(fd: FormData): Promise<CommitResult> {
       const paths = revalidationPathsFor(resource);
       for (const p of paths) revalidatePath(p);
       revalidatePath("/settings/bulk-import");
+
+      // Ping the uploader when the job finishes so long imports don't
+      // require staring at the browser tab. Fire-and-forget; a failed
+      // notification never rolls back a successful commit (the ledger
+      // row + audit log are already durable at this point).
+      // `requireCurrentEmployee` guarantees `user_id` is non-null.
+      void notifyUser({
+        recipient: {
+          userId: employee.user_id,
+          employeeId: employee.id,
+        },
+        kind: "BULK_IMPORT_COMPLETED",
+        title: `Import ${resource.toLowerCase()} selesai`,
+        body:
+          inserted + updated === 0
+            ? `File ${filename}: tidak ada baris yang berubah (kemungkinan semua duplikat).`
+            : `File ${filename}: ${inserted} ditambahkan, ${updated} diperbarui.`,
+        actionUrl: `/settings/bulk-import?job=${jobId}`,
+        payload: {
+          job_id: jobId,
+          resource,
+          inserted,
+          updated,
+        },
+        tenantId: employee.tenant_id,
+      });
 
       return {
         ok: true,
