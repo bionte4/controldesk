@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { buildSystemPrompt } from "@/lib/help/chat-prompt";
 import { retrieveContext } from "@/lib/help/retrieval";
+import { deriveTitle } from "@/lib/help/title";
 import { resolveAiModel } from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { makeToolRegistry } from "@/lib/ai/tools";
@@ -167,33 +168,59 @@ export async function POST(request: Request): Promise<Response> {
   // ------------------------------------------------------------------
   let conversationId: string | null = null;
   if (payload.conversationId) {
-    // Upsert conversation — creates on first message, no-ops after.
-    // RLS enforces {tenant_id, user_id} scope; if a different user
-    // somehow guessed a colleague's uuid, the upsert would fail with
-    // an RLS error and we'd fall back to Level 1.
-    const { data: convRow, error: convErr } = await supabase
+    // Two-phase to distinguish "new conversation" from "resume".
+    // On first message we derive a sidebar-friendly title from the
+    // user's opener; on subsequent turns we leave the title alone so
+    // renaming an in-progress thread doesn't stomp on what the user
+    // has been referring to it as. RLS ({tenant_id, user_id})
+    // enforces the isolation; guessing a colleague's uuid returns 0
+    // rows.
+    const { data: existing } = await supabase
       .from("tenant_chat_conversations")
-      .upsert(
-        {
+      .select("id, title")
+      .eq("id", payload.conversationId)
+      .maybeSingle();
+
+    if (!existing) {
+      const derivedTitle = deriveTitle(lastUser.content);
+      const { data: convRow, error: convErr } = await supabase
+        .from("tenant_chat_conversations")
+        .insert({
           id: payload.conversationId,
           tenant_id: tenantId,
           user_id: userId,
           employee_id: employeeId,
-        },
-        { onConflict: "id" },
-      )
-      .select("id")
-      .maybeSingle();
-    if (convErr || !convRow) {
-      // Continue as Level 1 rather than failing the whole request —
-      // history is a nice-to-have.
-      log.warn("help_chat_conversation_upsert_failed", {
-        tenant_id: tenantId,
-        user_id: userId,
-        error: convErr?.message,
-      });
+          title: derivedTitle,
+        })
+        .select("id")
+        .maybeSingle();
+      if (convErr || !convRow) {
+        log.warn("help_chat_conversation_insert_failed", {
+          tenant_id: tenantId,
+          user_id: userId,
+          error: convErr?.message,
+        });
+      } else {
+        conversationId = convRow.id;
+      }
     } else {
-      conversationId = convRow.id;
+      conversationId = existing.id;
+      // Back-fill title if a legacy row happens to lack one. Idempotent
+      // and safe against later fills because the UPDATE only touches
+      // rows where title IS NULL.
+      if (!existing.title) {
+        const derivedTitle = deriveTitle(lastUser.content);
+        if (derivedTitle) {
+          await supabase
+            .from("tenant_chat_conversations")
+            .update({ title: derivedTitle })
+            .eq("id", existing.id)
+            .is("title", null);
+        }
+      }
+    }
+
+    if (conversationId) {
       // Persist the user's new turn immediately so it's captured even
       // if the model call fails midway.
       await supabase.from("tenant_chat_messages").insert({

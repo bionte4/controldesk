@@ -90,4 +90,33 @@ test.describe("Help center — knowledge base", () => {
     await expect(composer).toBeVisible();
     await expect(composer).toBeEnabled();
   });
+
+  test("Ask AI history sidebar hits the conversations API on mount", async ({
+    page,
+  }) => {
+    await loginAs(page, "employee");
+
+    // Wait for the sidebar's initial GET before the tab renders any
+    // content — this proves the client wires the history endpoint on
+    // mount even in the empty state, without needing a real LLM
+    // configured for the tenant.
+    const historyRequest = page.waitForRequest(
+      (req) =>
+        req.url().includes("/api/help/conversations") &&
+        req.method() === "GET",
+    );
+    await page.goto("/help?tab=ask");
+    const req = await historyRequest;
+    expect(req.method()).toBe("GET");
+
+    // Sidebar renders with the "New conversation" button. The
+    // aria-label on the aside comes from the localised history.title.
+    const sidebar = page.getByRole("complementary", {
+      name: /Riwayat percakapan|Recent conversations/i,
+    });
+    await expect(sidebar).toBeVisible();
+    await expect(
+      sidebar.getByRole("button", { name: /Percakapan baru|New conversation/i }),
+    ).toBeVisible();
+  });
 });

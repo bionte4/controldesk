@@ -340,6 +340,42 @@ Isolation guarantees:
 - Telemetry via `log.info("help_chat_reply", …)` — never persists user
   content, only slug hits, latency, and token counts.
 
+### `GET /api/help/conversations`
+
+Lists the caller's own recent chatbot conversations for the "Ask AI"
+sidebar. Implementation: `src/app/api/help/conversations/route.ts`.
+
+- **Auth** — `requireCurrentEmployee()`.
+- **RLS** — `tenant_chat_conversations_tenant_read` (migration 0085)
+  enforces `tenant_id = current_tenant_id() AND user_id = auth.uid()`.
+  Tenant admins cannot read colleagues' chats.
+- **Response** — `{ conversations: [{ id, title, updated_at,
+  message_count }] }`. Max 10 rows, sorted by `updated_at desc`.
+  `message_count` counts only `user` + `assistant` roles; `tool`
+  traces are internal.
+
+### `GET /api/help/conversations/{id}`
+
+Hydrates one thread's messages so the client sidebar can resume it.
+
+- **Auth + RLS** — same as list.
+- **Path** — `{id}` must be a UUID. Non-UUID returns 400
+  `invalid_id`; unknown UUID (either non-existent or owned by another
+  user) returns 404 `not_found` — no existence oracle between users.
+- **Response** — `{ id, title, messages: [{ id, role, content,
+  created_at }] }` sorted by `created_at asc`. `tool` role rows are
+  filtered out.
+
+### `DELETE /api/help/conversations/{id}`
+
+Hard-deletes a thread and cascades to its messages.
+
+- **Auth + RLS** — same as above.
+- **Response** — `{ ok: true }` on success. 500 `delete_failed` when
+  the RLS-guarded delete errors; the row is silently untouched if the
+  policy denies (no existence oracle).
+- Telemetry — `log.info("help_conversation_deleted", …)`.
+
 ### `POST /api/ai/copilot`
 
 Streaming per-field inline AI copilot (Level 3). Implementation:

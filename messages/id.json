@@ -103,6 +103,21 @@
       "send": "Kirim",
       "sending": "Mengirim…",
       "reset": "Percakapan baru",
+      "history": {
+        "title": "Riwayat percakapan",
+        "empty": "Belum ada percakapan tersimpan.",
+        "newButton": "Percakapan baru",
+        "loadFailed": "Gagal memuat riwayat.",
+        "resumeFailed": "Gagal membuka percakapan.",
+        "deleteFailed": "Gagal menghapus percakapan.",
+        "delete": "Hapus percakapan",
+        "deleteConfirm": "Hapus percakapan ini secara permanen?",
+        "untitled": "Percakapan tanpa judul",
+        "loading": "Memuat…",
+        "messagesCount": "{count, plural, =1 {# pesan} other {# pesan}}",
+        "srToggleOpen": "Buka daftar percakapan",
+        "srToggleClose": "Tutup daftar percakapan"
+      },
       "error": {
         "rate_limitedTitle": "Terlalu cepat",
         "rate_limitedBody": "Anda mengirim pesan terlalu banyak dalam waktu singkat. Coba lagi dalam 1 menit.",

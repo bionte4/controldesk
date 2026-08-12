@@ -103,6 +103,21 @@
       "send": "Send",
       "sending": "Sending…",
       "reset": "New conversation",
+      "history": {
+        "title": "Recent conversations",
+        "empty": "No saved conversations yet.",
+        "newButton": "New conversation",
+        "loadFailed": "Failed to load history.",
+        "resumeFailed": "Failed to open the conversation.",
+        "deleteFailed": "Failed to delete the conversation.",
+        "delete": "Delete conversation",
+        "deleteConfirm": "Permanently delete this conversation?",
+        "untitled": "Untitled conversation",
+        "loading": "Loading…",
+        "messagesCount": "{count, plural, =1 {# message} other {# messages}}",
+        "srToggleOpen": "Show conversation history",
+        "srToggleClose": "Hide conversation history"
+      },
       "error": {
         "rate_limitedTitle": "Slow down",
         "rate_limitedBody": "You've sent too many messages in a short time. Please wait a minute and try again.",

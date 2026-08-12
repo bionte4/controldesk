@@ -10,8 +10,18 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { ArrowUpRight, Bot, Loader2, RotateCcw, Send, User } from "lucide-react";
-import { useTranslations } from "next-intl";
+import {
+  ArrowUpRight,
+  Bot,
+  Loader2,
+  MessageSquare,
+  Plus,
+  RotateCcw,
+  Send,
+  Trash2,
+  User,
+} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,9 +33,11 @@ import { cn } from "@/lib/utils";
  * chatbot. Renders inside the AskAI tab on `/help`.
  *
  * Design notes:
- *   • Ephemeral by design (user's Fase-2 choice). Messages live in
- *     component state; refresh wipes the conversation. Nothing hits
- *     the DB.
+ *   • History-aware. Past conversations live in
+ *     `tenant_chat_conversations` (migration 0085) and are hydrated
+ *     into a left-hand sidebar so users can resume prior threads
+ *     instead of losing context on every reload. `activeId` tracks
+ *     which conversation the composer is talking to.
  *   • Streams from `/api/help/ask` via plain fetch + ReadableStream —
  *     no @ai-sdk/react dep. Keeps the surface minimal and avoids
  *     shipping the SDK's client bundle to every user who never uses
@@ -41,6 +53,13 @@ import { cn } from "@/lib/utils";
  */
 
 type Msg = { id: string; role: "user" | "assistant"; content: string };
+
+type ConversationSummary = {
+  id: string;
+  title: string | null;
+  updated_at: string;
+  message_count: number;
+};
 
 type ErrorKind =
   | "rate_limited"
@@ -60,6 +79,11 @@ type Props = {
 
 export function HelpAskPanel({ articleSlugs }: Props) {
   const t = useTranslations("help.ask");
+  // Cast the strongly-typed translator down to a plain
+  // `(key, values?) => string` to keep the tsc instantiation cheap
+  // when we pass `{ count }` for plural resolution.
+  const tHistory = useTranslations("help.ask.history") as HistoryTranslator;
+  const locale = useLocale();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -78,6 +102,40 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   //
   // Regenerated on `reset()` — a new conversation is a new uuid.
   const [conversationId, setConversationId] = useState<string>(() => randomUuid());
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+  const [hydratingId, setHydratingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Toggle the sidebar on narrow viewports where 100% chat width is
+  // more valuable than a permanently visible list.
+  const [historyOpenMobile, setHistoryOpenMobile] = useState(false);
+
+  const refreshHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const res = await fetch("/api/help/conversations", {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        setHistoryError(tHistory("loadFailed"));
+        return;
+      }
+      const payload: { conversations?: ConversationSummary[] } = await res.json();
+      setConversations(payload.conversations ?? []);
+      setHistoryError(null);
+    } catch {
+      setHistoryError(tHistory("loadFailed"));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [tHistory]);
+
+  useEffect(() => {
+    void refreshHistory();
+  }, [refreshHistory]);
 
   // Auto-scroll the log to the bottom on every new token so the user
   // sees the latest reply. `behavior: "auto"` (not "smooth") because
@@ -171,6 +229,11 @@ export function HelpAskPanel({ articleSlugs }: Props) {
             ),
           );
         }
+        // Refresh sidebar so the new conversation (or updated timestamp
+        // on a resumed one) shows up. Fire-and-forget — the chat
+        // itself is already visible; a slow history call shouldn't
+        // block interaction.
+        void refreshHistory();
       } catch (err) {
         if ((err as Error)?.name === "AbortError") return;
         setError("network");
@@ -180,7 +243,7 @@ export function HelpAskPanel({ articleSlugs }: Props) {
         abortRef.current = null;
       }
     },
-    [messages, streaming, conversationId],
+    [messages, streaming, conversationId, refreshHistory],
   );
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -197,112 +260,396 @@ export function HelpAskPanel({ articleSlugs }: Props) {
     }
   };
 
-  const reset = () => {
+  const reset = useCallback(() => {
     abortRef.current?.abort();
     setMessages([]);
     setError(null);
     // Fresh conversation id → server creates a new parent row and
     // history for the next turn stops carrying the prior context.
     setConversationId(randomUuid());
-  };
+    setHistoryOpenMobile(false);
+  }, []);
+
+  const resumeConversation = useCallback(
+    async (id: string) => {
+      if (streaming || hydratingId) return;
+      // Ignore no-ops so clicking the active thread doesn't refetch.
+      if (id === conversationId) {
+        setHistoryOpenMobile(false);
+        return;
+      }
+      setHydratingId(id);
+      setHistoryError(null);
+      abortRef.current?.abort();
+      try {
+        const res = await fetch(
+          `/api/help/conversations/${encodeURIComponent(id)}`,
+          {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+          },
+        );
+        if (!res.ok) {
+          setHistoryError(tHistory("resumeFailed"));
+          return;
+        }
+        const payload = (await res.json()) as {
+          id: string;
+          title: string | null;
+          messages: Array<{
+            id: string;
+            role: "user" | "assistant";
+            content: string;
+          }>;
+        };
+        setMessages(
+          payload.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+          })),
+        );
+        setConversationId(payload.id);
+        setError(null);
+        setHistoryOpenMobile(false);
+      } catch {
+        setHistoryError(tHistory("resumeFailed"));
+      } finally {
+        setHydratingId(null);
+      }
+    },
+    [conversationId, hydratingId, streaming, tHistory],
+  );
+
+  const deleteConversation = useCallback(
+    async (id: string) => {
+      if (deletingId) return;
+      // Confirm at the browser level — no custom modal for a
+      // destructive but recoverable-nearby action (the user can
+      // always start a new thread).
+      if (
+        typeof window !== "undefined" &&
+        !window.confirm(tHistory("deleteConfirm"))
+      ) {
+        return;
+      }
+      setDeletingId(id);
+      try {
+        const res = await fetch(
+          `/api/help/conversations/${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+        );
+        if (!res.ok) {
+          setHistoryError(tHistory("deleteFailed"));
+          return;
+        }
+        setConversations((prev) => prev.filter((c) => c.id !== id));
+        // If the deleted thread was active, drop into a fresh
+        // conversation so the composer doesn't dangle-reference a row
+        // that no longer exists.
+        if (id === conversationId) {
+          reset();
+        }
+      } catch {
+        setHistoryError(tHistory("deleteFailed"));
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [conversationId, deletingId, reset, tHistory],
+  );
+
+  const showMobileHistoryToggle = conversations.length > 0 || historyLoading;
 
   return (
-    <div className="flex flex-col gap-4">
-      {messages.length === 0 && (
-        <div className="rounded-lg border bg-muted/30 p-6 text-sm">
-          <div className="flex items-start gap-3">
-            <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-              <Bot className="size-4" aria-hidden />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">{t("welcomeTitle")}</p>
-              <p className="mt-1 text-muted-foreground">
-                {t("welcomeBody")}
-              </p>
-              <ul className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
-                <li>• {t("suggestion1")}</li>
-                <li>• {t("suggestion2")}</li>
-                <li>• {t("suggestion3")}</li>
-              </ul>
+    <div className="flex flex-col gap-4 md:grid md:grid-cols-[16rem,1fr] md:gap-4">
+      <ConversationSidebar
+        className={cn(
+          "md:sticky md:top-4 md:self-start",
+          historyOpenMobile ? "block" : "hidden md:block",
+        )}
+        conversations={conversations}
+        activeId={conversationId}
+        loading={historyLoading}
+        error={historyError}
+        hydratingId={hydratingId}
+        deletingId={deletingId}
+        onResume={resumeConversation}
+        onDelete={deleteConversation}
+        onNew={reset}
+        locale={locale}
+        t={tHistory}
+      />
+
+      <div className="flex min-w-0 flex-col gap-4">
+        {showMobileHistoryToggle && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="justify-start md:hidden"
+            onClick={() => setHistoryOpenMobile((v) => !v)}
+            aria-expanded={historyOpenMobile}
+            aria-label={
+              historyOpenMobile
+                ? tHistory("srToggleClose")
+                : tHistory("srToggleOpen")
+            }
+          >
+            <MessageSquare className="size-3.5" aria-hidden />
+            {tHistory("title")}
+          </Button>
+        )}
+        {messages.length === 0 && (
+          <div className="rounded-lg border bg-muted/30 p-6 text-sm">
+            <div className="flex items-start gap-3">
+              <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                <Bot className="size-4" aria-hidden />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium">{t("welcomeTitle")}</p>
+                <p className="mt-1 text-muted-foreground">
+                  {t("welcomeBody")}
+                </p>
+                <ul className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
+                  <li>• {t("suggestion1")}</li>
+                  <li>• {t("suggestion2")}</li>
+                  <li>• {t("suggestion3")}</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {messages.length > 0 && (
-        <div
-          ref={scrollRef}
-          className="max-h-[520px] overflow-y-auto rounded-lg border bg-background"
-          role="log"
-          aria-live="polite"
-          aria-atomic="false"
-        >
-          <div className="flex flex-col gap-4 p-4">
-            {messages.map((m) => (
-              <MessageBubble
-                key={m.id}
-                message={m}
-                slugAllowlist={slugSet}
-                streaming={
-                  streaming && m.role === "assistant" && m.id === messages.at(-1)?.id
-                }
-              />
-            ))}
+        {messages.length > 0 && (
+          <div
+            ref={scrollRef}
+            className="max-h-[520px] overflow-y-auto rounded-lg border bg-background"
+            role="log"
+            aria-live="polite"
+            aria-atomic="false"
+          >
+            <div className="flex flex-col gap-4 p-4">
+              {messages.map((m) => (
+                <MessageBubble
+                  key={m.id}
+                  message={m}
+                  slugAllowlist={slugSet}
+                  streaming={
+                    streaming &&
+                    m.role === "assistant" &&
+                    m.id === messages.at(-1)?.id
+                  }
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {error && <ChatError kind={error} t={t} />}
+        {error && <ChatError kind={error} t={t} />}
 
-      <form onSubmit={onSubmit} className="flex flex-col gap-2">
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          rows={2}
-          placeholder={t("inputPlaceholder")}
-          disabled={streaming}
-          className="resize-none"
-          aria-label={t("inputPlaceholder")}
-        />
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-xs text-muted-foreground">
-            {t("footerHint")}
-          </p>
-          <div className="flex items-center gap-2">
-            {messages.length > 0 && !streaming && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={reset}
-              >
-                <RotateCcw className="size-3.5" aria-hidden />
-                {t("reset")}
-              </Button>
-            )}
-            <Button
-              type="submit"
-              size="sm"
-              disabled={streaming || input.trim().length === 0}
-            >
-              {streaming ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
-                  {t("sending")}
-                </>
-              ) : (
-                <>
-                  <Send className="size-3.5" aria-hidden />
-                  {t("send")}
-                </>
+        <form onSubmit={onSubmit} className="flex flex-col gap-2">
+          <Textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+            rows={2}
+            placeholder={t("inputPlaceholder")}
+            disabled={streaming || hydratingId !== null}
+            className="resize-none"
+            aria-label={t("inputPlaceholder")}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">{t("footerHint")}</p>
+            <div className="flex items-center gap-2">
+              {messages.length > 0 && !streaming && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={reset}
+                >
+                  <RotateCcw className="size-3.5" aria-hidden />
+                  {t("reset")}
+                </Button>
               )}
-            </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={streaming || input.trim().length === 0}
+              >
+                {streaming ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                    {t("sending")}
+                  </>
+                ) : (
+                  <>
+                    <Send className="size-3.5" aria-hidden />
+                    {t("send")}
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
+}
+
+// Loosened translator signature. The i18n type inference blows up on
+// the full message tree when passing plural values through
+// `useTranslations`; a plain string-in string-out signature keeps
+// TypeScript within its instantiation budget while runtime behaviour
+// is unchanged (next-intl resolves keys the same way).
+type HistoryTranslator = (
+  key: string,
+  values?: Record<string, string | number>,
+) => string;
+
+function ConversationSidebar({
+  className,
+  conversations,
+  activeId,
+  loading,
+  error,
+  hydratingId,
+  deletingId,
+  onResume,
+  onDelete,
+  onNew,
+  locale,
+  t,
+}: {
+  className?: string;
+  conversations: ConversationSummary[];
+  activeId: string;
+  loading: boolean;
+  error: string | null;
+  hydratingId: string | null;
+  deletingId: string | null;
+  onResume: (id: string) => void;
+  onDelete: (id: string) => void;
+  onNew: () => void;
+  locale: string;
+  t: HistoryTranslator;
+}) {
+  return (
+    <aside
+      className={cn(
+        "flex flex-col gap-2 rounded-lg border bg-muted/20 p-2 md:max-h-[600px] md:overflow-y-auto",
+        className,
+      )}
+      aria-label={t("title")}
+    >
+      <div className="flex items-center justify-between gap-2 px-1 pt-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("title")}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs"
+          onClick={onNew}
+        >
+          <Plus className="size-3" aria-hidden />
+          {t("newButton")}
+        </Button>
+      </div>
+      {error && (
+        <p className="px-2 pb-1 text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      )}
+      {loading && conversations.length === 0 && (
+        <p className="px-2 py-4 text-xs text-muted-foreground">
+          {t("loading")}
+        </p>
+      )}
+      {!loading && conversations.length === 0 && (
+        <p className="px-2 py-4 text-xs text-muted-foreground">{t("empty")}</p>
+      )}
+      <ul className="flex flex-col gap-1">
+        {conversations.map((c) => {
+          const isActive = c.id === activeId;
+          const isHydrating = hydratingId === c.id;
+          const isDeleting = deletingId === c.id;
+          const label = c.title?.trim() || t("untitled");
+          return (
+            <li key={c.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => onResume(c.id)}
+                disabled={isHydrating || isDeleting}
+                className={cn(
+                  "flex w-full flex-col items-start gap-0.5 rounded-md px-2 py-2 pr-8 text-left text-xs transition-colors",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "hover:bg-muted",
+                  (isHydrating || isDeleting) && "opacity-60",
+                )}
+                aria-current={isActive ? "true" : undefined}
+              >
+                <span className="line-clamp-2 font-medium">{label}</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {t("messagesCount", { count: c.message_count })} ·{" "}
+                  {formatRelativeTime(c.updated_at, locale)}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(c.id);
+                }}
+                disabled={isDeleting}
+                className={cn(
+                  "absolute right-1 top-1.5 grid size-6 place-items-center rounded-md text-muted-foreground opacity-0 transition-opacity focus:opacity-100 hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100",
+                  isDeleting && "opacity-100",
+                )}
+                aria-label={t("delete")}
+                title={t("delete")}
+              >
+                {isDeleting ? (
+                  <Loader2 className="size-3 animate-spin" aria-hidden />
+                ) : (
+                  <Trash2 className="size-3" aria-hidden />
+                )}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </aside>
+  );
+}
+
+/**
+ * Locale-aware, low-cost relative-time string. We deliberately avoid
+ * bringing in `date-fns-tz` for this — the sidebar shows fuzzy
+ * timestamps ("5m ago", "yesterday") and the exact instant is
+ * uninteresting. `Intl.RelativeTimeFormat` is native and produces
+ * both Bahasa Indonesia ("5 menit yang lalu") and English ("5 minutes
+ * ago") without a translation table.
+ */
+function formatRelativeTime(iso: string, locale: string): string {
+  const parsed = Date.parse(iso);
+  if (Number.isNaN(parsed)) return "";
+  const diffSec = Math.round((parsed - Date.now()) / 1000);
+  const abs = Math.abs(diffSec);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (abs < 60) return rtf.format(diffSec, "second");
+  if (abs < 3600) return rtf.format(Math.round(diffSec / 60), "minute");
+  if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
+  if (abs < 604800) return rtf.format(Math.round(diffSec / 86400), "day");
+  if (abs < 2592000)
+    return rtf.format(Math.round(diffSec / 604800), "week");
+  if (abs < 31536000)
+    return rtf.format(Math.round(diffSec / 2592000), "month");
+  return rtf.format(Math.round(diffSec / 31536000), "year");
 }
 
 /**
