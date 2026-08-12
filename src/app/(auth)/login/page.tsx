@@ -35,7 +35,7 @@ export default async function LoginPage({
       <p className="text-sm text-muted-foreground text-center">
         {t("newToControlDesk")}{" "}
         <Link
-          href="/register"
+          href="/register-org"
           className="text-foreground font-medium underline underline-offset-4"
         >
           {t("createAccount")}

@@ -86,6 +86,19 @@ export async function proxy(request: NextRequest) {
   // through. `/login` is included because that's where platform admins
   // sign in from apex.
   if (tenant.kind === "apex") {
+    // Legacy `/register` links (from old emails / bookmarks / the marketing
+    // page before Aug 2026) still point at what used to be a partially-wired
+    // in-app "Create workspace" flow under `src/app/(auth)/register/`. That
+    // flow was retired in favour of the full `/register-org` funnel
+    // (verification email + slug provisioning + super-admin visibility).
+    // A 308 permanent redirect keeps those old links functional AND signals
+    // to crawlers to update their target — a proxy rewrite would leave the
+    // wrong URL in the browser bar and confuse anyone who bookmarked it.
+    if (pathname === "/register" || pathname.startsWith("/register/")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/register-org";
+      return NextResponse.redirect(url, 308);
+    }
     if (
       pathname === "/" ||
       pathname.startsWith("/marketing") ||
