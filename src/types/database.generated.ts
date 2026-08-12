@@ -8224,6 +8224,7 @@ export type Database = {
         | "TIMESHEET_APPROVED"
         | "TIMESHEET_REJECTED"
         | "BULK_IMPORT_COMPLETED"
+        | "APPROVAL_IDLE_24H"
       payroll_period_status: "DRAFT" | "FINALIZED"
       petty_cash_replenishment_status:
         | "PENDING_FINANCE"
@@ -8741,6 +8742,7 @@ export const Constants = {
         "TIMESHEET_APPROVED",
         "TIMESHEET_REJECTED",
         "BULK_IMPORT_COMPLETED",
+        "APPROVAL_IDLE_24H",
       ],
       payroll_period_status: ["DRAFT", "FINALIZED"],
       petty_cash_replenishment_status: [

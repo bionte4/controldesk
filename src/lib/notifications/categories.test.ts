@@ -22,6 +22,7 @@ describe("notifications/categories", () => {
       "APPROVAL_REQUESTED",
       "APPROVAL_APPROVED",
       "APPROVAL_REJECTED",
+      "APPROVAL_IDLE_24H",
       "EVALUATION_SUBMITTED",
       "UPK_APPROVED",
       "MONTHLY_REPORT_SUBMITTED",

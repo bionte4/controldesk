@@ -166,6 +166,43 @@ Response:
 }
 ```
 
+### `POST /api/cron/approval-idle-nudge`
+
+**Schedule** — `0 * * * *` (hourly, on the hour).
+
+Bridges the gap between "just submitted" and the once-daily digest.
+For every active tenant, counts pending items (`project_expenses`,
+`cash_advances`, `hr_requests` with `status LIKE 'PENDING_%'`) whose
+`created_at < now() - 24h`. If the total is non-zero, every ACTIVE
+employee with an approver role (SUPERVISOR / PROJECT_MANAGER /
+OPERATIONS_MANAGER / LEAD_FINANCE / GENERAL_MANAGER / TENANT_ADMIN
+plus canonical aliases) receives at most one `APPROVAL_IDLE_24H`
+in-app notification per UTC day.
+
+Deduplication key: `(user_id, kind='APPROVAL_IDLE_24H', created_at
+same UTC day)`. Users can silence the APPROVALS category in
+Preferences to opt out entirely.
+
+Query params:
+
+- `?dry_run=true` — count only, no `notifications` INSERT.
+
+Response:
+
+```json
+{
+  "status": "success",
+  "dry_run": false,
+  "started_at": "2026-08-12T00:00:00.000Z",
+  "stats": {
+    "tenants_processed": 3,
+    "tenants_skipped_no_idle": 12,
+    "notified": 5,
+    "skipped_already_nudged_today": 8
+  }
+}
+```
+
 ### `POST /api/cron/ai-insights-sweep`
 
 **Schedule** — `*/15 * * * *` (every 15 minutes).

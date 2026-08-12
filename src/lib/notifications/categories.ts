@@ -41,6 +41,9 @@ const KIND_CATEGORY: Partial<Record<NotificationKind, NotificationCategory>> =
     APPROVAL_REQUESTED: "APPROVALS",
     APPROVAL_APPROVED: "APPROVALS",
     APPROVAL_REJECTED: "APPROVALS",
+    // Cron-driven "still waiting on you" nudge when a pending item
+    // crosses 24h. Silenceable via the same APPROVALS toggle above.
+    APPROVAL_IDLE_24H: "APPROVALS",
     // Evaluation lifecycle sits in Approvals — it's a supervisor / OM
     // approval chain (see rules §hr-evaluation).
     EVALUATION_DUE: "APPROVALS",
