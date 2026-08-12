@@ -1,44 +1,47 @@
-/* Client-side wrapper around `react-markdown` — the library needs
- * React 19 client components for its internal Suspense boundaries.
+/* Client-side wrapper around `react-markdown`.
  *
- * We accept the plugin arrays as props from the RSC page rather than
- * hard-coding them here so the choice of remark/rehype plugins lives
- * next to the article route (where reviewers expect it). The
- * `unknown[]` typing shape is intentional — remark/rehype's Options
- * typings vary across plugins and forcing a stricter type here means
- * more `as` casts at every call site.
+ * Plugins are imported and configured HERE, not passed in from the
+ * caller. Reason: the RSC → client boundary only serialises plain
+ * data (primitives, plain objects, arrays of those, and Server
+ * Actions). Function references — which every remark/rehype plugin
+ * is — cannot cross that boundary. Passing them as props from a
+ * Server Component page threw at request time:
+ *
+ *   Error: Functions cannot be passed directly to Client Components
+ *   unless you explicitly expose it by marking it with "use server".
+ *
+ * Baking the plugin list into this file also keeps the rendering
+ * pipeline centralised — every `/help/{slug}` page renders with the
+ * same GFM + slug + autolink behaviour, which is what reviewers
+ * expect anyway.
  */
 "use client";
 
-import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
-
-// `react-markdown` re-exports `Options` from `unified`, but `unified`
-// itself isn't a direct dependency of this project so its type
-// declarations aren't resolvable from `.pnpm`. Pull the plugin-list
-// type out of `ReactMarkdown`'s own props instead — same underlying
-// `PluggableList` type, but only via a package we do depend on.
-type PluginList = ComponentProps<typeof ReactMarkdown>["remarkPlugins"];
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
 
 type HelpMarkdownProps = {
   markdown: string;
-  remarkPlugins?: PluginList;
-  rehypePlugins?: PluginList;
 };
 
-export function HelpMarkdown({
-  markdown,
-  remarkPlugins,
-  rehypePlugins,
-}: HelpMarkdownProps) {
+// Constants (not props) so React can safely reuse them across renders
+// without prop-identity churn.
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS: Parameters<typeof ReactMarkdown>[0]["rehypePlugins"] = [
+  rehypeSlug,
+  [rehypeAutolinkHeadings, { behavior: "wrap" }],
+];
+
+export function HelpMarkdown({ markdown }: HelpMarkdownProps) {
   return (
     <ReactMarkdown
-      remarkPlugins={remarkPlugins}
-      rehypePlugins={rehypePlugins}
+      remarkPlugins={REMARK_PLUGINS}
+      rehypePlugins={REHYPE_PLUGINS}
       components={{
-        // External links open in new tab; internal links stay in-app.
-        // `href` starting with `/` is same-origin; anchors (`#…`)
-        // scroll within the same article.
+        // External links open in a new tab; internal/anchor links
+        // stay in-app so client-side navigation still works.
         a: ({ href, children, ...rest }) => {
           if (!href) return <a {...rest}>{children}</a>;
           const external = /^https?:\/\//.test(href);

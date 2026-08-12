@@ -3,9 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeSlug from "rehype-slug";
-import remarkGfm from "remark-gfm";
 
 import { HelpMarkdown } from "@/components/help/help-markdown";
 import { Badge } from "@/components/ui/badge";
@@ -94,14 +91,7 @@ export default async function HelpArticlePage({
       </header>
 
       <article className="prose prose-slate max-w-3xl dark:prose-invert prose-headings:font-display prose-headings:tracking-tight prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:rounded prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:text-sm prose-code:font-mono prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:text-foreground prose-img:rounded-lg">
-        <HelpMarkdown
-          markdown={article.markdown}
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[
-            rehypeSlug,
-            [rehypeAutolinkHeadings, { behavior: "wrap" }],
-          ]}
-        />
+        <HelpMarkdown markdown={article.markdown} />
       </article>
     </div>
   );
