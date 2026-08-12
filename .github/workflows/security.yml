@@ -1,0 +1,94 @@
+name: Security
+
+# Static security checks — dependency audit + CodeQL semantic analysis.
+# Kept separate from the main CI matrix so an audit finding on a
+# transitive dev-only dependency doesn't block otherwise-green PRs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly Monday 04:00 UTC (11:00 WIB) — catch newly-disclosed CVEs.
+    - cron: "0 4 * * 1"
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: pnpm audit (prod)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # in package.json — do NOT pass a `version:` here or the action
+      # errors with "Multiple versions of pnpm specified".
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # `--prod` scopes the audit to runtime dependencies only. Dev-only
+      # advisories are still surfaced in the summary but do not fail the
+      # job (see `continue-on-error` above). Escalate to a real failure
+      # by removing that flag once the tree has been quiet for a month.
+      - name: Run pnpm audit
+        run: pnpm audit --audit-level=moderate --prod --json > audit.json || true
+
+      - name: Human-readable summary
+        run: pnpm audit --audit-level=moderate --prod || true
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-audit
+          path: audit.json
+          retention-days: 30
+
+  codeql:
+    name: CodeQL / javascript-typescript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          config: |
+            paths-ignore:
+              - node_modules
+              - .next
+              - playwright-report
+              - test-results
+              - coverage
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

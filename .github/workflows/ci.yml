@@ -1,0 +1,83 @@
+name: CI
+
+# ControlDesk main CI pipeline.
+#
+# Runs on every push to `main` and every pull request that targets `main`.
+# The pipeline is intentionally split so a green tick means:
+#   • Types are sound (`pnpm typecheck`)
+#   • Style is clean (`pnpm lint`)
+#   • All Vitest suites pass (`pnpm test`)
+#   • Coverage floor on `src/lib/security/**` still ≥ 80 % (rules §21)
+#   • The production Next.js build compiles (`pnpm build`)
+#
+# Playwright E2E lives in a companion workflow (`e2e.yml`) because it
+# needs a full Supabase stack and takes noticeably longer.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: lint · typecheck · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Placeholder Supabase env vars so `next build` can import
+      # `src/lib/supabase/*` without falling over. No network calls happen
+      # at build time — the modules only read `process.env.*` inside
+      # function bodies.
+      NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role-key
+      APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      CRON_SECRET: ci-placeholder-cron-secret
+      NEXT_PUBLIC_APP_URL: http://demo.localhost:3000
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # in package.json — do NOT pass a `version:` here or the action
+      # errors with "Multiple versions of pnpm specified".
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint (ESLint)
+        run: pnpm lint
+
+      - name: Typecheck (tsc --noEmit)
+        run: pnpm typecheck
+
+      - name: Unit tests + coverage (Vitest)
+        run: pnpm test:coverage
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Production build (Next.js)
+        run: pnpm build

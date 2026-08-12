@@ -1,0 +1,3976 @@
+{
+  "common": {
+    "signIn": "Masuk",
+    "signOut": "Keluar",
+    "cancel": "Batal",
+    "save": "Simpan",
+    "delete": "Hapus",
+    "loading": "Memuat…",
+    "back": "Kembali",
+    "search": "Cari…",
+    "profile": "Profil",
+    "noResults": "Tidak ada hasil.",
+    "comingSoon": "Segera hadir",
+    "active": "Aktif",
+    "inactive": "Non-aktif",
+    "edit": "Ubah",
+    "confirm": "Konfirmasi"
+  },
+  "roles": {
+    "EMPLOYEE": "Karyawan",
+    "SUPERVISOR": "Supervisor",
+    "PROJECT_MANAGER": "Project Manager",
+    "OPERATIONS_MANAGER": "Operations Manager",
+    "HEAD_MANAGER": "Head Manager",
+    "GENERAL_MANAGER": "General Manager",
+    "PETTY_CASH_CUSTODIAN": "Kustodian Kas Kecil",
+    "LEAD_FINANCE": "Lead Finance",
+    "HR_ADMIN": "HR Admin",
+    "TENANT_ADMIN": "Admin"
+  },
+  "capabilities": {
+    "view_budget": {
+      "title": "Lihat anggaran",
+      "description": "Angka anggaran di dashboard, list proyek, dan detail proyek."
+    },
+    "view_contract": {
+      "title": "Lihat kontrak BPO",
+      "description": "MRR, nilai kontrak, dan SLA komersial klien."
+    },
+    "view_petty_cash": {
+      "title": "Lihat kas kecil",
+      "description": "Fund balance, voucher, dan rekonsiliasi kas kecil."
+    },
+    "view_payroll": {
+      "title": "Lihat payroll",
+      "description": "Periode gaji, gaji pokok, dan payslip karyawan."
+    },
+    "view_performance": {
+      "title": "Lihat evaluasi performa",
+      "description": "Draft dan hasil evaluasi performa karyawan."
+    },
+    "view_employee_directory": {
+      "title": "Lihat direktori karyawan",
+      "description": "Daftar karyawan, kontak, dan struktur tim."
+    },
+    "view_upk": {
+      "title": "Lihat UPK",
+      "description": "Draft uang pesangon karyawan dan approval trail."
+    },
+    "view_client": {
+      "title": "Lihat direktori klien",
+      "description": "Daftar klien, kontak PIC, dan riwayat komersial."
+    },
+    "view_assignment": {
+      "title": "Lihat matriks assignment",
+      "description": "Alokasi PM dan karyawan lintas proyek."
+    },
+    "view_handover": {
+      "title": "Lihat handover PM",
+      "description": "Catatan handover proyek antar PM."
+    },
+    "view_insights": {
+      "title": "Lihat AI Insights",
+      "description": "Insight AI: dampak biaya, utilisasi, kesehatan klien, risiko SLA."
+    }
+  },
+  "brand": {
+    "name": "ControlDesk",
+    "tagline": "Ruang kerja tunggal untuk proyek, karyawan, keuangan, dan klien."
+  },
+  "profile": {
+    "kicker": "Akun saya",
+    "form": {
+      "title": "Data pribadi",
+      "description": "Perbarui bagian profil yang Anda kelola sendiri. Kolom dengan tanda * wajib diisi.",
+      "firstName": "Nama depan",
+      "lastName": "Nama belakang",
+      "phone": "Telepon",
+      "dateOfBirth": "Tanggal lahir",
+      "preferredLocale": "Bahasa pilihan",
+      "preferredLocalePlaceholder": "Gunakan default tenant",
+      "preferredLocaleHint": "Aplikasi akan tampil dalam bahasa ini di perangkat Anda. Anda tetap bisa mengubah sementara dari topbar.",
+      "save": "Simpan perubahan",
+      "savedToast": "Profil diperbarui."
+    },
+    "password": {
+      "title": "Ganti kata sandi",
+      "description": "Verifikasi kata sandi saat ini, lalu pilih yang baru. Sesi di perangkat lain tidak otomatis keluar.",
+      "current": "Kata sandi saat ini",
+      "new": "Kata sandi baru",
+      "confirm": "Konfirmasi kata sandi baru",
+      "hint": "Minimal 8 karakter, kombinasi huruf dan angka.",
+      "show": "Tampilkan",
+      "hide": "Sembunyikan",
+      "showAria": "Tampilkan kata sandi",
+      "hideAria": "Sembunyikan kata sandi",
+      "submit": "Perbarui kata sandi",
+      "changedToast": "Kata sandi diperbarui."
+    },
+    "directory": {
+      "title": "Direktori",
+      "description": "Dikelola oleh HR. Hubungi HR jika ada yang perlu diperbaiki.",
+      "email": "Email",
+      "phone": "Telepon",
+      "role": "Peran",
+      "department": "Departemen",
+      "positionTitle": "Jabatan",
+      "employmentType": "Tipe kontrak",
+      "joinDate": "Tanggal masuk",
+      "contractEnd": "Kontrak berakhir",
+      "reportsTo": "Atasan",
+      "hrOnly": "Hubungi HR untuk perubahan."
+    },
+    "assignments": {
+      "title": "Proyek aktif saya",
+      "total": "Total alokasi: {pct}%",
+      "empty": "Anda belum ditugaskan ke proyek aktif mana pun.",
+      "since": "sejak {date}"
+    },
+    "timesheet": {
+      "title": "Bulan ini",
+      "subtitle": "Aktivitas timesheet untuk {month}",
+      "hoursWorked": "Jam kerja",
+      "hoursOvertime": "Jam lembur",
+      "entries": "Entri",
+      "approved": "Disetujui"
+    },
+    "locale": {
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    },
+    "preferencesCta": {
+      "title": "Preferensi & notifikasi",
+      "description": "Kelola notifikasi, Telegram, WhatsApp, dan tampilan di halaman Preferensi."
+    },
+    "preferences": {
+      "title": "Preferensi",
+      "subtitle": "Pengaturan pribadi — hanya kamu yang bisa melihat atau mengubahnya.",
+      "actions": {
+        "save": "Simpan perubahan",
+        "restore": "Pulihkan default"
+      },
+      "toast": {
+        "saveOk": "Preferensi disimpan.",
+        "saveError": "Preferensi gagal disimpan.",
+        "restoreOk": "Preferensi kembali ke default.",
+        "restoreError": "Gagal memulihkan default."
+      },
+      "notifications": {
+        "title": "Notifikasi",
+        "description": "Pilih di mana setiap kategori notifikasi dikirim — lonceng in-app, email, atau chat Telegram pribadi.",
+        "tableCategory": "Kategori",
+        "summary": "{count} kategori dimuat.",
+        "emailHint": "Email dikirim ke alamat login-mu. Pengiriman memakai SMTP tenant. Kamu bisa mematikan email untuk semua kategori dari halaman ini."
+      },
+      "categories": {
+        "APPROVALS": "Persetujuan",
+        "BUDGETS": "Anggaran",
+        "MILESTONES": "Milestone",
+        "ASSIGNMENTS": "Penugasan",
+        "TIMESHEETS": "Timesheet",
+        "EMPLOYEES": "Karyawan",
+        "SYSTEM": "Sistem"
+      },
+      "categoryDescription": {
+        "APPROVALS": "Persetujuan expense, kas bon, evaluasi & laporan bulanan.",
+        "BUDGETS": "Pencairan kas bon, settlement & kas kecil.",
+        "MILESTONES": "Pengingat SLA proyek dan berakhirnya kontrak.",
+        "ASSIGNMENTS": "PM handover dan perubahan tim.",
+        "TIMESHEETS": "Event submit, approve, dan reject timesheet.",
+        "EMPLOYEES": "Kontrak, probation, dan update HR request.",
+        "SYSTEM": "Pemberitahuan akun dan infrastruktur."
+      },
+      "channels": {
+        "IN_APP": "In-app",
+        "EMAIL": "Email",
+        "TELEGRAM": "Telegram",
+        "WHATSAPP": "WhatsApp"
+      },
+      "telegram": {
+        "title": "Telegram",
+        "description": "Notifikasi akan masuk ke chat Telegram pribadimu bersama bot tenant.",
+        "linked": "Terhubung",
+        "linkedAs": "sebagai",
+        "sendTest": "Kirim tes",
+        "unlink": "Putuskan",
+        "generateLink": "Buat deep link",
+        "unlinkedIntro": "Buka chat dengan @{botUsername} lalu tekan Start untuk menghubungkan akun ini.",
+        "linkReady": "Klik deep link di bawah untuk membuka Telegram dan konfirmasi link.",
+        "openInTelegram": "Buka di Telegram",
+        "copy": "Salin link",
+        "linkExpires": "Link ini kedaluwarsa dalam 15 menit.",
+        "botNotConfigured": "Tenant belum mendaftarkan bot Telegram. Minta administrator untuk mendaftarkannya via /settings/integrations.",
+        "toast": {
+          "linkError": "Gagal membuat deep link.",
+          "testOk": "Pesan tes terkirim — cek Telegram.",
+          "testError": "Gagal mengirim pesan tes.",
+          "unlinkOk": "Telegram diputuskan.",
+          "unlinkError": "Gagal memutuskan Telegram.",
+          "copied": "Link disalin ke clipboard."
+        }
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "description": "Notifikasi akan masuk ke WhatsApp-mu dari nomor bisnis tenant.",
+        "linked": "Terhubung",
+        "linkedAs": "sebagai",
+        "sendTest": "Kirim tes",
+        "unlink": "Putuskan",
+        "generateLink": "Buat link WhatsApp",
+        "unlinkedIntro": "Buka chat dengan {businessPhone} lalu kirim pesan yang sudah terisi untuk menghubungkan akun ini.",
+        "linkReady": "Ketuk link di bawah untuk membuka WhatsApp dan kirim pesan konfirmasi.",
+        "openInWhatsApp": "Buka di WhatsApp",
+        "copy": "Salin link",
+        "linkExpires": "Link ini kedaluwarsa dalam 15 menit.",
+        "notConfigured": "Tenant belum mendaftarkan WhatsApp. Minta administrator untuk mendaftarkan pengirim Twilio atau Meta Cloud API via /settings/integrations.",
+        "toast": {
+          "linkError": "Gagal membuat link WhatsApp.",
+          "testOk": "Pesan tes terkirim — cek WhatsApp.",
+          "testError": "Gagal mengirim pesan tes.",
+          "unlinkOk": "WhatsApp diputuskan.",
+          "unlinkError": "Gagal memutuskan WhatsApp.",
+          "copied": "Link disalin ke clipboard."
+        }
+      },
+      "appearance": {
+        "title": "Tampilan",
+        "description": "Pilih tampilan ControlDesk untuk perangkat ini. Auto mengikuti pengaturan light/dark OS.",
+        "light": "Terang",
+        "dark": "Gelap",
+        "system": "Auto",
+        "appliedInstantly": "Berlaku instan. Tersimpan ke akun saat kamu klik.",
+        "resolvedAs": "Aktif: {theme}"
+      }
+    }
+  },
+  "marketing": {
+    "badge": "Multi-tenant BPO / ERP",
+    "heroLead": "Ruang operasional untuk",
+    "heroAccent": "Managed Services",
+    "heroBody": "Approval, kas bon, kas kecil, HRIS, analitik SLA, dan prediksi berbasis AI — satu ruang kerja per tenant, terisolasi by design.",
+    "ctaPrimary": "Buat ruang kerja",
+    "ctaSecondary": "Saya sudah punya akun",
+    "ctaOpenDashboard": "Buka dashboard",
+    "ctaCreateWorkspace": "Buat ruang kerja",
+    "signIn": "Masuk",
+    "cards": {
+      "approvals": {
+        "title": "Approval Dinamis",
+        "body": "Routing berbasis nominal: Supervisor → PM → OM → HM → GM dengan gate Finance paralel."
+      },
+      "margins": {
+        "title": "Gross Margin Real-Time",
+        "body": "Biaya tenaga kerja, lembur, dan penalti SLA direkonsiliasi ke gross margin secara langsung."
+      },
+      "ai": {
+        "title": "Insight AI",
+        "body": "Dampak biaya, utilisasi resource, kesehatan klien, dan prediksi pelanggaran SLA."
+      }
+    },
+    "subdomainHint": "Routing subdomain: {tenant}.{root}"
+  },
+  "auth": {
+    "welcomeBack": "Selamat datang kembali",
+    "welcomeBackSubtitle": "Masuk ke ruang kerja ControlDesk Anda untuk melanjutkan.",
+    "email": "Email",
+    "password": "Kata sandi",
+    "passwordPlaceholder": "Kata sandi Anda",
+    "emailPlaceholder": "anda@perusahaan.com",
+    "signIn": "Masuk",
+    "sendMagicLink": "Kirim magic link",
+    "magicLink": "Magic Link",
+    "magicLinkSent": "Magic link telah dikirim.",
+    "newToControlDesk": "Baru menggunakan ControlDesk?",
+    "createAccount": "Buat akun",
+    "alreadyHaveWorkspace": "Sudah punya ruang kerja?",
+    "wrongTenant": "Anda telah keluar karena akun ini milik tenant lain.",
+    "createWorkspace": "Buat ruang kerja",
+    "createWorkspaceSubtitle": "Buat tenant ControlDesk baru. Anda akan menjadi Tenant Admin pertama.",
+    "invitationOnly": "Ruang kerja hanya via undangan",
+    "invitationOnlySubtitle": "Karyawan ditambahkan ke ruang kerja {slug} oleh HR atau Tenant Admin.",
+    "needAccess": "Butuh akses?",
+    "needAccessBody": "Hubungi HR Admin untuk menerima undangan ruang kerja.",
+    "alreadyHaveInvite": "Sudah menerima undangan?",
+    "tenantPrefix": "Tenant",
+    "workspaceReady": "Ruang kerja \"{slug}\" siap digunakan.",
+    "registerForm": {
+      "workspaceName": "Nama ruang kerja",
+      "workspaceNamePlaceholder": "Acme BPO",
+      "workspaceUrl": "URL ruang kerja",
+      "workspaceUrlPlaceholder": "acme",
+      "fullName": "Nama Anda",
+      "fullNamePlaceholder": "Ada Lovelace",
+      "emailPlaceholderRegister": "ada@acme.com",
+      "passwordMinLength": "Minimal 8 karakter",
+      "submit": "Buat ruang kerja"
+    }
+  },
+  "authLayout": {
+    "sideKicker": "PLATFORM OPERASIONAL ENTERPRISE",
+    "sideHeadline": "Kendalikan proyek, arus kas, dan tim dari satu ruang kerja.",
+    "sideBody": "Approval berjenjang otomatis, realisasi anggaran real-time, dan prediksi risiko SLA berbantuan AI — dirancang untuk operasional BPO & Managed Services yang kompleks.",
+    "features": {
+      "approvals": "Approval berjenjang otomatis dengan audit trail",
+      "cash": "Kas bon lapangan & kas kecil terkendali",
+      "hris": "HRIS + payroll multi-cabang",
+      "ai": "Prediksi risiko SLA & anggaran dengan AI"
+    },
+    "trust": "Dipercaya tim operasional BPO & Managed Services"
+  },
+  "nav": {
+    "openUserMenu": "Buka menu pengguna",
+    "sections": {
+      "overview": "Ringkasan",
+      "delivery": "Delivery",
+      "finance": "Keuangan",
+      "people": "Sumber Daya Manusia",
+      "analytics": "Analitik",
+      "settings": "Setelan",
+      "navigation": "Navigasi",
+      "appearance": "Tampilan",
+      "session": "Sesi",
+      "language": "Bahasa"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "insights": "AI Insights",
+      "clients": "Klien",
+      "projects": "Proyek",
+      "team": "Tim",
+      "assignments": "Penugasan",
+      "handovers": "Serah Terima PM",
+      "expenses": "Pengajuan Biaya",
+      "cashAdvance": "Kas Bon",
+      "pettyCash": "Kas Kecil",
+      "budgets": "Anggaran",
+      "approvals": "Approval",
+      "employees": "Karyawan",
+      "roster": "Roster",
+      "shifts": "Shift",
+      "timesheets": "Timesheet",
+      "leaveOvertime": "Cuti & Lembur",
+      "payroll": "Payroll",
+      "reports": "Laporan",
+      "contracts": "Kontrak BPO",
+      "archives": "Arsip Data",
+      "secrets": "Rotasi Secret",
+      "lookups": "Data Referensi",
+      "users": "Pengguna",
+      "coa": "Bagan Akun",
+      "bulkImport": "Impor Massal",
+      "performance": "Evaluasi Performa",
+      "upk": "UPK",
+      "overview": "Ringkasan",
+      "preferences": "Preferensi",
+      "integrations": "Integrasi",
+      "approvalThresholds": "Ambang Approval",
+      "capabilities": "Kapabilitas",
+      "features": "Fitur Aktif"
+    },
+    "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
+    "commandPlaceholder": "Cari perintah, lompat ke halaman…",
+    "theme": {
+      "light": "Mode terang",
+      "dark": "Mode gelap",
+      "system": "Ikuti sistem"
+    },
+    "language": {
+      "label": "Bahasa",
+      "id": "Bahasa Indonesia",
+      "en": "English"
+    }
+  },
+  "notifications": {
+    "expenses": {
+      "approverInbox": {
+        "title": "Biaya menunggu L1 · IDR {amount}",
+        "titleGeneric": "Biaya menunggu persetujuan Anda · IDR {amount}",
+        "staleReceipt": "Nota lewat batas (>7 hari kerja) · IDR {amount} · perlu review · usia nota {days} wd"
+      },
+      "submitterProgress": {
+        "title": "Biaya diteruskan · {stepRoleLabel} menyetujui",
+        "body": "IDR {amount} · sekarang menunggu {nextRoleLabel}"
+      },
+      "submitterApproved": {
+        "title": "Biaya disetujui",
+        "body": "IDR {amount} · seluruh approval lengkap"
+      },
+      "submitterRejected": {
+        "title": "Biaya ditolak",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Pengajuan biaya Anda ditolak."
+      },
+      "roles": {
+        "SUPERVISOR": "Supervisor",
+        "PROJECT_MANAGER": "Project Manager",
+        "LEAD_FINANCE": "Lead Finance",
+        "OPERATIONS_MANAGER": "Operations Manager",
+        "HEAD_MANAGER": "Head Manager",
+        "GENERAL_MANAGER": "General Manager",
+        "TENANT_ADMIN": "Admin"
+      }
+    },
+    "cashAdvances": {
+      "approverInbox": {
+        "titleGeneric": "Cash advance menunggu approval Anda · IDR {amount}",
+        "titleFieldOps": "Dana operasional Field-Ops menunggu approval Anda · IDR {amount}"
+      },
+      "submitterProgress": {
+        "title": "Cash advance lanjut · {stepRoleLabel} sudah menyetujui",
+        "body": "IDR {amount} · sekarang menunggu {nextRoleLabel}"
+      },
+      "submitterApproved": {
+        "title": "Cash advance disetujui",
+        "body": "IDR {amount} · menunggu Finance mencairkan dana"
+      },
+      "submitterRejected": {
+        "title": "Cash advance ditolak",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Pengajuan cash advance Anda ditolak."
+      },
+      "submitterDisbursed": {
+        "title": "Dana sudah dicairkan",
+        "body": "Ref {ref} · setelah dipakai, submit settlement/pertanggungjawaban."
+      },
+      "submitterSettled": {
+        "title": "Settlement disetujui",
+        "body": "IDR {amount} — settlement diterima oleh Finance."
+      },
+      "submitterSettlementReturned": {
+        "title": "Settlement dikembalikan",
+        "bodyWithReason": "{reason}",
+        "bodyGeneric": "Finance mengembalikan settlement — mohon periksa & submit ulang."
+      },
+      "roles": {
+        "SUPERVISOR": "Supervisor",
+        "PROJECT_MANAGER": "Project Manager",
+        "LEAD_FINANCE": "Lead Finance",
+        "OPERATIONS_MANAGER": "Operations Manager",
+        "HEAD_MANAGER": "Head Manager",
+        "GENERAL_MANAGER": "General Manager",
+        "TENANT_ADMIN": "Admin"
+      }
+    },
+    "settlementReminders": {
+      "ca": {
+        "dueSoon": {
+          "title": "Settlement wajib dilakukan dalam {days} hari kerja",
+          "body": "Cash advance IDR {amount} · deadline {deadline}. Segera submit settlement (nota + total pengeluaran)."
+        },
+        "dueToday": {
+          "title": "Hari terakhir submit settlement",
+          "body": "Cash advance IDR {amount} · hari ini adalah hari kerja terakhir untuk submit settlement."
+        },
+        "overdue": {
+          "title": "Settlement lewat {days} hari kerja",
+          "body": "Cash advance IDR {amount} · sudah melewati deadline {deadline}. Segera submit settlement."
+        },
+        "escalationSupervisor": {
+          "title": "Settlement telat · di-eskalasi ke Supervisor",
+          "body": "{submitter} — cash advance IDR {amount} sudah {days} wd melewati deadline."
+        },
+        "escalationPm": {
+          "title": "Settlement telat · di-eskalasi ke PM",
+          "body": "{submitter} — cash advance IDR {amount} sudah {days} wd melewati deadline."
+        },
+        "escalationOm": {
+          "title": "Settlement telat · di-eskalasi ke Operations Manager",
+          "body": "{submitter} — cash advance IDR {amount} sudah {days} wd melewati deadline."
+        }
+      },
+      "expenseDraft": {
+        "stale": {
+          "title": "Draft biaya sudah {days} hari kerja belum di-submit",
+          "body": "IDR {amount} · lengkapi & submit atau hapus draft-nya. Approval tidak bisa lanjut selama masih DRAFT."
+        }
+      },
+      "expenseIncurred": {
+        "flagged": {
+          "title": "Nota terlambat di-flag ke approver",
+          "body": "IDR {amount} — nota berusia {days} wd saat submit. Justifikasi: {reason}"
+        }
+      },
+      "email": {
+        "ctaOpenCashAdvance": "Buka cash advance",
+        "ctaOpenExpense": "Buka draft biaya"
+      }
+    },
+    "evaluations": {
+      "submittedTitle": "Evaluasi dikirim untuk direview",
+      "submittedBody": "SPV telah menyelesaikan evaluasi — silakan review dan teruskan ke OM.",
+      "reviewedTitle": "Evaluasi telah direview — menunggu keputusan OM",
+      "reviewedBody": "PM telah mereview evaluasi. Silakan setujui atau tolak.",
+      "returnedTitle": "Evaluasi dikembalikan — perlu coaching",
+      "returnedBody": "PM meminta Anda menyesuaikan evaluasi sebelum resubmit.",
+      "approvedTitle": "Evaluasi disetujui OM",
+      "rejectedTitle": "Evaluasi ditolak OM",
+      "finalizedTitle": "Evaluasi difinalisasi"
+    },
+    "upk": {
+      "draftTitle": "Draft UPK menunggu input Anda",
+      "draftBody": "Draft UPK dibuat otomatis untuk karyawan yang kontraknya tidak diperpanjang. Silakan review nominal dan submit ke Finance.",
+      "financeApprovedTitle": "UPK disetujui Finance",
+      "financeToDirectorTitle": "UPK diteruskan ke Direktur untuk approval",
+      "financeRejectedTitle": "UPK ditolak Finance",
+      "paidTitle": "UPK telah dibayarkan"
+    },
+    "monthlyReports": {
+      "submittedTitle": "Laporan bulanan menunggu review Anda",
+      "submittedBody": "Supervisor mengirim laporan bulanan — silakan review.",
+      "approvedTitle": "Laporan bulanan disetujui PM",
+      "returnedTitle": "Laporan bulanan dikembalikan — silakan revisi",
+      "rejectedTitle": "Laporan bulanan ditolak",
+      "sentTitle": "Laporan bulanan sudah dikirim ke client",
+      "clientApprovedTitle": "Client menyetujui laporan bulanan",
+      "clientRejectedTitle": "Client meminta revisi laporan bulanan",
+      "baGeneratedTitle": "Berita Acara siap untuk collection"
+    }
+  },
+  "topbar": {
+    "breadcrumbDashboard": "Dashboard",
+    "breadcrumbDetail": "Detail",
+    "notifications": {
+      "label": "Notifikasi",
+      "unread": "{count} belum dibaca",
+      "empty": "Tidak ada notifikasi",
+      "emptyBody": "Approval baru dan mention akan muncul di sini secara realtime.",
+      "markAllRead": "Tandai semua dibaca",
+      "viewAll": "Lihat semua",
+      "justNow": "Baru saja"
+    },
+    "aiInsights": {
+      "ariaLabel": "AI Insights ({count} belum dibaca)"
+    }
+  },
+  "dashboard": {
+    "overview": "Ringkasan",
+    "welcome": "Selamat datang, {firstName}",
+    "signedInAs": "{role} · Masuk ke {tenant}",
+    "updatedAt": "Diperbarui {time}",
+    "kpiSection": "Indikator kinerja utama",
+    "deliveryPulseTitle": "Delivery pulse",
+    "deliveryPulseDescription": "Data SLA real-time, coverage roster, dan margin akan tampil di sini setelah modul Operations rilis (rules §5, §12).",
+    "chartsPlaceholder": "Chart segera hadir — scaffold Recharts sudah siap.",
+    "approvalInboxTitle": "Inbox approval",
+    "approvalInboxDescription": "Approval dinamis berbasis nominal (rules §9) akan tampil di sini.",
+    "approvalInboxEmpty": "Belum ada item pending — engine Approvals belum di-scaffold di skeleton ini.",
+    "kpis": {
+      "activeProjects": "Proyek Aktif",
+      "approvedBudget": "Anggaran Disetujui",
+      "milestoneDone": "Milestone Selesai",
+      "pendingApprovals": "Approval Pending",
+      "issuesAtRisk": "Issue Berisiko"
+    },
+    "portfolio": {
+      "title": "Snapshot portfolio",
+      "subtitle": "Ring kesehatan per proyek — progress milestone vs. utilisasi budget.",
+      "empty": "Belum ada proyek aktif",
+      "emptyBody": "Setelah proyek dibuat dan berstatus Active, progress milestone dan utilisasi budget akan muncul di sini.",
+      "totals": {
+        "activeProjects": "Proyek aktif",
+        "totalPlanned": "Total planned",
+        "totalRealised": "Realisasi",
+        "totalOutstanding": "Outstanding",
+        "averageProgress": "Progress rata-rata"
+      },
+      "ring": {
+        "progress": "Milestone",
+        "budget": "Budget"
+      },
+      "labels": {
+        "client": "Klien",
+        "budget": "Budget",
+        "noBudget": "Belum ada budget",
+        "planned": "Planned",
+        "realised": "Realisasi",
+        "outstanding": "Outstanding",
+        "utilisation": "Utilisasi",
+        "milestones": "Milestone",
+        "over": "Over budget",
+        "onTrack": "On track"
+      }
+    }
+  },
+  "comingSoon": {
+    "title": "{module} — segera hadir",
+    "titleFallback": "Modul — segera hadir",
+    "body": "Modul ini sudah di-scaffold di roadmap dan akan rilis di iterasi berikutnya. Skeleton platform (auth, tenancy, RLS, shell, RBAC) sudah tersedia.",
+    "backToDashboard": "Kembali ke dashboard"
+  },
+  "clients": {
+    "title": "Klien",
+    "subtitle": "Direktori klien tenant Anda. Satu klien dapat memiliki banyak proyek (rules §6).",
+    "kicker": "Directory",
+    "newClient": "Klien baru",
+    "empty": "Belum ada klien",
+    "emptyBody": "Direktori klien kosong. Tambahkan klien pertama untuk mulai melacak kontrak BPO dan proyek delivery.",
+    "columns": {
+      "name": "Nama",
+      "industry": "Industri",
+      "status": "Status",
+      "contractNumber": "Kontrak",
+      "projectCode": "PID",
+      "projects": "Proyek",
+      "contact": "Kontak",
+      "onboardedAt": "Onboarding"
+    },
+    "status": {
+      "PROSPECT": "Prospek",
+      "ACTIVE": "Aktif",
+      "ON_HOLD": "Ditahan",
+      "CHURNED": "Churn"
+    },
+    "form": {
+      "createTitle": "Tambah klien baru",
+      "createDescription": "Data klien akan tersedia untuk semua proyek dan kontrak BPO tenant ini.",
+      "name": "Nama klien",
+      "namePlaceholder": "PT Acme Nusantara",
+      "industry": "Industri",
+      "industryPlaceholder": "Perbankan, Retail, Fintech…",
+      "status": "Status",
+      "contactName": "Nama kontak",
+      "contactNamePlaceholder": "Ada Lovelace",
+      "contactEmail": "Email kontak",
+      "contactPhone": "Telepon",
+      "contractInfoTitle": "Info kontrak",
+      "contractInfoHint": "Referensi cepat untuk lookup. Sumber utama tetap di modul Kontrak / Proyek.",
+      "contractNumber": "Nomor kontrak",
+      "contractNumberPlaceholder": "MSA-2026-001",
+      "projectCode": "Kode proyek (PID)",
+      "projectCodePlaceholder": "PID-2026-001",
+      "notes": "Catatan",
+      "notesPlaceholder": "Konteks internal, catatan onboarding, poin negosiasi…",
+      "submit": "Buat klien",
+      "created": "Klien \"{name}\" berhasil dibuat.",
+      "editButton": "Edit",
+      "editTitle": "Edit klien",
+      "editDescription": "Perbarui data klien. Perubahan langsung dipakai di semua modul.",
+      "saveChanges": "Simpan perubahan",
+      "updated": "Klien \"{name}\" berhasil diperbarui."
+    },
+    "detail": {
+      "kicker": "Klien",
+      "back": "Kembali ke klien",
+      "onboardedOn": "Onboarding {date}",
+      "activeProjects": "Proyek aktif",
+      "totalProjects": "dari {count} total",
+      "activeMrr": "MRR aktif",
+      "mrrHint": "Kontrak berjalan (bulanan)",
+      "totalBudget": "Total anggaran",
+      "totalSpent": "Terpakai {amount}",
+      "grossMarginProxy": "Gross margin (approx)",
+      "grossMarginNote": "= (MRR × 12 − total spent) / (MRR × 12)",
+      "projectsTitle": "Proyek",
+      "projectsEmpty": "Belum ada proyek untuk klien ini.",
+      "contractsTitle": "Kontrak BPO",
+      "contractsEmpty": "Belum ada kontrak yang tercatat.",
+      "notesTitle": "Catatan",
+      "code": "Kode",
+      "name": "Proyek",
+      "status": "Status",
+      "budget": "Anggaran",
+      "managePortalUsers": "Kelola user portal",
+      "refContract": "Kontrak",
+      "refProject": "PID"
+    },
+    "portalUsers": {
+      "kicker": "Klien · User portal",
+      "title": "User portal",
+      "subtitle": "Kontak eksternal di {client} yang punya akses read-only ke proyek mereka.",
+      "back": "Kembali ke klien",
+      "listTitle": "User terdaftar",
+      "listSubtitle": "Terbaru di atas. Hanya OM+ / TENANT_ADMIN yang bisa mengundang atau mencabut akses.",
+      "empty": "Belum ada user portal.",
+      "cols": {
+        "name": "Nama",
+        "email": "Email",
+        "status": "Status",
+        "lastLogin": "Login terakhir",
+        "actions": "Aksi"
+      },
+      "status": {
+        "ACTIVE": "Aktif",
+        "PENDING_ACTIVATION": "Menunggu",
+        "DISABLED": "Nonaktif",
+        "LOCKED": "Terkunci"
+      },
+      "create": {
+        "cta": "Undang user portal",
+        "title": "Undang user portal",
+        "subtitle": "Kami akan buat akun dan generate password sekali pakai yang bisa Anda bagikan.",
+        "name": "Nama lengkap",
+        "email": "Email",
+        "submit": "Buat user",
+        "submitting": "Membuat…"
+      },
+      "row": {
+        "resetPassword": "Reset password",
+        "resetTitle": "Reset password?",
+        "resetSubtitle": "Rotasi password untuk {email}. Semua sesi aktif akan dicabut.",
+        "confirmReset": "Reset password",
+        "enable": "Aktifkan",
+        "disable": "Nonaktifkan",
+        "enabled": "User portal diaktifkan.",
+        "disabled": "User portal dinonaktifkan.",
+        "enableTitle": "Aktifkan user portal?",
+        "enableSubtitle": "{email} bisa login kembali.",
+        "disableTitle": "Nonaktifkan user portal?",
+        "disableSubtitle": "{email} akan langsung logout dan tidak bisa login.",
+        "confirmEnable": "Aktifkan",
+        "confirmDisable": "Nonaktifkan",
+        "cancel": "Batal",
+        "submitting": "Memproses…"
+      },
+      "events": {
+        "title": "Riwayat login terbaru",
+        "subtitle": "25 event autentikasi terakhir dari user portal klien ini. Audit trail immutable (retensi 7 tahun).",
+        "empty": "Belum ada event login untuk klien ini.",
+        "tableAriaLabel": "Portal login events",
+        "cols": {
+          "event": "Event",
+          "user": "User",
+          "ip": "IP",
+          "userAgent": "User agent",
+          "when": "Waktu"
+        },
+        "kinds": {
+          "SUCCESS": "Berhasil login",
+          "FAILURE_UNKNOWN_USER": "User tak dikenal",
+          "FAILURE_BAD_PASSWORD": "Password salah",
+          "FAILURE_LOCKED": "Akun terkunci",
+          "LOGOUT": "Logout",
+          "SESSION_EXPIRED": "Sesi kadaluarsa"
+        }
+      },
+      "tempPassword": {
+        "warning": "Password ini tidak akan ditampilkan lagi. Salin dan bagikan ke klien via channel aman.",
+        "emailLabel": "Email",
+        "passwordLabel": "Password sementara",
+        "copy": "Salin",
+        "copied": "Tersalin",
+        "copyFailed": "Gagal menyalin — pilih password secara manual.",
+        "done": "Selesai"
+      }
+    }
+  },
+  "projects": {
+    "title": "Proyek",
+    "subtitle": "Proyek delivery aktif di semua klien. Setiap proyek melapor ke satu Primary PM (rules §7).",
+    "kicker": "Delivery",
+    "newProject": "Proyek baru",
+    "empty": "Belum ada proyek",
+    "emptyBody": "Tambahkan klien terlebih dahulu, lalu buat proyek pertama untuk mulai roster, timesheet, dan approval biaya.",
+    "columns": {
+      "code": "Kode",
+      "name": "Proyek",
+      "client": "Klien",
+      "type": "Tipe",
+      "status": "Status",
+      "priority": "Prioritas",
+      "budget": "Anggaran",
+      "startDate": "Mulai",
+      "period": "Periode"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PLANNING": "Perencanaan",
+      "ACTIVE": "Aktif",
+      "ON_HOLD": "Ditahan",
+      "COMPLETED": "Selesai",
+      "ARCHIVED": "Diarsipkan"
+    },
+    "lifecycle": {
+      "stageDraft": "Business Case",
+      "stagePlanning": "Perencanaan (anggaran)",
+      "stageActive": "Aktif",
+      "draftReady": "Business Case lengkap — siap promosi ke Perencanaan.",
+      "draftMissingBc": "Isi ringkasan eksekutif + sponsor untuk promosi ke Perencanaan.",
+      "planningReady": "Anggaran sudah disetujui — siap assign PM dan aktifkan.",
+      "planningMissingBudget": "Minimal satu anggaran harus DISETUJUI sebelum aktivasi.",
+      "activeReady": "Proyek aktif. Entri operasional dibuka.",
+      "closedHint_ON_HOLD": "Proyek Ditahan — entri operasional dijeda.",
+      "closedHint_COMPLETED": "Proyek Selesai — tidak ada entri operasional baru.",
+      "closedHint_ARCHIVED": "Proyek Diarsipkan — hanya baca.",
+      "ctaPromote": "Promosi ke Perencanaan",
+      "ctaActivate": "Aktifkan & Assign PM",
+      "activateTitle": "Aktifkan proyek",
+      "activateDescription": "Pilih PM Utama. Proyek langsung menjadi Aktif.",
+      "activatePickPm": "PM Utama",
+      "activatePickPmPlaceholder": "Pilih PM…",
+      "activatePickPmError": "Pilih PM dulu.",
+      "activateHasActivePmHint": "Proyek ini sudah punya PM aktif — aktivasi hanya menggeser status.",
+      "toastPromoted": "Proyek dipromosikan ke Perencanaan.",
+      "toastPromoteFailed": "Gagal promosi proyek.",
+      "toastActivated": "Proyek diaktifkan.",
+      "toastActivateFailed": "Gagal mengaktifkan proyek."
+    },
+    "priority": {
+      "CRITICAL": "Kritis",
+      "HIGH": "Tinggi",
+      "MEDIUM": "Sedang",
+      "LOW": "Rendah"
+    },
+    "type": {
+      "FIXED_PRICE": "Fixed Price",
+      "TIME_MATERIAL": "Time & Material",
+      "RETAINER": "Retainer",
+      "INTERNAL": "Internal"
+    },
+    "form": {
+      "createTitle": "Proyek baru",
+      "createDescription": "Proyek diikat ke satu klien dan dapat memiliki beberapa PM dan tim ter-alokasi.",
+      "needsClient": "Anda perlu memiliki setidaknya satu klien sebelum membuat proyek.",
+      "client": "Klien",
+      "clientPlaceholder": "Pilih klien…",
+      "code": "Kode",
+      "name": "Nama proyek",
+      "status": "Status",
+      "priority": "Prioritas",
+      "pm": "Project manager",
+      "pmPlaceholder": "Tugaskan PM…",
+      "pmUnassigned": "Belum ditugaskan (assign nanti)",
+      "projectType": "Tipe proyek",
+      "projectTypePlaceholder": "Pilih…",
+      "location": "Lokasi",
+      "locationPlaceholder": "Kota, lokasi, atau 'Remote'",
+      "startDate": "Tanggal mulai",
+      "endDate": "Tanggal berakhir",
+      "description": "Deskripsi",
+      "descriptionPlaceholder": "Cakupan, jenis layanan, catatan penting…",
+      "submit": "Buat proyek",
+      "created": "Proyek \"{name}\" berhasil dibuat."
+    },
+    "wizard": {
+      "step1": "Info",
+      "step2": "Business Case & anggaran",
+      "step3": "Milestones",
+      "back": "Kembali",
+      "next": "Lanjut",
+      "saveProject": "Simpan proyek",
+      "autoNumberHint": "Nomor proyek dibuat otomatis saat simpan",
+      "duration": "Durasi",
+      "contractValue": "Nilai kontrak",
+      "currency": "Mata uang",
+      "notes": "Catatan",
+      "bcSection": "Business Case",
+      "bcSectionHint": "Opsional saat pembuatan — proyek dimulai di Draft. Isi bagian ini sebelum promosi ke Planning.",
+      "bcExecutiveSummary": "Ringkasan eksekutif",
+      "bcExecutiveSummaryPlaceholder": "Kenapa proyek ini? Scope, outcome yang diharapkan, nilai strategis…",
+      "bcTargetGmPct": "Target gross margin (%)",
+      "bcSponsor": "Sponsor",
+      "bcSponsorPlaceholder": "Pilih sponsor (OM / Admin / Director)…",
+      "bcSponsorNone": "Tidak ada sponsor yang memenuhi syarat",
+      "syncCalendar": "Sinkron ke Google Calendar",
+      "syncCalendarHint": "Mendorong proyek (dan setiap milestone) ke kalender organisasi. Matikan untuk engagement rahasia atau proyek referensi pribadi.",
+      "comingSoon": "Segera",
+      "milestonesTitle": "Milestones",
+      "milestonesHint": "Opsional saat pembuatan. Progress % dihitung dari penyelesaian milestone.",
+      "addMilestone": "+ Tambah milestone",
+      "removeMilestone": "Hapus milestone",
+      "noMilestones": "Belum ada milestone — klik Tambah milestone.",
+      "milestoneName": "Nama",
+      "milestoneNamePlaceholder": "Nama milestone",
+      "milestoneDue": "Jatuh tempo",
+      "milestoneWeight": "Bobot %",
+      "totalWeight": "Total bobot (biarkan 0 semua untuk bobot rata)"
+    },
+    "detail": {
+      "kicker": "Proyek",
+      "back": "Kembali ke proyek",
+      "budgetTitle": "Anggaran",
+      "budgetEmpty": "Anggaran belum ditetapkan untuk proyek ini.",
+      "budgetSpent": "Terpakai",
+      "budgetOf": "dari",
+      "budgetUsed": "terpakai",
+      "primaryPmTitle": "Primary PM",
+      "noPrimaryPm": "Belum ada Primary PM yang ditugaskan.",
+      "since": "Sejak {date}",
+      "teamTitle": "Tim & Alokasi",
+      "teamEmpty": "Belum ada karyawan yang ditugaskan ke proyek ini.",
+      "addTeamMember": "Tambah anggota",
+      "expensesTitle": "Biaya terbaru",
+      "expensesEmpty": "Belum ada pengajuan biaya.",
+      "descriptionTitle": "Deskripsi"
+    },
+    "directLabor": {
+      "title": "Biaya Tenaga Kerja Langsung",
+      "subtitle": "Jam approved × tarif per jam untuk {period}. Lembur 1,5x.",
+      "total": "Total DLC",
+      "baseCost": "Biaya dasar",
+      "overtimeCost": "Biaya lembur",
+      "weeklyShare": "Share weekly-approved",
+      "weeklyShareHelp": "{weekly}j dari paket mingguan vs {daily}j daily-only",
+      "empty": "Belum ada jam approved untuk bulan ini.",
+      "weekly": "mingguan",
+      "columns": {
+        "employee": "Karyawan",
+        "hoursWorked": "Jam",
+        "hoursOvertime": "Lembur",
+        "rate": "Tarif",
+        "cost": "Biaya",
+        "source": "Sumber"
+      }
+    }
+  },
+  "contracts": {
+    "kicker": "Keuangan",
+    "title": "Kontrak BPO",
+    "subtitle": "Master data semua kontrak Managed Services / MSA per klien. MRR di sini menjadi input real-time gross margin (rules §5, §14).",
+    "newContract": "Kontrak baru",
+    "empty": "Belum ada kontrak",
+    "emptyBody": "Buat kontrak BPO pertama untuk mengaktifkan perhitungan MRR dan gross margin.",
+    "openEnded": "terbuka",
+    "columns": {
+      "number": "Nomor kontrak",
+      "client": "Klien",
+      "status": "Status",
+      "mrr": "MRR",
+      "period": "Periode",
+      "updated": "Diperbarui"
+    },
+    "form": {
+      "createTitle": "Buat kontrak BPO",
+      "createDescription": "Kontrak menjadi source of truth untuk MRR dan gross margin di dashboard.",
+      "editTitle": "Edit kontrak",
+      "editDescription": "Perbarui data kontrak. Perubahan langsung dipakai di semua modul.",
+      "editButton": "Edit kontrak",
+      "client": "Klien",
+      "clientPlaceholder": "Pilih klien…",
+      "contractNumber": "Nomor kontrak (MSA)",
+      "mrrAmount": "Nominal MRR (IDR)",
+      "mrrHint": "Bulanan, rupiah bulat. Contoh: 15000000 = Rp 15 juta.",
+      "status": "Status",
+      "startDate": "Tanggal mulai",
+      "endDate": "Tanggal berakhir",
+      "endDateHint": "Kosongkan bila kontrak open-ended (tanpa tanggal akhir).",
+      "notes": "Catatan",
+      "notesPlaceholder": "Konteks negosiasi, SLA khusus, addendum…",
+      "submit": "Buat kontrak",
+      "saveChanges": "Simpan perubahan",
+      "created": "Kontrak {number} berhasil dibuat.",
+      "updated": "Kontrak {number} berhasil diperbarui."
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Aktif",
+      "ENDED": "Selesai",
+      "RENEWED": "Diperpanjang",
+      "TERMINATED": "Diputus"
+    },
+    "detail": {
+      "kicker": "Kontrak BPO",
+      "back": "Kembali",
+      "openEnded": "tanggal akhir belum ditetapkan",
+      "mrrLabel": "MRR",
+      "mrrHint": "Recurring per bulan",
+      "annualRevenueLabel": "Pendapatan tahunan",
+      "annualRevenueHint": "MRR × 12",
+      "linkedProjectsLabel": "Proyek terkait",
+      "linkedProjectsHint": "Proyek dengan contract_id sama",
+      "currencyLabel": "Mata uang",
+      "currencyHint": "Sesuai contract terms",
+      "projectsTitle": "Proyek terkait",
+      "projectsEmpty": "Belum ada proyek yang dihubungkan ke kontrak ini.",
+      "code": "Kode",
+      "name": "Nama",
+      "status": "Status",
+      "dates": "Tanggal",
+      "notesTitle": "Catatan kontrak",
+      "createdAt": "Dibuat {date}",
+      "updatedAt": "diperbarui {date}"
+    }
+  },
+  "milestones": {
+    "title": "Milestone",
+    "subtitle": "Progress proyek dihitung dari milestone berbobot. Saat ini {progress}% selesai, {used}% dari budget bobot terisi.",
+    "new": "Tambah milestone",
+    "empty": "Belum ada milestone. Tambahkan agar progress bisa dilacak.",
+    "progressLabel": "Progress proyek",
+    "weightBudget": "{used}% dari 100% terisi · sisa {remaining}%",
+    "columns": {
+      "name": "Milestone",
+      "weight": "Bobot",
+      "owner": "Owner",
+      "dueDate": "Deadline",
+      "status": "Status"
+    },
+    "status": {
+      "PLANNED": "Rencana",
+      "IN_PROGRESS": "Berjalan",
+      "AT_RISK": "Berisiko",
+      "DONE": "Selesai",
+      "CANCELLED": "Dibatalkan"
+    },
+    "form": {
+      "title": "Tambah milestone",
+      "description": "Milestone berbobot; total bobot harus 100% saat rencana lengkap. Sisa {remaining}%.",
+      "seq": "#",
+      "name": "Nama",
+      "namePlaceholder": "cth. Rilis Alpha, UAT sign-off…",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Milestone ini menghasilkan apa?",
+      "weight": "Bobot (%)",
+      "weightHint": "0.00–100.00% · sisa {remaining}%",
+      "weightBudgetError": "Sisa budget bobot hanya {remaining}%.",
+      "plannedStart": "Mulai rencana",
+      "plannedEnd": "Selesai rencana",
+      "owner": "Owner (opsional)",
+      "ownerPlaceholder": "Pilih owner…",
+      "submit": "Tambah milestone",
+      "created": "Milestone ditambahkan."
+    },
+    "actions": {
+      "openMenu": "Buka menu milestone",
+      "moveTo": "Pindah ke {status}",
+      "delete": "Hapus milestone",
+      "noActions": "Tidak ada aksi tersedia",
+      "statusUpdated": "Status milestone diperbarui.",
+      "deleted": "Milestone dihapus."
+    }
+  },
+  "tasks": {
+    "title": "WBS (Work Breakdown Structure)",
+    "subtitle": "Uraikan pekerjaan proyek menjadi paket kerja bertingkat. {total, plural, =0 {Belum ada task.} one {# task tercatat} other {# task tercatat}} · {overdue, plural, =0 {} one {# overdue} other {# overdue}} · rata-rata progress {progress}%",
+    "empty": "Belum ada task. Tambahkan task utama untuk mulai memecah pekerjaan.",
+    "new": "Task baru",
+    "newChild": "Sub-task",
+    "expandAll": "Buka semua",
+    "collapseAll": "Tutup semua",
+    "columns": {
+      "code": "WBS",
+      "name": "Nama",
+      "owner": "Owner",
+      "progress": "Progress",
+      "planned": "Rencana",
+      "status": "Status",
+      "actions": "Aksi"
+    },
+    "status": {
+      "TODO": "Belum",
+      "IN_PROGRESS": "Berjalan",
+      "BLOCKED": "Terhambat",
+      "REVIEW": "Review",
+      "DONE": "Selesai",
+      "CANCELLED": "Dibatalkan"
+    },
+    "form": {
+      "titleCreate": "Task baru",
+      "titleEdit": "Edit task",
+      "description": "Task adalah unit kerja yang bisa di-assign, di-track progress-nya, dan (opsional) dikaitkan ke milestone.",
+      "name": "Nama task",
+      "namePlaceholder": "cth. Design DB schema, Deploy staging…",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Ceritakan konteks & acceptance criteria",
+      "parent": "Parent task (opsional)",
+      "parentPlaceholder": "Root level",
+      "milestone": "Milestone (opsional)",
+      "milestonePlaceholder": "Tidak terkait",
+      "owner": "Owner",
+      "ownerPlaceholder": "Pilih owner…",
+      "weight": "Bobot (%)",
+      "weightHint": "Bobot dalam kelompok sibling; kosongkan = 0",
+      "progress": "Progress (%)",
+      "plannedStart": "Mulai rencana",
+      "plannedEnd": "Selesai rencana",
+      "budget": "Anggaran (opsional)",
+      "budgetPlaceholder": "0",
+      "dependsOn": "Predecessor (finish-to-start)",
+      "dependsOnPlaceholder": "Tidak ada",
+      "submitCreate": "Simpan task",
+      "submitEdit": "Simpan perubahan",
+      "created": "Task ditambahkan.",
+      "updated": "Task diperbarui."
+    },
+    "actions": {
+      "openMenu": "Buka menu task",
+      "edit": "Edit",
+      "addChild": "Tambah sub-task",
+      "moveTo": "Ubah status ke {status}",
+      "setProgress": "Set progress…",
+      "delete": "Hapus task (+ sub-tree)",
+      "deleteConfirm": "Hapus task ini beserta seluruh sub-task-nya?",
+      "statusUpdated": "Status task diperbarui.",
+      "progressUpdated": "Progress task diperbarui.",
+      "deleted": "Task dihapus."
+    },
+    "stats": {
+      "total": "Total",
+      "inProgress": "Berjalan",
+      "done": "Selesai",
+      "overdue": "Overdue",
+      "avgProgress": "Rata-rata progress"
+    },
+    "tabs": {
+      "tree": "Tree",
+      "gantt": "Gantt"
+    },
+    "gantt": {
+      "hint": "Drag bar untuk reschedule · drag ujung bar untuk atur progress · hari ini {date}",
+      "emptyPlanned": "Belum ada task dengan tanggal rencana. Isi Start + End date pada task untuk menampilkannya di Gantt.",
+      "unplanned": "{count} task belum punya tanggal rencana (tidak muncul di Gantt)"
+    }
+  },
+  "issues": {
+    "title": "Issue",
+    "subtitle": "{count, plural, =0 {Belum ada issue.} one {# issue tercatat.} other {# issue tercatat.}}",
+    "new": "Issue baru",
+    "empty": "Belum ada issue untuk proyek ini.",
+    "tableAria": "Daftar issue proyek",
+    "milestoneMissing": "Milestone dihapus",
+    "attachmentCountAria": "{count, plural, one {# lampiran} other {# lampiran}}",
+    "columns": {
+      "title": "Judul",
+      "category": "Kategori",
+      "severity": "Prioritas",
+      "status": "Status",
+      "sla": "SLA",
+      "assignee": "Penanggung jawab",
+      "created": "Dibuat",
+      "due": "Batas"
+    },
+    "severity": {
+      "CRITICAL": "Kritis",
+      "HIGH": "Tinggi",
+      "MEDIUM": "Menengah",
+      "LOW": "Rendah"
+    },
+    "category": {
+      "BUG": "Bug",
+      "FEATURE": "Fitur",
+      "TASK": "Task",
+      "INCIDENT": "Insiden",
+      "RISK": "Risiko",
+      "IMPROVEMENT": "Perbaikan",
+      "QUESTION": "Pertanyaan"
+    },
+    "status": {
+      "OPEN": "Terbuka",
+      "IN_PROGRESS": "Sedang dikerjakan",
+      "RESOLVED": "Terselesaikan",
+      "CLOSED": "Ditutup",
+      "REOPENED": "Dibuka lagi"
+    },
+    "sla": {
+      "onTrack": "Aman",
+      "atRisk": "Sisa {minutes} mnt",
+      "breached": "Terlampaui {hours} jam"
+    },
+    "form": {
+      "title": "Issue baru",
+      "description": "Catat bug, penghambat, atau risiko pada proyek ini. Prioritas menentukan SLA jam kerja (Kritis 1 jam · Tinggi 4 jam · Menengah 8 jam · Rendah 24 jam).",
+      "project": "Proyek",
+      "projectLockedFallback": "Proyek ini",
+      "milestone": "Milestone (opsional)",
+      "milestoneNone": "— tidak ada —",
+      "milestoneHint": "Tautkan issue ke milestone untuk menandai risiko pengiriman.",
+      "issueTitle": "Judul",
+      "issueTitlePlaceholder": "Login gagal setelah 2 percobaan…",
+      "category": "Kategori",
+      "priority": "Prioritas",
+      "priorityHint": "Menentukan SLA (Kritis 1 jam · Tinggi 4 jam · Menengah 8 jam · Rendah 24 jam).",
+      "dueDate": "Batas waktu (opsional)",
+      "assignee": "Tugaskan ke (opsional)",
+      "assigneeUnassigned": "— belum ditugaskan —",
+      "descriptionField": "Deskripsi",
+      "descriptionPlaceholder": "Langkah reproduksi, dampak bisnis, ekspektasi vs. aktual, tautan ke tiket terkait, dll.",
+      "tags": "Tag (pisahkan koma)",
+      "tagsPlaceholder": "backend, checkout, prio-p1",
+      "tagsHint": "Maksimum 20 tag. Otomatis kami ubah ke huruf kecil.",
+      "notes": "Catatan",
+      "notesPlaceholder": "Catatan internal (tidak ditampilkan ke klien)…",
+      "notesHint": "Hanya terlihat oleh staf internal.",
+      "attachments": {
+        "label": "Lampiran (opsional)",
+        "add": "Tambah file",
+        "hint": "Lampirkan screenshot, log, atau dokumen referensi. Maks 10 MB per file.",
+        "pickerLabel": "Pilih file yang akan dilampirkan",
+        "removeAria": "Hapus file",
+        "unsupportedType": "{name} — tipe file tidak didukung. Gunakan JPEG, PNG, WebP, atau PDF.",
+        "tooLarge": "{name} melebihi batas 10 MB.",
+        "partialUploadFailed": "Issue tersimpan, tapi ada lampiran yang gagal diunggah."
+      },
+      "submit": "Simpan",
+      "createdToast": "Issue dibuat."
+    },
+    "actions": {
+      "openMenu": "Buka menu issue",
+      "transitionTo": "Ubah ke…",
+      "transitionedToast": "Issue dipindahkan ke {status}."
+    },
+    "kpi": {
+      "breached": "SLA terlampaui",
+      "atRisk": "Beresiko",
+      "active": "Issue aktif"
+    }
+  },
+  "budgetRequests": {
+    "title": "Permintaan Anggaran",
+    "subtitle": "Perubahan mid-cycle (Tambah / Kurangi / Transfer) pada anggaran ini. Setelah disetujui, perubahan diterapkan ke line item secara atomik.",
+    "new": "Permintaan baru",
+    "empty": "Belum ada permintaan anggaran.",
+    "columns": {
+      "kind": "Jenis",
+      "amount": "Nominal",
+      "status": "Status",
+      "chain": "Alur",
+      "requester": "Pemohon",
+      "createdAt": "Dibuat"
+    },
+    "kind": {
+      "INCREASE": "Tambah",
+      "DECREASE": "Kurangi",
+      "TRANSFER": "Transfer"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_PM": "Menunggu PM",
+      "PENDING_FINANCE": "Menunggu Finance",
+      "PENDING_DIRECTOR": "Menunggu Direksi",
+      "APPROVED": "Disetujui",
+      "APPLIED": "Diterapkan",
+      "REJECTED": "Ditolak",
+      "CANCELLED": "Dibatalkan"
+    },
+    "form": {
+      "title": "Ajukan Permintaan Anggaran",
+      "description": "Alurkan Tambah / Kurangi / Transfer melalui approval chain. Nominal menentukan siapa saja yang harus menyetujui.",
+      "kind": "Jenis permintaan",
+      "kindHint": {
+        "INCREASE": "Tambahkan dana ke satu line item.",
+        "DECREASE": "Lepas sisa dana yang tidak terpakai dari satu line item.",
+        "TRANSFER": "Pindahkan dana antara dua line item (net-zero terhadap total anggaran)."
+      },
+      "amount": "Nominal (IDR)",
+      "amountHint": "Rupiah utuh tanpa desimal.",
+      "chainPreview": "Approval chain: {chain}",
+      "chainPreviewLabel": "Alur approval",
+      "sourceLine": "Dari line item",
+      "targetLine": "Ke line item",
+      "linePickerPlaceholder": "Pilih line…",
+      "remaining": "sisa",
+      "justification": "Justifikasi",
+      "justificationPlaceholder": "Jelaskan alasan perubahan ini (minimal 20 karakter).",
+      "justificationHint": "Minimal 20 karakter — mempermudah approver melakukan review.",
+      "submit": "Ajukan permintaan",
+      "createdToast": "Permintaan anggaran dikirim untuk approval."
+    },
+    "actions": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancel": "Batalkan",
+      "apply": "Terapkan",
+      "approvedToast": "Permintaan anggaran disetujui.",
+      "rejectedToast": "Permintaan anggaran ditolak.",
+      "cancelledToast": "Permintaan anggaran dibatalkan.",
+      "appliedToast": "Permintaan anggaran diterapkan ke line item.",
+      "rejectTitle": "Tolak permintaan anggaran",
+      "rejectDescription": "Berikan alasan singkat. Pemohon akan melihat pesan ini di notifikasi mereka.",
+      "rejectPlaceholder": "Alasan penolakan…",
+      "rejectConfirm": "Tolak permintaan",
+      "cancelTitle": "Batalkan permintaan anggaran",
+      "cancelDescription": "Tarik kembali permintaan ini. Tindakan ini tidak dapat dibatalkan.",
+      "cancelPlaceholder": "Komentar opsional…",
+      "cancelConfirm": "Batalkan permintaan"
+    }
+  },
+  "expenses": {
+    "title": "Pengajuan Biaya",
+    "subtitle": "Reimbursement proyek berjalan melalui matriks approval berjenjang (rules §9).",
+    "kicker": "Finance",
+    "new": "Pengajuan baru",
+    "empty": "Belum ada pengajuan biaya",
+    "emptyBody": "Ajukan biaya pertama Anda untuk memicu alur approval berjenjang.",
+    "columns": {
+      "date": "Tanggal",
+      "project": "Proyek",
+      "description": "Deskripsi",
+      "category": "Kategori",
+      "paymentMethod": "Pembayaran",
+      "amount": "Nominal",
+      "status": "Status"
+    },
+    "filters": {
+      "all": "Semua",
+      "myDrafts": "Draft saya",
+      "pending": "Diproses",
+      "approved": "Disetujui",
+      "rejected": "Ditolak / Dibatalkan"
+    },
+    "categories": {
+      "TRAVEL": "Perjalanan Dinas",
+      "ONSITE_MEAL": "Konsumsi Onsite",
+      "IT_SUPPLIES": "IT Supplies",
+      "SOFTWARE_LICENSE": "Lisensi Software",
+      "TRAINING": "Training",
+      "COMMUNICATION": "Komunikasi",
+      "MISC": "Lain-lain"
+    },
+    "form": {
+      "title": "Pengajuan biaya baru",
+      "description": "Simpan sebagai draft dulu, unggah nota, baru kirim untuk approval.",
+      "needsProject": "Anda harus memiliki proyek aktif sebelum mengajukan biaya.",
+      "project": "Proyek",
+      "projectPlaceholder": "Pilih proyek…",
+      "budgetLine": "MA (Mata Anggaran)",
+      "budgetLinePlaceholder": "Pilih mata anggaran…",
+      "budgetLinePlaceholderNoProject": "Pilih proyek dulu…",
+      "budgetLineLoading": "Memuat mata anggaran…",
+      "budgetLineEmpty": "Tidak ada MA yang bisa dipakai untuk proyek ini.",
+      "budgetLineHint": "Hanya MA di budget berstatus draft, submitted, atau approved yang ditampilkan.",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Pilih akun GL…",
+      "coaPlaceholderNoProject": "Pilih proyek dulu…",
+      "coaLoading": "Memuat CoA…",
+      "coaEmpty": "Belum ada CoA terdaftar untuk proyek ini.",
+      "coaEmptyHint": "Finance belum menautkan Chart of Accounts ke MA proyek ini.",
+      "coaNone": "— Tanpa CoA (Finance akan klasifikasi) —",
+      "coaHint": "Hanya CoA yang sudah didaftarkan pada MA proyek ini yang ditampilkan.",
+      "amount": "Nominal",
+      "amountHint": "Rupiah utuh, tanpa desimal.",
+      "chainPreviewTitle": "Alur approval",
+      "category": "Kategori",
+      "paymentMethod": "Metode pembayaran",
+      "paymentMethodPlaceholder": "Pilih metode pembayaran…",
+      "incurredOn": "Tanggal biaya",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Biaya ini untuk apa?",
+      "notes": "Catatan",
+      "notesPlaceholder": "Konteks tambahan untuk reviewer…",
+      "lateReasonLabel": "Justifikasi keterlambatan submit ({days} hari kerja) — wajib",
+      "lateReasonPlaceholder": "misal: baru pulang dari site, nota terselip, approval leaders terlambat…",
+      "lateReasonHint": "Nota lebih dari 7 hari kerja. Approver akan menerima flag khusus — mohon jelaskan alasan singkat (min 5 karakter).",
+      "receipts": "Nota / bukti",
+      "receiptsHint": "JPG, PNG, WEBP atau PDF · maks 10 MB per file.",
+      "addReceipt": "Tambah nota",
+      "receiptsAttached": "{n} file siap unggah",
+      "removeStagedReceipt": "Hapus",
+      "uploadingReceipts": "Mengunggah nota…",
+      "budgetLineEmptyHint": "Minta Finance membuat anggaran untuk proyek ini terlebih dahulu.",
+      "draftHint": "Draft — nota diunggah otomatis setelah Save draft.",
+      "receiptUrl": "URL bukti/nota (opsional)",
+      "saveDraft": "Simpan draft",
+      "submit": "Kirim untuk approval",
+      "draftSaved": "Draft tersimpan. Anda bisa tambah nota di halaman detail.",
+      "submitted": "Pengajuan biaya berhasil dikirim."
+    },
+    "paymentMethods": {
+      "BANK_TRANSFER": "Transfer bank",
+      "CASH": "Tunai",
+      "REIMBURSEMENT": "Reimbursement",
+      "CORPORATE_CARD": "Kartu korporat"
+    },
+    "detail": {
+      "back": "Kembali ke daftar",
+      "kicker": "Pengajuan biaya",
+      "amount": "Nominal",
+      "incurredOn": "Terjadi pada {date}",
+      "submitterTitle": "Pengaju",
+      "submittedAt": "Diajukan {date}",
+      "openReceipt": "Buka bukti/nota",
+      "timelineTitle": "Riwayat approval",
+      "timelineEmpty": "Belum ada aktivitas approval.",
+      "rejectionReasonTitle": "Alasan penolakan",
+      "notesTitle": "Catatan",
+      "receiptsTitle": "Nota / bukti",
+      "receiptsEmpty": "Belum ada nota yang diunggah.",
+      "uploadReceipts": "Unggah nota",
+      "uploadHint": "JPG, PNG, WEBP atau PDF · maksimal 10 MB per file.",
+      "uploadingFiles": "Mengunggah {n} file…",
+      "uploadedToast": "{n} nota terunggah.",
+      "removeReceipt": "Hapus",
+      "removedToast": "Nota dihapus.",
+      "submitForApproval": "Kirim untuk approval",
+      "submitLocked": "Lengkapi metode pembayaran dan minimal 1 nota untuk mengirim. MA akan diisi PM/Finance saat review.",
+      "deleteDraft": "Hapus draft",
+      "deletedToast": "Draft dihapus.",
+      "confirmDelete": "Hapus draft ini secara permanen?",
+      "confirmDeleteBody": "Aksi ini tidak dapat dibatalkan. Nota yang sudah diunggah akan ikut dihapus.",
+      "budgetLineLabel": "MA / Budget line",
+      "coaLabel": "Chart of Accounts",
+      "paymentMethodLabel": "Metode pembayaran",
+      "assignBudgetLineTitle": "Assign MA (budget line)",
+      "changeBudgetLine": "Ubah MA",
+      "selectBudgetLine": "Pilih MA…",
+      "loadingBudgetLines": "Memuat MA…",
+      "noBudgetLines": "Belum ada MA aktif untuk project ini.",
+      "saveBudgetLine": "Simpan",
+      "cancelBudgetLine": "Batal",
+      "budgetLineAssignedToast": "MA berhasil di-assign."
+    },
+    "actions": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancel": "Batal",
+      "approveTitle": "Setujui pengajuan?",
+      "approveDescription": "Tindakan ini akan memajukan status ke level approval berikutnya sesuai matriks nominal.",
+      "rejectTitle": "Tolak pengajuan?",
+      "rejectDescription": "Pengajuan tidak dapat diaktifkan kembali setelah ditolak. Sertakan alasan yang jelas.",
+      "comment": "Komentar (opsional)",
+      "commentPlaceholder": "Catatan untuk auditor…",
+      "reason": "Alasan penolakan",
+      "reasonPlaceholder": "Jelaskan alasan penolakan…",
+      "confirmApprove": "Konfirmasi & setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "approvedToast": "Pengajuan disetujui.",
+      "rejectedToast": "Pengajuan ditolak."
+    }
+  },
+  "budgets": {
+    "kicker": "Keuangan",
+    "title": "Anggaran",
+    "subtitle": "Anggaran proyek per tahun fiskal. Diteruskan ke Finance dan Director untuk persetujuan (rules §9.2).",
+    "new": "Anggaran baru",
+    "empty": "Belum ada anggaran",
+    "emptyBody": "Buat anggaran proyek pertama untuk membuka forecasting kas dan alur approval.",
+    "columns": {
+      "fiscalYear": "TA",
+      "project": "Proyek",
+      "title": "Judul",
+      "totalPlanned": "Rencana",
+      "status": "Status",
+      "createdAt": "Dibuat"
+    },
+    "categories": {
+      "DIRECT_LABOUR": "Tenaga kerja langsung",
+      "SUBCONTRACTOR": "Subkontraktor",
+      "INFRASTRUCTURE": "Infrastruktur",
+      "TOOLING": "Perkakas",
+      "TRAVEL": "Perjalanan",
+      "TRAINING": "Pelatihan",
+      "MARKETING": "Pemasaran",
+      "OPERATIONS": "Operasional",
+      "CONTINGENCY": "Contingency",
+      "OTHER": "Lainnya"
+    },
+    "form": {
+      "title": "Buat anggaran",
+      "description": "Header saja. Tambahkan line item setelah anggaran dibuat.",
+      "needsProject": "Buat atau aktifkan proyek terlebih dahulu sebelum menyusun anggaran.",
+      "project": "Proyek",
+      "projectPlaceholder": "Pilih proyek…",
+      "fiscalYear": "Tahun fiskal",
+      "titleField": "Judul",
+      "notes": "Catatan (opsional)",
+      "notesPlaceholder": "Konteks atau asumsi untuk reviewer…",
+      "submit": "Buat anggaran",
+      "created": "Draft anggaran dibuat."
+    },
+    "lineItems": {
+      "addRow": "Tambah baris",
+      "seq": "#",
+      "category": "Kategori",
+      "coaAccount": "Bagan Akun (CoA)",
+      "coaPlaceholder": "Pilih akun GL…",
+      "coaNone": "— belum dipilih —",
+      "plannedAmount": "Rencana (IDR)",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Baris ini untuk apa?",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "added": "Baris ditambahkan.",
+      "deleted": "Baris dihapus.",
+      "delete": "Hapus baris"
+    },
+    "detail": {
+      "back": "Kembali ke daftar",
+      "kicker": "Anggaran",
+      "awaiting": "Menunggu approval dari {slot}.",
+      "totalPlanned": "Total rencana",
+      "totalRealized": "Terealisasi",
+      "totalOutstanding": "Outstanding",
+      "totalRemaining": "Sisa",
+      "utilizationTitle": "Utilisasi",
+      "utilizationSubtitle": "{percent}% dari rencana anggaran sudah terpakai (realized + outstanding).",
+      "lineItemsTitle": "Line item",
+      "lineItemsSubtitle": "Rencana vs realisasi vs outstanding. Sisa dihitung otomatis.",
+      "noLineItems": "Belum ada baris. Tambahkan minimal satu sebelum submit.",
+      "columns": {
+        "category": "Kategori",
+        "coa": "CoA",
+        "description": "Deskripsi",
+        "planned": "Rencana",
+        "realized": "Realized",
+        "outstanding": "Outstanding",
+        "remaining": "Sisa"
+      },
+      "metadataTitle": "Metadata",
+      "createdBy": "Dibuat oleh",
+      "createdAt": "Dibuat pada",
+      "approvedBy": "Disetujui oleh",
+      "approvedAt": "Disetujui pada",
+      "notes": "Catatan",
+      "coaMissing": "MA belum diisi",
+      "coaMissingHelp": "Line item ini belum di-link ke akun MA (Mata Anggaran). Finance tidak bisa post ke GL sampai MA diisi. Edit baris untuk memilih akun yang sesuai."
+    },
+    "actions": {
+      "submit": "Ajukan approval",
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancelBudget": "Batalkan anggaran",
+      "cancel": "Batal",
+      "approveTitle": "Setujui anggaran ini?",
+      "approveDescription": "Melanjutkan anggaran ke approver berikutnya (atau finalisasi bila tidak ada slot lanjutan).",
+      "rejectTitle": "Tolak anggaran ini?",
+      "rejectDescription": "Anggaran akan dipindahkan ke CANCELLED dengan alasan tercatat di audit trail.",
+      "cancelTitle": "Batalkan anggaran ini?",
+      "cancelDescription": "Hanya submitter (atau ADMIN) yang bisa membatalkan anggaran yang masih terbuka.",
+      "comment": "Catatan (opsional)",
+      "commentPlaceholder": "Tambah konteks untuk approver berikutnya…",
+      "reason": "Alasan",
+      "reasonPlaceholder": "Jelaskan alasan penolakan…",
+      "cancelReason": "Alasan (opsional)",
+      "cancelReasonPlaceholder": "Kenapa dibatalkan?",
+      "confirmApprove": "Konfirmasi & setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "confirmCancel": "Konfirmasi batal",
+      "submittedToast": "Anggaran diajukan untuk approval.",
+      "approvedToast": "Anggaran disetujui.",
+      "rejectedToast": "Anggaran ditolak.",
+      "cancelledToast": "Anggaran dibatalkan."
+    }
+  },
+  "hrRequests": {
+    "kicker": "HRIS",
+    "title": "Cuti, Lembur & Sakit",
+    "subtitle": "Pengajuan HRIS diteruskan via Supervisor → PM → OM → HR Admin (SICK langsung ke HR).",
+    "new": "Pengajuan baru",
+    "empty": "Belum ada pengajuan HR",
+    "emptyBody": "Ajukan cuti, lembur, atau sakit pertama Anda untuk memicu alur approval.",
+    "columns": {
+      "kind": "Jenis",
+      "requester": "Pengaju",
+      "window": "Rentang",
+      "reason": "Alasan",
+      "status": "Status",
+      "chain": "Chain"
+    },
+    "kinds": {
+      "LEAVE": "Cuti",
+      "OVERTIME": "Lembur",
+      "SICK": "Sakit"
+    },
+    "leaveTypes": {
+      "ANNUAL": "Cuti tahunan",
+      "UNPAID": "Cuti tanpa gaji",
+      "MATERNITY": "Cuti melahirkan",
+      "PATERNITY": "Cuti ayah",
+      "BEREAVEMENT": "Cuti duka",
+      "MARRIAGE": "Cuti menikah",
+      "OTHER": "Lainnya"
+    },
+    "form": {
+      "title": "Pengajuan HR baru",
+      "description": "Ajukan cuti, lembur, atau sakit. Pengajuan sakit wajib melampirkan surat dokter.",
+      "submitted": "Pengajuan berhasil dikirim.",
+      "kind": "Jenis",
+      "leaveType": "Tipe cuti",
+      "startAt": "Mulai",
+      "endAt": "Berakhir",
+      "hoursEstimate": "Estimasi jam",
+      "reason": "Alasan",
+      "reasonPlaceholder": "Justifikasi singkat…",
+      "doctorNote": "Surat dokter (URL)",
+      "attachment": "URL lampiran (opsional)",
+      "submit": "Kirim pengajuan"
+    },
+    "detail": {
+      "kicker": "Pengajuan",
+      "back": "Kembali",
+      "window": "Rentang",
+      "hours": "{hours} jam",
+      "requesterTitle": "Pengaju",
+      "submittedAt": "Diajukan {date}",
+      "openAttachment": "Buka lampiran",
+      "approvalChainTitle": "Alur approval",
+      "timelineTitle": "Riwayat approval",
+      "timelineEmpty": "Belum ada aktivitas approval.",
+      "rejectionReasonTitle": "Alasan penolakan"
+    },
+    "actions": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancel": "Batal",
+      "approveTitle": "Setujui pengajuan?",
+      "approveDescription": "Aksi ini akan meneruskan ke peran approver berikutnya.",
+      "rejectTitle": "Tolak pengajuan?",
+      "rejectDescription": "Pengajuan yang sudah ditolak tidak dapat diaktifkan kembali.",
+      "comment": "Komentar (opsional)",
+      "commentPlaceholder": "Catatan untuk auditor…",
+      "reason": "Alasan penolakan",
+      "reasonPlaceholder": "Jelaskan alasan penolakan…",
+      "confirmApprove": "Konfirmasi & setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "approvedToast": "Pengajuan disetujui.",
+      "rejectedToast": "Pengajuan ditolak."
+    }
+  },
+  "cashAdvances": {
+    "kicker": "Keuangan",
+    "title": "Kas Bon",
+    "subtitle": "Kas bon (uang muka kerja) dengan matriks approval berbasis nominal yang sama dengan biaya.",
+    "new": "Kas bon baru",
+    "empty": "Belum ada kas bon",
+    "emptyBody": "Ajukan kas bon pertama untuk memicu alur approval.",
+    "columns": {
+      "project": "Proyek",
+      "requester": "Pengaju",
+      "purpose": "Tujuan",
+      "amount": "Nominal",
+      "neededBy": "Diperlukan",
+      "status": "Status",
+      "type": "Jenis"
+    },
+    "form": {
+      "title": "Ajukan kas bon",
+      "description": "Ajukan kas bon operasional. Jenis dan nominal menentukan alur approval.",
+      "needsProject": "Anda harus memiliki proyek aktif untuk mengajukan kas bon. Hubungi PM Anda jika ini keliru.",
+      "type": "Jenis",
+      "project": "Proyek",
+      "projectPlaceholder": "Pilih proyek…",
+      "amount": "Nominal (IDR)",
+      "amountHint": "Rupiah utuh — pemisah titik otomatis ditambahkan.",
+      "neededBy": "Diperlukan tanggal",
+      "purposeLabel": "Tujuan penggunaan",
+      "purposePlaceholder": "cth: Material site visit XYZ; logistik meeting vendor; top-up kartu untuk klien X.",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Pilih akun GL…",
+      "coaPlaceholderNoProject": "Pilih proyek dulu…",
+      "coaLoading": "Memuat CoA…",
+      "coaEmpty": "Belum ada CoA terdaftar untuk proyek ini.",
+      "coaEmptyHint": "Finance belum menautkan Chart of Accounts ke MA proyek ini.",
+      "coaNone": "— Tanpa CoA (Finance akan klasifikasi) —",
+      "coaHint": "Hanya CoA yang sudah didaftarkan pada MA proyek ini yang ditampilkan.",
+      "chainPreviewTitle": "Alur approval",
+      "chainPreviewEmpty": "Isi nominal untuk melihat approver.",
+      "chainPreviewAuto": "Otomatis disetujui (di bawah threshold).",
+      "submit": "Kirim untuk approval",
+      "submitted": "Kas bon berhasil dikirim.",
+      "settlementPreviewTitle": "Estimasi batas settlement",
+      "settlementPreviewBody": "Jika dicairkan hari ini, Anda wajib settle sebelum {date} (7 hari kerja). Settlement telat memblokir request baru.",
+      "settlementPreviewEmpty": "Batas settlement akan muncul setelah tanggal pencairan diketahui.",
+      "fieldOpsCardLockedTitle": "Field Ops punya alur khusus",
+      "fieldOpsCardLockedEligible": "Gunakan tombol 'Pengajuan Operasional' — form itu mencakup rincian RAB, detail lokasi, dan attachment yang diperlukan approver.",
+      "fieldOpsCardLockedNotEligible": "Hanya Supervisor atau Field Technician yang di-assign ke proyek yang boleh mengajukan Field Ops CA. Minta Supervisor mengajukan untuk Anda.",
+      "fieldOpsCardLockedToastEligible": "Silakan gunakan tombol 'Pengajuan Operasional' untuk Field Ops CA.",
+      "fieldOpsCardLockedToastNotEligible": "Field Ops CA khusus role Supervisor / Field Technician."
+    },
+    "chainSlot": {
+      "SUPERVISOR": "Supervisor",
+      "PM": "Project Manager",
+      "OM": "Operations Manager",
+      "FINANCE": "Finance",
+      "DIRECTOR": "Direktur"
+    },
+    "attachments": {
+      "title": "Lampiran Pendukung",
+      "subtitleGeneral": "File pendukung opsional (memo, invoice, kwitansi) yang mungkin dibutuhkan approver.",
+      "subtitleFieldOps": "Wajib untuk approver: screenshot rute Google Maps, memo pendukung, dan foto site jika diminta.",
+      "upload": "Tambah file",
+      "uploadHint": "JPG, PNG, WEBP atau PDF · maks 10 MB per file. Bisa diupload selagi status DRAFT atau Pending Supervisor.",
+      "empty": "Belum ada file pendukung.",
+      "remove": "Hapus file",
+      "uploadedToast": "{n} file berhasil diupload.",
+      "removedToast": "File dihapus.",
+      "locked": "Lampiran terkunci",
+      "lockedTitle": "Lampiran menjadi read-only setelah Supervisor meneruskan pengajuan."
+    },
+    "detail": {
+      "kicker": "Kas bon",
+      "back": "Kembali ke daftar",
+      "amount": "Nominal",
+      "neededBy": "Diperlukan {date}",
+      "coaLabel": "CoA",
+      "requesterTitle": "Pengaju",
+      "submittedAt": "Diajukan {date}",
+      "timelineTitle": "Riwayat approval",
+      "timelineEmpty": "Belum ada aktivitas approval.",
+      "chainTitle": "Alur approval (berdasarkan nominal)",
+      "chainEmpty": "Otomatis disetujui — tidak butuh approver.",
+      "settlementsTitle": "Settlement (nota)",
+      "settlementsEmpty": "Belum ada settlement.",
+      "returnedReason": "Dikembalikan: {reason}",
+      "netSettlementTitle": "Selisih akhir",
+      "netRefund": "Karyawan wajib mengembalikan selisih ke kas.",
+      "netTopUp": "Perusahaan berutang top-up ke karyawan.",
+      "netZero": "Sudah reconciled penuh.",
+      "rejectionReasonTitle": "Alasan penolakan",
+      "type": {
+        "GENERAL": "Umum",
+        "FIELD_OPS": "Operasional lapangan"
+      }
+    },
+    "actions": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "disburse": "Cairkan",
+      "cancel": "Batal",
+      "approveTitle": "Setujui kas bon?",
+      "approveDescription": "Aksi ini akan meneruskan ke level approval berikutnya.",
+      "rejectTitle": "Tolak kas bon?",
+      "rejectDescription": "Kas bon yang ditolak tidak dapat diaktifkan kembali.",
+      "disburseTitle": "Cairkan dana?",
+      "disburseDescription": "Catat referensi pencairan dan rilis dana ke pengaju.",
+      "disbursementRef": "Referensi pencairan",
+      "comment": "Komentar (opsional)",
+      "commentPlaceholder": "Catatan untuk auditor…",
+      "reason": "Alasan penolakan",
+      "reasonPlaceholder": "Jelaskan alasan penolakan…",
+      "confirmApprove": "Konfirmasi & setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "confirmDisburse": "Konfirmasi cairkan",
+      "approvedToast": "Kas bon disetujui.",
+      "rejectedToast": "Kas bon ditolak.",
+      "disbursedToast": "Kas bon dicairkan."
+    },
+    "settlement": {
+      "submit": "Kirim settlement",
+      "submitTitle": "Kirim settlement",
+      "submitDescription": "Upload total nota/struk agar Finance dapat rekonsiliasi.",
+      "totalSpent": "Total terpakai (IDR)",
+      "totalSpentInvalid": "Total terpakai harus berupa nominal ≥ 0.",
+      "notes": "Catatan (opsional)",
+      "confirmSubmit": "Kirim",
+      "submitted": "Settlement berhasil dikirim.",
+      "attachments": {
+        "label": "Nota / struk",
+        "hint": "JPG · PNG · PDF · maks 10 MB per file",
+        "add": "Tambah nota",
+        "attached": "{n} terlampir",
+        "none": "Belum ada nota",
+        "pickerLabel": "Pilih file nota",
+        "requiredForSpend": "Minimal 1 nota wajib dilampirkan jika total terpakai > 0.",
+        "carryOverInfo": "{n} nota dari submission sebelumnya (RETURNED) akan otomatis disertakan.",
+        "submittedWithCopyForward": "Settlement terkirim beserta {n} nota lama.",
+        "unsupportedType": "{name}: format tidak didukung",
+        "tooLarge": "{name}: melebihi batas 10 MB",
+        "removeAria": "Hapus {name} dari pilihan",
+        "detached": "{name} dihapus.",
+        "detachAria": "Hapus {name}",
+        "removedToast": "Nota berhasil dihapus.",
+        "listAria": "Nota terlampir pada settlement ini",
+        "listTitle": "Nota terlampir"
+      },
+      "review": {
+        "accept": "Terima",
+        "acceptTitle": "Terima settlement?",
+        "acceptDescription": "Kas bon akan berpindah ke status SETTLED dan mempengaruhi anggaran proyek.",
+        "confirmAccept": "Konfirmasi terima",
+        "acceptedToast": "Settlement diterima.",
+        "return": "Kembalikan",
+        "returnTitle": "Kembalikan settlement?",
+        "returnDescription": "Pemohon dapat mengedit lampiran dan mengirim ulang.",
+        "reason": "Alasan pengembalian",
+        "reasonPlaceholder": "Jelaskan bagian yang perlu direvisi…",
+        "confirmReturn": "Konfirmasi kembalikan",
+        "returnedToast": "Settlement dikembalikan ke pemohon."
+      }
+    },
+    "types": {
+      "general": "Umum",
+      "generalHint": "Semua anggota proyek boleh mengajukan. Approval: PM (≥ Rp 2 jt) → Finance → Direktur (≥ Rp 20 jt).",
+      "fieldOps": "Operasional lapangan",
+      "fieldOpsHint": "Diinisiasi Supervisor untuk kunjungan lapangan. Approval selalu mulai dari Supervisor; eskalasi ke PM / OM / Direktur sesuai nominal."
+    },
+    "newFieldOps": "Pengajuan operasional",
+    "newFieldOpsDisabled": "Pengajuan dana operasional hanya untuk teknisi lapangan yang aktif di proyek.",
+    "newGeneralDisabled": "Anda ter-assign sebagai teknisi lapangan — gunakan Pengajuan Operasional.",
+    "fieldOpsForm": {
+      "title": "Pengajuan Dana Operasional Lapangan",
+      "description": "Sesuai mockup Field Ops. Approval otomatis dihitung dari total RAB (5 jt / 20 jt / 50 jt).",
+      "needsFieldTech": "Anda perlu assignment aktif sebagai FIELD_TECHNICIAN di sebuah project untuk menggunakan form ini.",
+      "section1": "Informasi Pekerjaan & Site",
+      "section2": "Transportasi & Lokasi",
+      "section3": "Rekening Pencairan",
+      "rabTitle": "Rincian Anggaran (RAB)",
+      "rabHint": "Total RAB menentukan alur approval. Minimal 1 baris.",
+      "rabAdd": "Tambah baris",
+      "rabRemove": "Hapus",
+      "rabCategory": "Kategori",
+      "rabCategoryPlaceholder": "Transportasi / Konsumsi / Akomodasi …",
+      "rabDetail": "Detail",
+      "rabDetailPlaceholder": "Contoh: PP Jakarta–Bandung, 2 org, 3 hari",
+      "rabAmount": "Nominal (IDR)",
+      "rabTotal": "Total RAB",
+      "rabEmpty": "Belum ada baris RAB.",
+      "rabCoa": "Chart of Accounts",
+      "rabCoaPlaceholder": "Pilih akun GL…",
+      "rabCoaPlaceholderNoProject": "Pilih proyek dulu…",
+      "rabCoaLoading": "Memuat CoA…",
+      "rabCoaEmpty": "Belum ada CoA terdaftar untuk proyek ini.",
+      "rabCoaNone": "— Tanpa CoA (Finance akan klasifikasi) —",
+      "project": "Nama Project",
+      "projectPlaceholder": "Pilih project…",
+      "ticketNumber": "No Ticket / SPK",
+      "ticketNumberPlaceholder": "SPK-2026-…",
+      "unitPengaju": "Unit Pengaju",
+      "unitPengajuPlaceholder": "Ops-Nusa / NOC-Jakarta …",
+      "justification": "Justifikasi",
+      "justificationPlaceholder": "Ringkas kenapa kunjungan/kerja lapangan ini perlu…",
+      "cidCompany": "CID / Nama Perusahaan",
+      "cidCompanyPlaceholder": "CID: NUSA-CS-2026-…",
+      "area": "Area",
+      "areaPlaceholder": "Jabodetabek / Jawa Barat …",
+      "tujuan": "Tujuan",
+      "tujuanPlaceholder": "Alamat / site tujuan",
+      "picName": "Nama PIC di Lokasi",
+      "picNamePlaceholder": "Nama kontak on-site",
+      "picPhone": "No HP PIC",
+      "pickupKeyBts": "Ambil kunci BTS?",
+      "transportNeed": "Kebutuhan Transportasi",
+      "transportNeedPlaceholder": "Motor / mobil pribadi / rental / carter",
+      "jarakPpKm": "Jarak PP (km)",
+      "gmapDuration": "Durasi Estimasi (Gmap)",
+      "gmapDurationPlaceholder": "2 jam 30 menit",
+      "driverPhone": "No HP Driver",
+      "bankOwnerName": "Nama Pemilik Rekening",
+      "bankName": "Nama Bank",
+      "bankNamePlaceholder": "BCA / Mandiri / BNI …",
+      "bankAccountNo": "No Rekening",
+      "bankAccountHint": "6-24 digit angka.",
+      "lookupEmpty": "Belum ada opsi — hubungi admin.",
+      "saveDraft": "Simpan Draft",
+      "saveDraftSaved": "Draft tersimpan. Anda bisa lengkapi dan submit dari detail halaman.",
+      "cancel": "Batal",
+      "chainPreview": "Preview alur approval untuk total ini",
+      "chainSupervisor": "Supervisor",
+      "chainManagerOnSite": "Manager On-site",
+      "chainLeadOm": "Lead Operations Manager",
+      "chainFinance": "Finance",
+      "chainHeadOps": "Head of Operations",
+      "section4": "Lampiran Pendukung",
+      "attachmentsHint": "Wajib untuk approver Field-Ops: screenshot rute Google Maps, memo pendukung, foto site. Bisa juga ditambah nanti dari halaman detail.",
+      "addAttachment": "Tambah lampiran",
+      "attachmentsPickHint": "JPG, PNG, WEBP atau PDF · maksimal 10 MB per file.",
+      "attachmentsAttached": "{n} file siap diupload setelah Simpan Draft.",
+      "removeStagedAttachment": "Hapus dari daftar upload",
+      "uploadingAttachments": "Mengupload lampiran…"
+    },
+    "canonicalStatus": {
+      "DRAFT": "Draf",
+      "PENDING_SUPERVISOR": "Menunggu · Supervisor",
+      "PENDING_PM": "Menunggu · Project Manager",
+      "PENDING_OM": "Menunggu · Operations Manager",
+      "PENDING_FINANCE": "Menunggu · Finance",
+      "PENDING_DIRECTOR": "Menunggu · Direktur",
+      "APPROVED": "Menunggu pencairan",
+      "DISBURSED": "Dicairkan · menunggu settlement",
+      "SETTLED": "Selesai",
+      "REJECTED": "Ditolak",
+      "CANCELLED": "Dibatalkan"
+    }
+  },
+  "pettyCash": {
+    "kicker": "Keuangan",
+    "title": "Kas Kecil",
+    "subtitle": "Imprest fund per lokasi. Voucher di bawah Rp 1.000.000 · replenishment via Lead Finance.",
+    "newFund": "Fund baru",
+    "newVoucher": "Voucher baru",
+    "empty": "Belum ada kas kecil",
+    "emptyBody": "Buat imprest fund pertama per lokasi untuk mulai mencatat voucher.",
+    "belowMinBadge": "Di bawah min",
+    "balance": "Saldo",
+    "ofImprest": "dari imprest {amount}",
+    "categories": {
+      "SUPPLIES": "Perlengkapan",
+      "REFRESHMENT": "Konsumsi",
+      "TRANSPORT": "Transport",
+      "PARKING": "Parkir",
+      "COURIER": "Kurir",
+      "MISC": "Lain-lain"
+    },
+    "fundForm": {
+      "title": "Buat fund baru",
+      "description": "Tentukan plafon imprest, saldo minimum, dan tunjuk custodian.",
+      "needsCustodian": "Anda harus memiliki user berperan PETTY_CASH_CUSTODIAN atau LEAD_FINANCE.",
+      "location": "Lokasi / cabang",
+      "locationPlaceholder": "Jakarta HQ",
+      "custodian": "Custodian",
+      "custodianPlaceholder": "Pilih custodian…",
+      "imprest": "Imprest (IDR)",
+      "minBalance": "Saldo minimum",
+      "openingBalance": "Saldo awal",
+      "openingBalanceHint": "Default = imprest bila dikosongkan",
+      "submit": "Buat fund",
+      "created": "Fund berhasil dibuat."
+    },
+    "voucherForm": {
+      "title": "Voucher kas kecil baru",
+      "description": "Catat pengeluaran dari fund. Maksimal Rp 999.999.",
+      "amount": "Nominal (IDR)",
+      "amountHint": "< Rp 1.000.000 per voucher",
+      "category": "Kategori",
+      "incurredOn": "Tanggal",
+      "descriptionLabel": "Deskripsi",
+      "descriptionPlaceholder": "Catatan singkat tentang pembelian…",
+      "coaAccount": "Chart of Accounts",
+      "coaPlaceholder": "Pilih akun GL…",
+      "coaNone": "— Tanpa CoA —",
+      "coaHint": "Opsional. Hanya akun aktif + postable yang ditampilkan.",
+      "receiptUrl": "URL bukti (opsional)",
+      "submit": "Catat voucher",
+      "recorded": "Voucher berhasil dicatat."
+    },
+    "detail": {
+      "kicker": "Fund",
+      "back": "Kembali ke daftar fund",
+      "balanceTitle": "Saldo",
+      "ofImprest": "Imprest {amount}",
+      "minBalanceLabel": "Saldo minimum {amount}",
+      "belowMin": "Di bawah saldo minimum",
+      "vouchersTitle": "Voucher terbaru",
+      "vouchersEmpty": "Belum ada voucher tercatat.",
+      "replenishmentsTitle": "Pengajuan replenishment",
+      "replenishmentsEmpty": "Belum ada replenishment diajukan.",
+      "cols": {
+        "date": "Tanggal",
+        "category": "Kategori",
+        "coa": "CoA",
+        "description": "Deskripsi",
+        "amount": "Nominal",
+        "status": "Status"
+      }
+    },
+    "replenishment": {
+      "open": "Ajukan top-up",
+      "title": "Ajukan replenishment",
+      "description": "Minta Lead Finance untuk top-up fund kembali ke plafon imprest.",
+      "amount": "Nominal (IDR)",
+      "reason": "Alasan (opsional)",
+      "confirm": "Kirim pengajuan",
+      "submitted": "Pengajuan replenishment berhasil dikirim.",
+      "attachments": {
+        "labelMemo": "Memo pendukung (opsional)",
+        "labelTransferProof": "Bukti transfer (disarankan)",
+        "hint": "JPG · PNG · PDF · maks 10 MB per file",
+        "add": "Tambah memo",
+        "addProof": "Lampirkan bukti transfer",
+        "attached": "{n} terlampir",
+        "none": "Belum ada lampiran",
+        "pickerLabel": "Pilih file memo",
+        "pickerLabelProof": "Pilih file bukti transfer",
+        "uploading": "Mengunggah…",
+        "unsupportedType": "{name}: format tidak didukung",
+        "tooLarge": "{name}: melebihi batas 10 MB",
+        "removeAria": "Hapus {name} dari pilihan",
+        "detachAria": "Hapus {name}",
+        "removedToast": "Lampiran berhasil dihapus.",
+        "listAria": "Lampiran untuk replenishment ini",
+        "partialUploadFailed": "Pengajuan tersimpan tetapi upload lampiran gagal: {reason}"
+      },
+      "actions": {
+        "approve": "Setujui",
+        "reject": "Tolak",
+        "disburse": "Cairkan",
+        "cancel": "Batal",
+        "approveTitle": "Setujui replenishment?",
+        "approveDescription": "Membuka pencairan oleh Lead Finance.",
+        "rejectTitle": "Tolak replenishment?",
+        "rejectDescription": "Pengajuan yang ditolak tidak dapat dibuka ulang.",
+        "disburseTitle": "Cairkan replenishment?",
+        "disburseDescription": "Masukkan referensi pencairan untuk credit fund.",
+        "disbursementRef": "Referensi pencairan",
+        "comment": "Komentar (opsional)",
+        "commentPlaceholder": "Catatan untuk auditor…",
+        "reason": "Alasan penolakan",
+        "confirmApprove": "Konfirmasi setujui",
+        "confirmReject": "Konfirmasi tolak",
+        "confirmDisburse": "Konfirmasi cairkan",
+        "approvedToast": "Replenishment disetujui.",
+        "rejectedToast": "Replenishment ditolak.",
+        "disbursedToast": "Replenishment dicairkan."
+      }
+    }
+  },
+  "settingsHub": {
+    "kicker": "Setelan",
+    "title": "Setelan",
+    "subtitle": "Kelola preferensi pribadi dan, jika kamu punya akses admin, konfigurasi tenant.",
+    "personal": {
+      "heading": "Preferensi pribadi",
+      "description": "Pengaturan hanya untuk akun kamu — tidak mempengaruhi pengguna lain.",
+      "preferences": {
+        "title": "Preferensi saya",
+        "description": "Notifikasi, Telegram, WhatsApp, dan tampilan."
+      }
+    },
+    "admin": {
+      "heading": "Administrasi",
+      "description": "Konfigurasi tingkat tenant. Kartu di bawah hanya muncul untuk role yang berwenang.",
+      "tiles": {
+        "users": {
+          "title": "Pengguna",
+          "description": "Kelola akun login, role, dan status aktif."
+        },
+        "coa": {
+          "title": "Bagan Akun (CoA)",
+          "description": "Kelola daftar akun keuangan tenant."
+        },
+        "lookups": {
+          "title": "Data Referensi",
+          "description": "Departemen, jabatan, kategori anggaran, dan lookup lain."
+        },
+        "approvalThresholds": {
+          "title": "Ambang Approval",
+          "description": "Sesuaikan nominal batas rantai approval per tenant (Expense, Cash Advance, Budget, Petty Cash)."
+        },
+        "capabilities": {
+          "title": "Kapabilitas",
+          "description": "Atur siapa yang boleh melihat modul keuangan, HR, dan operasional dengan matriks toggle per role."
+        },
+        "features": {
+          "title": "Fitur Aktif",
+          "description": "Lihat fitur mana yang di-enable oleh tim platform untuk tenant Anda (baca-saja)."
+        },
+        "bulkImport": {
+          "title": "Impor Massal",
+          "description": "Unggah CSV/XLSX untuk klien, karyawan, proyek, dan budget line."
+        },
+        "secrets": {
+          "title": "Rotasi Secret",
+          "description": "Catat rotasi kunci enkripsi dan credential integrasi."
+        },
+        "archives": {
+          "title": "Arsip Data",
+          "description": "Lihat data yang di-arsipkan (soft-delete) di seluruh tenant."
+        },
+        "integrations": {
+          "title": "Integrasi",
+          "description": "Google Calendar, bot Telegram, WhatsApp Business."
+        }
+      }
+    }
+  },
+  "integrationsHub": {
+    "kicker": "Setelan · Integrasi",
+    "title": "Integrasi",
+    "subtitle": "Integrasi tingkat tenant — kredensial OAuth, konfigurasi bot, dan API pihak ketiga. Untuk menghubungkan akun Telegram / WhatsApp pribadi kamu, buka Preferensi.",
+    "status": {
+      "connected": "Terhubung",
+      "disconnected": "Belum terhubung",
+      "notAvailable": "Segera hadir"
+    },
+    "cards": {
+      "ai": {
+        "title": "AI Provider",
+        "description": "Pilih provider LLM (Gemini, OpenAI, Anthropic, atau local LLM via Ollama/LM Studio) untuk fitur insight."
+      },
+      "calendar": {
+        "title": "Google Calendar",
+        "description": "Push proyek dan milestone ke kalender bersama tim."
+      },
+      "smtp": {
+        "title": "SMTP (Email)",
+        "description": "Kirim email digest & reminder dari domain tenant Anda sendiri (SPF/DKIM/DMARC selaras)."
+      },
+      "telegram_bot": {
+        "title": "Bot Telegram",
+        "description": "Konfigurasi bot per-tenant untuk kirim notifikasi ke karyawan."
+      },
+      "whatsapp_business": {
+        "title": "WhatsApp Business",
+        "description": "Kirim notifikasi lewat WhatsApp. Pilih provider Fonnte (lokal, murah) atau Twilio (partner resmi Meta)."
+      }
+    }
+  },
+  "aiAdmin": {
+    "kicker": "Integrasi · AI Provider",
+    "title": "AI Provider",
+    "subtitle": "Pilih penyedia LLM untuk fitur Insight AI (analisis biaya, utilisasi resource, kesehatan klien, SLA breach). Setiap tenant bisa pakai provider yang berbeda — Google Gemini, OpenAI, Anthropic Claude, atau LLM lokal yang di-host sendiri (Ollama, LM Studio, vLLM).",
+    "status": {
+      "connected": "Provider AI aktif",
+      "inactive": "Provider terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada provider AI — insight akan pakai mock deterministic",
+      "disabled": "Insight AI dinonaktifkan (opt-out eksplisit)",
+      "lastError": "Error terakhir",
+      "hintConnected": "Semua insight AI tenant ini akan pakai provider di atas. Cek riwayat panggilan di tabel ai_insights (model_id, tokens_output, latency_ms).",
+      "hintNotConfigured": "Tanpa konfigurasi tenant, insight AI pakai provider dari env global. Untuk data sovereignty atau custom LLM, tambahkan provider Anda di form."
+    },
+    "runbook": {
+      "title": "1 · Pilih provider LLM",
+      "description": "Empat pilihan: cloud provider (Google/OpenAI/Anthropic), local LLM via OpenAI-compatible endpoint, atau disable AI sepenuhnya.",
+      "step1": "Buat API key di dashboard provider (misal Google AI Studio, OpenAI Platform, atau Anthropic Console). Untuk LLM lokal, install Ollama atau LM Studio dan jalankan model.",
+      "step2": "Untuk LLM lokal, pastikan endpoint OpenAI-compatible bisa diakses dari server ControlDesk. Contoh Ollama: `http://ollama-server:11434/v1`.",
+      "step3": "Pilih model — Gemini flash untuk latency rendah, gpt-4o-mini untuk hemat, claude-sonnet-5 untuk reasoning, atau llama3.1:70b/qwen2.5 untuk on-prem.",
+      "step4": "Tentukan daily token cap (opsional) untuk batasi biaya. Default global 10.000 token output per hari per tenant.",
+      "step5": "Isi form di sebelah kanan. Sistem verifikasi credential dengan test call sebelum menyimpan.",
+      "warning": "PII redaction aktif secara default untuk cloud provider — data sensitif (nama karyawan, salary, bank account) di-hash sebelum dikirim ke LLM. Untuk LLM lokal yang di-host sendiri, redaction bisa dinonaktifkan agar analisis lebih akurat."
+    },
+    "form": {
+      "title": "Daftarkan atau update provider AI",
+      "description": "Sistem verifikasi credential dengan panggilan test ('Respond with the single word: pong.') sebelum persist. Kalau gagal, tidak ada credential yang tersimpan.",
+      "fields": {
+        "provider": "Provider LLM",
+        "modelId": "Model ID",
+        "baseUrl": "Base URL",
+        "apiKey": "API Key",
+        "dailyCap": "Daily token cap (opsional)",
+        "dailyCapHint": "Batas maksimum token output per hari per tenant. Kosongkan untuk pakai default global (10.000).",
+        "piiRedaction": "PII Redaction",
+        "piiRedactionHint": "Hash / mask data sensitif sebelum dikirim ke LLM. Direkomendasikan aktif; hanya matikan untuk LLM on-prem sepenuhnya di dalam network Anda."
+      },
+      "providers": {
+        "GOOGLE": {
+          "label": "Google Gemini (cloud)",
+          "tagline": "Model Google — Gemini flash cepat & murah, Gemini pro untuk reasoning. Data melewati Google.",
+          "modelPlaceholder": "gemini-flash-latest",
+          "modelHint": "Contoh: gemini-flash-latest (recommended — auto-track versi stable), gemini-2.5-pro. Hindari versi pinned (mis. gemini-2.5-flash) karena bisa di-deprecate Google.",
+          "apiKeyPlaceholder": "AIza...",
+          "apiKeyHint": "Buat di https://aistudio.google.com/apikey. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "OPENAI": {
+          "label": "OpenAI (cloud)",
+          "tagline": "Model OpenAI — gpt-4o-mini paling hemat, gpt-4o untuk kualitas, o1-mini untuk reasoning. Data melewati OpenAI.",
+          "modelPlaceholder": "gpt-4o-mini",
+          "modelHint": "Contoh: gpt-4o-mini, gpt-4o, o1-mini, o1-preview.",
+          "apiKeyPlaceholder": "sk-...",
+          "apiKeyHint": "Buat di https://platform.openai.com/api-keys. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "ANTHROPIC": {
+          "label": "Anthropic Claude (cloud)",
+          "tagline": "Model Anthropic — Claude Sonnet untuk balance, Claude Opus untuk reasoning maksimum. Data melewati Anthropic.",
+          "modelPlaceholder": "claude-sonnet-5",
+          "modelHint": "Contoh: claude-sonnet-5, claude-opus-5, claude-haiku-5.",
+          "apiKeyPlaceholder": "sk-ant-...",
+          "apiKeyHint": "Buat di https://console.anthropic.com/settings/keys. Terenkripsi di database.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi."
+        },
+        "OPENAI_COMPATIBLE": {
+          "label": "Local LLM (OpenAI-compatible)",
+          "tagline": "LLM yang di-host sendiri via Ollama, LM Studio, vLLM, atau third-party (Groq, Together AI, Cerebras). Data tidak keluar network Anda.",
+          "modelPlaceholder": "llama3.1:70b",
+          "modelHint": "Nama model di endpoint target. Contoh Ollama: llama3.1:70b, qwen2.5:32b, mixtral:8x7b.",
+          "baseUrlPlaceholder": "http://localhost:11434/v1",
+          "baseUrlHint": "Endpoint OpenAI-compatible. Contoh Ollama: http://ollama:11434/v1, LM Studio: http://localhost:1234/v1, vLLM: http://vllm-server:8000/v1.",
+          "apiKeyPlaceholder": "Opsional (Ollama biasanya tanpa auth)",
+          "apiKeyHint": "Optional. Ollama & LM Studio di LAN pribadi biasanya tidak butuh key. Groq/Together AI butuh key.",
+          "apiKeyHintUpdate": "Kosongkan untuk pertahankan key saat ini. Tempel value baru untuk rotasi atau kosongkan untuk hapus."
+        },
+        "DISABLED": {
+          "label": "Disabled (nonaktifkan AI)",
+          "tagline": "Opt-out eksplisit — semua fitur insight AI akan pakai mock deterministic. Cocok untuk tenant tanpa budget AI atau saat compliance melarang penggunaan LLM."
+        }
+      },
+      "actions": {
+        "save": "Simpan & verifikasi",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan provider AI tenant ini? Fitur insight akan pakai mock deterministic sampai Anda aktifkan lagi.",
+      "toast": {
+        "savedOk": "Provider AI tersimpan dan terverifikasi.",
+        "deactivatedOk": "Provider AI dinonaktifkan."
+      }
+    }
+  },
+  "smtpAdmin": {
+    "kicker": "Integrasi · SMTP (Email)",
+    "title": "SMTP (Email)",
+    "subtitle": "Konfigurasi relay email keluar per-tenant. Digest harian, reminder settlement, dan email undangan akan dikirim dari domain Anda sendiri (bukan default ControlDesk) supaya kop surat, DKIM, dan reputasi domain selaras dengan brand tenant.",
+    "status": {
+      "connected": "Relay SMTP aktif",
+      "inactive": "Relay terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada relay SMTP terdaftar — email akan pakai default global",
+      "lastError": "Error terakhir",
+      "hintConnected": "Semua email keluar tenant ini melewati relay di atas dengan alamat pengirim yang Anda tentukan. Cek riwayat pengiriman di tabel email_outbox.",
+      "hintNotConfigured": "Tanpa konfigurasi khusus, email dikirim dari relay default ControlDesk dengan alamat no-reply@controldesk.app. Tambahkan relay Anda supaya digest terkirim dari domain sendiri."
+    },
+    "runbook": {
+      "title": "1 · Siapkan relay SMTP",
+      "description": "Anda bisa pakai relay apa saja yang mendukung SMTP submission (port 587 STARTTLS atau 465 SMTPS): Gmail Workspace, Zoho Mail, Postmark SMTP, AWS SES SMTP endpoint, atau server mail sendiri.",
+      "step1": "Buat mailbox atau credential SMTP di provider Anda (misal: no-reply@acme.com di Google Workspace, atau SMTP token di Postmark).",
+      "step2": "Verifikasi domain Anda di provider — atur SPF, DKIM, dan DMARC record di DNS agar email tidak masuk spam.",
+      "step3": "Catat host, port, username, dan password/token dari dashboard provider.",
+      "step4": "Isi form di sebelah kanan. Kami test koneksi ke relay sebelum menyimpan supaya kesalahan konfigurasi ketahuan langsung.",
+      "step5": "Setelah tersimpan, semua email keluar tenant Anda otomatis pakai relay ini. Kembali ke sini kalau perlu ganti password atau relay.",
+      "warning": "Simpan password dengan hati-hati. Setelah tersimpan tidak akan ditampilkan ulang. Untuk rotasi, tempel password baru di form ini."
+    },
+    "form": {
+      "title": "Daftarkan atau update relay SMTP",
+      "description": "Setelah disimpan, kami verifikasi koneksi ke relay (SMTP handshake + AUTH) sebelum persist. Kalau gagal, kredensial tidak akan tersimpan.",
+      "fields": {
+        "host": "Host SMTP",
+        "hostPlaceholder": "smtp.gmail.com",
+        "hostHint": "Hostname relay SMTP. Contoh: smtp.gmail.com, smtp.zoho.com, smtp.postmarkapp.com.",
+        "port": "Port",
+        "portHint": "587 (submission/STARTTLS), 465 (SMTPS), 25 (relay lama), 1025 (mailpit dev).",
+        "username": "Username SMTP",
+        "usernamePlaceholder": "no-reply@acme.com atau apikey",
+        "usernameHint": "Biasanya alamat email pengirim (Gmail/Zoho) atau nama pengguna khusus (Postmark: 'apikey', SES: username IAM SMTP).",
+        "password": "Password / Token",
+        "passwordPlaceholder": "Password atau API token",
+        "passwordHint": "Password akun email atau API token dari provider. Terenkripsi di database; tidak pernah ditampilkan setelah tersimpan.",
+        "passwordHintUpdate": "Kosongkan untuk pertahankan password saat ini. Tempel nilai baru untuk rotasi.",
+        "fromAddress": "Alamat pengirim (From)",
+        "fromAddressPlaceholder": "no-reply@acme.com",
+        "fromAddressHint": "Alamat email yang muncul sebagai pengirim. Wajib match dengan domain yang sudah di-verify di relay (SPF/DKIM).",
+        "fromName": "Nama pengirim",
+        "fromNamePlaceholder": "Acme HR",
+        "fromNameHint": "Nama yang muncul di kolom From. Kosongkan untuk pakai alamat email saja.",
+        "replyTo": "Reply-To (opsional)",
+        "replyToPlaceholder": "hr@acme.com",
+        "replyToHint": "Alamat yang menerima balasan email. Kosongkan untuk pakai alamat pengirim (From)."
+      },
+      "actions": {
+        "save": "Simpan & verifikasi",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan relay SMTP tenant ini? Email keluar akan kembali menggunakan relay default global ControlDesk.",
+      "toast": {
+        "savedOk": "Relay SMTP tersimpan dan terverifikasi.",
+        "deactivatedOk": "Relay SMTP dinonaktifkan."
+      }
+    }
+  },
+  "telegramBotAdmin": {
+    "kicker": "Integrasi · Bot Telegram",
+    "title": "Bot Telegram",
+    "subtitle": "Konfigurasi bot per-tenant yang mengirim notifikasi approval, budget, dan roster. Ini setting level tenant; setiap karyawan menautkan akun Telegram pribadi mereka secara terpisah lewat Preferences.",
+    "status": {
+      "connected": "Bot aktif",
+      "inactive": "Bot terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada bot terdaftar untuk tenant ini",
+      "lastError": "Error terakhir",
+      "hintConnected": "Karyawan bisa menautkan chat Telegram pribadi mereka lewat Preferences.",
+      "hintNotConfigured": "Setelah bot didaftarkan, tombol Link Telegram akan muncul di Preferences setiap karyawan."
+    },
+    "runbook": {
+      "title": "1 · Buat bot di Telegram",
+      "description": "Ikuti langkah ini sekali. Botnya ada di dalam Telegram; hanya kredensialnya yang masuk ke ControlDesk.",
+      "step1": "Di Telegram, chat @BotFather dan kirim /newbot.",
+      "step2": "Pilih nama tampilan, lalu username yang berakhiran _bot.",
+      "step3": "Copy bot token yang dikirim BotFather — bentuknya seperti 123456:ABC-DEF….",
+      "step4": "Catat bot username (diawali @) — Anda butuh kedua nilai ini untuk aktivasi."
+    },
+    "handoff": {
+      "title": "2 · Serahkan ke platform engineering",
+      "description": "Form admin self-serve belum tersedia. Kirim bundel berikut ke platform engineer — mereka akan melakukan satu kali penulisan ke penyimpanan terenkripsi.",
+      "copyLabel": "Field yang harus diserahkan",
+      "hint": "Jangan pernah tempel bot token di chat atau issue — gunakan password manager atau vault."
+    },
+    "comingSoon": {
+      "title": "Form admin self-serve masuk roadmap",
+      "body": "Form khusus dengan input token, tombol test connection, dan toggle aktif/nonaktif akan menggantikan langkah handoff ini. Menunggu pattern editor secret terenkripsi yang dipakai /settings/secrets."
+    },
+    "form": {
+      "title": "Daftarkan atau update bot",
+      "description": "Tempel bot username dan token dari @BotFather. Saat disimpan, kami verifikasi token ke API Telegram getMe sebelum menyimpannya.",
+      "fields": {
+        "botUsername": "Bot username",
+        "botUsernamePlaceholder": "my_erp_bot",
+        "botUsernameHint": "Handle @ yang Anda set di BotFather. Harus berakhiran \"bot\". Awalan @ opsional.",
+        "botToken": "Bot token",
+        "botTokenPlaceholder": "123456789:ABC-DEF...",
+        "botTokenHint": "Copy dari BotFather. Token dienkripsi di database dan tidak pernah ditampilkan ulang.",
+        "botTokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan."
+      },
+      "actions": {
+        "save": "Simpan & aktifkan",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan bot Telegram ini? Notifikasi keluar akan berhenti dan tombol link pribadi di Preferences akan disembunyikan.",
+      "toast": {
+        "savedOk": "Bot Telegram @{botUsername} aktif.",
+        "deactivatedOk": "Bot Telegram dinonaktifkan."
+      }
+    }
+  },
+  "whatsappAdmin": {
+    "kicker": "Integrasi · WhatsApp",
+    "title": "WhatsApp Business",
+    "subtitle": "Konfigurasi channel WhatsApp keluar untuk tenant. Pilih provider: Fonnte (gateway device-token, murah, lokal) atau Twilio (partner resmi Meta, compliance ketat, per-pesan berbayar).",
+    "status": {
+      "connected": "Sender WhatsApp aktif",
+      "inactive": "Sender terdaftar tapi tidak aktif",
+      "noConfig": "Belum ada sender WhatsApp terdaftar untuk tenant ini",
+      "lastError": "Error terakhir",
+      "hintConnected": "Karyawan bisa menautkan nomor WhatsApp mereka lewat Preferences. Pastikan HP yang di-pairing tetap online — device yang terputus akan menghentikan pengiriman.",
+      "hintNotConfigured": "Setelah device didaftarkan, tombol Link WhatsApp akan muncul di Preferences setiap karyawan."
+    },
+    "runbook": {
+      "title": "1 · Pairing device di Fonnte",
+      "description": "Fonnte merelai pesan melalui sesi WhatsApp Web yang terikat pada HP Anda. Free tier cukup untuk testing awal.",
+      "step1": "Buka https://md.fonnte.com dan sign up (atau login).",
+      "step2": "Ke menu Device → Add device. Beri nama (misal \"ControlDesk primary\").",
+      "step3": "Scan QR code dengan WhatsApp di HP yang nomornya akan Anda pakai sebagai sender.",
+      "step4": "Setelah device berstatus \"connect\", copy device Token dari device list.",
+      "step5": "Tempel token ke form di sebelah kanan. Kami verifikasi ke Fonnte sebelum menyimpannya.",
+      "warning": "Peringatan: Fonnte adalah gateway tidak resmi. Akun WhatsApp yang di-pairing bisa di-banned oleh WhatsApp kalau di-flag. Untuk produksi volume tinggi, rencanakan migrasi ke Meta Cloud API (adapter-nya sudah ada di backend)."
+    },
+    "form": {
+      "title": "Daftarkan atau update sender WhatsApp",
+      "description": "Pilih provider (Fonnte atau Twilio), tempel kredensial dari dashboard provider Anda. Sebelum disimpan, kami verifikasi ke endpoint provider untuk memastikan kredensial valid.",
+      "fields": {
+        "provider": "Provider"
+      },
+      "providers": {
+        "FONNTE": {
+          "label": "Fonnte (Indonesia, device-token gateway)",
+          "tagline": "Gateway lokal murah — pairing WhatsApp Web di HP Anda. Cocok untuk startup + volume rendah-menengah.",
+          "phoneLabel": "Nomor bisnis",
+          "phonePlaceholder": "6281234567890 atau +6281234567890",
+          "phoneHint": "Nomor WhatsApp yang Anda pairing ke device Fonnte ini (untuk display + audit). Fonnte routing pakai device token, jadi field ini informational.",
+          "tokenLabel": "Device token",
+          "tokenPlaceholder": "Tempel device token Fonnte Anda di sini",
+          "tokenHint": "Copy dari dashboard Fonnte → Device list. Terenkripsi di database; tidak pernah ditampilkan setelah tersimpan.",
+          "tokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan."
+        },
+        "TWILIO": {
+          "label": "Twilio (partner resmi Meta)",
+          "tagline": "Partner resmi Meta dengan compliance ketat. Sandbox gratis untuk testing; production sender berbayar per pesan.",
+          "phoneLabel": "Nomor WhatsApp Business (E.164)",
+          "phonePlaceholder": "+14155238886",
+          "phoneHint": "Nomor Twilio WhatsApp yang di-approve Meta. Format E.164 wajib pakai `+`, misal `+6281234567890`.",
+          "tokenLabel": "Auth Token",
+          "tokenPlaceholder": "Tempel Auth Token dari Twilio Console",
+          "tokenHint": "Ada di Twilio Console → Account → API keys & tokens → Live Credentials. Terenkripsi; tidak pernah ditampilkan setelah tersimpan.",
+          "tokenHintUpdate": "Tempel token baru untuk rotasi. Token yang tersimpan tidak pernah ditampilkan.",
+          "sidLabel": "Account SID",
+          "sidPlaceholder": "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+          "sidHint": "Account SID Twilio (mulai dengan AC, 34 karakter total). Copy dari halaman Account Info di Console."
+        }
+      },
+      "actions": {
+        "save": "Simpan & aktifkan",
+        "update": "Update & verifikasi ulang",
+        "deactivate": "Nonaktifkan"
+      },
+      "deactivateConfirm": "Nonaktifkan sender WhatsApp ini? Notifikasi keluar akan berhenti dan tombol link pribadi di Preferences akan disembunyikan.",
+      "toast": {
+        "savedOk": "Sender WhatsApp tersimpan dan terverifikasi.",
+        "deactivatedOk": "Sender WhatsApp dinonaktifkan."
+      }
+    }
+  },
+  "calendarSync": {
+    "kicker": "Integrasi \u00b7 Google Calendar",
+    "title": "Sync Kalender",
+    "subtitle": "Setiap proyek dan milestone di-push ke satu Google Calendar milik ERP. ERP adalah source of truth \u2014 edit manual di sisi Google akan ditimpa pada rekonsiliasi berikutnya. Attendee (PM proyek + PM/OM yang ditugaskan) otomatis lihat undangan di kalender masing-masing.",
+    "kpis": {
+      "synced": "Tersinkron",
+      "pending": "Tertunda",
+      "failed": "Gagal",
+      "skipped": "Dilewati"
+    },
+    "kind": {
+      "project": "Proyek",
+      "milestone": "Milestone"
+    },
+    "connection": {
+      "connected": "Terhubung ke Google Calendar",
+      "noEnv": "Belum dikonfigurasi di server",
+      "noEnvHint": "Setel GOOGLE_CALENDAR_CLIENT_ID dan GOOGLE_CALENDAR_CLIENT_SECRET, lalu restart.",
+      "noCreds": "Tenant belum menghubungkan kalender",
+      "noCredsHint": "Jalankan alur OAuth Google Calendar dari runbook ops.",
+      "inactive": "Kredensial dinonaktifkan",
+      "inactiveHint": "Cek pesan error terakhir \u2014 biasanya refresh token dicabut."
+    },
+    "statusBadge": {
+      "sent": "Tersinkron",
+      "pending": "Tertunda",
+      "failed": "Gagal",
+      "skipped": "Dilewati"
+    },
+    "filter": {
+      "all": "Semua status",
+      "sent": "Hanya tersinkron",
+      "pending": "Hanya tertunda",
+      "failed": "Hanya gagal",
+      "skipped": "Hanya dilewati"
+    },
+    "syncMap": {
+      "title": "Peta sinkron",
+      "lastSync": "Sync terakhir: {when}",
+      "rowActions": "Aksi baris",
+      "pendingScheduled": "Terjadwal",
+      "emptyAll": "Belum ada peristiwa kalender. Buat atau ubah proyek dengan syncCalendar aktif untuk mulai push event.",
+      "emptyFiltered": "Tidak ada baris untuk filter ini.",
+      "col": {
+        "type": "Tipe",
+        "project": "Proyek",
+        "subject": "Subjek",
+        "dates": "Mulai / Selesai",
+        "status": "Status",
+        "lastSynced": "Terakhir sync",
+        "actions": "Aksi"
+      }
+    },
+    "actions": {
+      "runReconciliation": "Jalankan rekonsiliasi",
+      "refresh": "Muat ulang",
+      "cancel": "Batal",
+      "retry": "Coba lagi",
+      "skip": "Lewati baris",
+      "openInGoogle": "Buka di Google",
+      "noAction": "Tidak ada aksi"
+    },
+    "reconcileDialog": {
+      "title": "Jalankan rekonsiliasi manual?",
+      "description": "{count} baris FAILED akan di-reset ke PENDING dan dijadwalkan ulang. Drain cron berjalan setiap 10 menit.",
+      "confirm": "Konfirmasi rekonsiliasi"
+    },
+    "skipDialog": {
+      "title": "Lewati baris ini?",
+      "description": "Baris ditandai SKIPPED dan tidak akan di-push. Alasan disimpan di audit log dan kolom last_error.",
+      "reasonLabel": "Alasan",
+      "reasonPlaceholder": "cth: proyek dibatalkan, tidak perlu di-sync",
+      "confirm": "Konfirmasi skip"
+    },
+    "howItWorks": {
+      "title": "Cara kerja sync",
+      "bullet1": "Setiap create/update/delete proyek + milestone memicu push best-effort.",
+      "bullet2": "Push yang gagal otomatis di-retry pada rekonsiliasi malam.",
+      "bullet3": "Matikan toggle syncCalendar di proyek untuk opt-out sepenuhnya (dan seluruh milestone-nya).",
+      "bullet4": "Attendee menerima undangan pertama kali event dibuat. Update berikutnya patch di tempat."
+    },
+    "toasts": {
+      "retryOk": "Baris dijadwalkan ulang.",
+      "retryFailed": "Gagal menjadwalkan ulang baris.",
+      "skipOk": "Baris ditandai SKIPPED.",
+      "skipFailed": "Gagal skip baris.",
+      "reconcileOk": "{count} baris FAILED dijadwalkan ulang.",
+      "reconcileNothing": "Tidak ada baris FAILED yang perlu direkonsiliasi.",
+      "reconcileFailed": "Rekonsiliasi gagal."
+    }
+  },
+  "settings": {
+    "features": {
+      "kicker": "Admin · Fitur aktif",
+      "title": "Fitur aktif untuk tenant Anda",
+      "subtitle": "Tampilan baca-saja fitur yang di-enable/disable oleh tim platform ControlDesk untuk tenant Anda. Toggle dilakukan oleh admin platform — hubungi support@controldesk.app untuk permintaan aktivasi.",
+      "infoBanner": {
+        "title": "Kenapa saya tidak bisa toggle?",
+        "description": "Feature flag di-manage sentral oleh tim platform untuk memastikan setiap fitur baru siap dari sisi kapasitas, biaya, dan konfigurasi (misal OAuth Google, kredensial SMTP, akses API pihak ketiga)."
+      },
+      "stats": {
+        "total": "Total fitur",
+        "enabled": "Aktif",
+        "overridden": "Custom override",
+        "overriddenHint": "Fitur yang di-set eksplisit oleh admin platform (di luar default)."
+      }
+    },
+    "users": {
+      "backToSettings": "Kembali ke Setelan",
+      "kicker": "Admin · Akun pengguna",
+      "title": "Pengguna",
+      "subtitle": "Akun login yang tercakup di tenant ini. Ini adalah tampilan baca-saja (Fase 1) — perubahan role dan pembuatan akun masih via Supabase Studio. Invalidasi sesi akan ditambahkan di fase berikutnya.",
+      "subtitleV2": "Kelola akun login di tenant ini. Undang pengguna baru, ubah role, atau nonaktifkan akun. Sesi otomatis di-revoke ketika role berubah atau akun dinonaktifkan.",
+      "readOnlyNotice": "Tampilan baca-saja. Hubungi admin platform Anda (atau buka Supabase Studio) untuk mengundang pengguna baru, mengganti role, atau menonaktifkan akun.",
+      "searchPlaceholder": "Cari email atau nama…",
+      "statusFilter": {
+        "label": "Status",
+        "all": "Semua status",
+        "active": "Aktif",
+        "suspended": "Diblokir",
+        "inactive": "Nonaktif",
+        "pending": "Belum konfirmasi"
+      },
+      "status": {
+        "ACTIVE": "Aktif",
+        "SUSPENDED": "Diblokir",
+        "INACTIVE": "Nonaktif",
+        "PENDING": "Belum konfirmasi",
+        "reason": "Alasan (opsional, tercatat di audit log)",
+        "reasonPlaceholder": "cth: karyawan resign efektif hari ini",
+        "deactivateTitle": "Nonaktifkan akun",
+        "deactivateDescription": "{email} kehilangan akses seketika dan tidak bisa login sampai Anda aktifkan kembali. Data historis (pengajuan, timesheet, audit log) tetap tersimpan.",
+        "deactivateConfirm": "Nonaktifkan akun",
+        "deactivateToast": "Akun {email} berhasil dinonaktifkan.",
+        "reactivateTitle": "Aktifkan kembali akun",
+        "reactivateDescription": "{email} bisa login kembali dengan role sebelumnya.",
+        "reactivateConfirm": "Aktifkan kembali",
+        "reactivateToast": "Akun {email} berhasil diaktifkan kembali."
+      },
+      "empty": "Tidak ada pengguna yang cocok dengan filter.",
+      "emptyBody": "Coba kata kunci lain atau bersihkan filter status.",
+      "totalCount": "{count} pengguna",
+      "columns": {
+        "email": "Email",
+        "linkedEmployee": "Karyawan terkait",
+        "role": "Role",
+        "status": "Status",
+        "lastLogin": "Login terakhir",
+        "createdAt": "Akun dibuat",
+        "actions": "Aksi"
+      },
+      "noLinkedEmployee": "— tidak ada —",
+      "noRole": "— belum diassign —",
+      "neverSignedIn": "Belum pernah login",
+      "youBadge": "Anda",
+      "canonicalRole": {
+        "EMPLOYEE": "Karyawan",
+        "SUPERVISOR": "Supervisor",
+        "PM": "Project Manager",
+        "OM": "Operations Manager",
+        "FINANCE": "Finance",
+        "DIRECTOR": "Director",
+        "ADMIN": "Administrator"
+      },
+      "invite": {
+        "openTrigger": "Undang pengguna",
+        "title": "Undang pengguna baru",
+        "description": "Undangan berupa email magic-link. Setelah klik, pengguna set password sendiri lalu masuk ke tenant Anda dengan role yang Anda pilih.",
+        "email": "Email",
+        "emailPlaceholder": "pengguna@perusahaan.com",
+        "fullName": "Nama lengkap",
+        "fullNamePlaceholder": "cth: Ayu Setyawati",
+        "role": "Role saat diundang",
+        "roleHint": "Bisa diubah nanti — tapi setiap perubahan role tercatat di audit log.",
+        "flowTitle": "Alur invite",
+        "flowStep1": "Kami buat auth user di Supabase dan kirim email magic-link (dev: Inbucket di localhost:54324).",
+        "flowStep2": "Row employee juga dibuat lebih dulu dengan role pilihan Anda supaya JWT claim langsung siap pada login pertama.",
+        "flowStep3": "Kalau setelah 7 hari email belum diklaim, resend dari Supabase Studio.",
+        "submit": "Kirim undangan",
+        "submittedToast": "Undangan terkirim ke {email}."
+      },
+      "actions": {
+        "openMenu": "Buka aksi pengguna",
+        "menuLabel": "Kelola pengguna",
+        "changeRole": "Ubah role",
+        "deactivate": "Nonaktifkan",
+        "reactivate": "Aktifkan kembali",
+        "forceLogout": "Paksa logout",
+        "selfDisabledHint": "Anda tidak bisa mengubah akun sendiri di sini.",
+        "missingEmployeeHint": "Auth user ini belum terhubung ke row employee — aksi tidak tersedia."
+      },
+      "changeRole": {
+        "title": "Ubah role pengguna",
+        "description": "Perbarui role canonical untuk {email}. Semua sesi aktif akan di-revoke supaya login berikutnya memakai claim role baru.",
+        "newRole": "Role baru",
+        "reason": "Alasan (opsional, tercatat di audit log)",
+        "reasonPlaceholder": "cth: promosi setelah review Q3",
+        "sessionWarning": "Semua sesi aktif pengguna ini akan di-revoke seketika.",
+        "submit": "Ubah role & revoke sesi",
+        "submittedToast": "Role {email} diperbarui. {sessions} sesi di-revoke."
+      },
+      "forceLogout": {
+        "title": "Paksa logout",
+        "description": "Revoke semua sesi aktif untuk {email}. Role dan status akun tidak berubah — mereka hanya perlu login ulang pada request berikutnya.",
+        "reason": "Alasan (opsional, tercatat di audit log)",
+        "reasonPlaceholder": "cth: device dicurigai hilang, sedang reset password",
+        "submit": "Revoke sesi",
+        "submittedToast": "{sessions} sesi berhasil di-revoke untuk {email}."
+      }
+    },
+    "secrets": {
+      "kicker": "Ops · Rotasi",
+      "title": "Rotasi Secret Infrastruktur",
+      "description": "Setiap secret long-lived wajib dirotasi tiap 90 hari (rules §22). Halaman ini melacak `last_rotated_at` untuk setiap credential dan menandai OVERDUE bila melewati jendela rotasi. Cron `/api/cron/rotation-check` berjalan tiap Senin pagi (WIB).",
+      "back": "Kembali ke Dashboard",
+      "registryTitle": "Registry rotasi",
+      "registryDescription": "{count} secret terlacak.",
+      "empty": "Belum ada secret terdaftar. Jalankan migrasi 0018_secret_rotations.sql.",
+      "tableAriaLabel": "Registry rotasi secret",
+      "colName": "Nama",
+      "colPriority": "Prioritas",
+      "colSeverity": "Status",
+      "colDaysUntil": "Sisa hari",
+      "colRotatedAt": "Terakhir dirotasi",
+      "colActions": "Aksi",
+      "daysLeft": "{count} hari lagi",
+      "daysOverdue": "Lewat {count} hari",
+      "interval": "Interval {days} hari",
+      "agoDays": "{count} hari lalu",
+      "summary": {
+        "overdue": "Overdue",
+        "warn": "Warning",
+        "ok": "Aman"
+      },
+      "actions": {
+        "markRotated": "Tandai dirotasi",
+        "markRotatedTitle": "Tandai {name} sudah dirotasi?",
+        "markRotatedDescription": "Aksi ini menyetel `last_rotated_at = now()` dan mencatat Anda sebagai `last_rotated_by`. Wajib dilakukan hanya setelah credential baru benar-benar aktif di seluruh environment.",
+        "notesLabel": "Catatan (opsional)",
+        "notesPlaceholder": "misal: nomor tiket, waktu maintenance window, siapa buddy engineer",
+        "confirmMarkRotated": "Konfirmasi rotasi",
+        "markSuccess": "{name} ditandai baru saja dirotasi.",
+        "markFailed": "Gagal menandai rotasi."
+      }
+    },
+    "approvalThresholds": {
+      "backToSettings": "Kembali ke Pengaturan",
+      "kicker": "Admin · Ambang Approval",
+      "title": "Ambang Approval",
+      "subtitle": "Sesuaikan nominal batas rantai approval per tenant. Perubahan berlaku untuk pengajuan baru; item yang sudah tersubmit tetap memakai chain snapshot saat submit.",
+      "overrideCount": "{count} kustom aktif",
+      "noOverrides": "Memakai default global",
+      "customBadge": "Kustom",
+      "defaultBadge": "Default",
+      "hint": {
+        "title": "Bagaimana ini bekerja",
+        "body": "Field yang dikosongkan otomatis pakai default global. Rantai approval untuk item baru mengikuti nilai ini; item yang sudah submit dibekukan (frozen chain) supaya perubahan tidak me-re-route pengajuan yang sedang berjalan."
+      },
+      "kinds": {
+        "EXPENSE": "Expense",
+        "BUDGET": "Budget",
+        "CASH_ADVANCE_GENERAL": "Cash Advance (General)",
+        "CASH_ADVANCE_FIELD_OPS": "Cash Advance (Field Ops)",
+        "PETTY_CASH": "Petty Cash",
+        "BUDGET_REQUEST": "Budget Request"
+      },
+      "descriptions": {
+        "EXPENSE": "≥ PM threshold butuh approval PM. ≥ Director threshold butuh approval Director. Finance selalu di jalur.",
+        "BUDGET": "≥ Director threshold butuh approval Director. Finance selalu di jalur.",
+        "CASH_ADVANCE_GENERAL": "≥ PM threshold butuh approval PM. ≥ Director threshold butuh approval Director.",
+        "CASH_ADVANCE_FIELD_OPS": "Supervisor selalu di rung 0. Threshold PM / OM / Director menambah slot berurutan. SLA settlement dihitung dari tanggal disburse.",
+        "PETTY_CASH": "< Auto-approve: langsung di-post. ≥ Receipt-required: struk wajib. > Hard ceiling: tidak boleh via petty cash, harus lewat Expense flow.",
+        "BUDGET_REQUEST": "Increase / Decrease / Transfer. Threshold mirror Expense."
+      },
+      "fields": {
+        "supervisor_threshold": "Threshold Supervisor",
+        "pm_threshold": "Threshold PM",
+        "om_threshold": "Threshold OM",
+        "director_threshold": "Threshold Director",
+        "petty_auto_approve_below": "Auto-approve di bawah",
+        "petty_receipt_required_above": "Struk wajib mulai",
+        "petty_hard_ceiling": "Batas maksimum (hard ceiling)",
+        "settlement_sla_days": "SLA settlement (hari)"
+      },
+      "defaultIdr": "Default: {value}",
+      "defaultSlaDays": "Default: {days} hari",
+      "noDefault": "—",
+      "updatedAt": "Terakhir diubah: {when}",
+      "neverEdited": "Belum pernah dikustomisasi.",
+      "actions": {
+        "save": "Simpan",
+        "reset": "Reset ke default",
+        "saveAria": "Simpan threshold {kind}",
+        "resetAria": "Reset threshold {kind} ke default"
+      },
+      "toasts": {
+        "saved": "Threshold {kind} tersimpan.",
+        "saveFailed": "Gagal menyimpan threshold.",
+        "reset": "Threshold {kind} kembali ke default.",
+        "resetFailed": "Gagal reset threshold."
+      }
+    },
+    "capabilities": {
+      "backToSettings": "Kembali ke Pengaturan",
+      "kicker": "Admin · Kapabilitas",
+      "title": "Matriks Kapabilitas",
+      "subtitle": "Atur siapa yang boleh melihat setiap modul. Klik sel untuk grant / revoke / kembalikan ke default. Perubahan berlaku pada navigasi berikutnya untuk semua user di tenant Anda.",
+      "overrideCount": "{count} kustom aktif",
+      "overrideCountShort": "{count} kustom",
+      "noOverrides": "Memakai default katalog",
+      "hint": {
+        "title": "Bagaimana ini bekerja",
+        "body": "Default katalog di-set berdasarkan role standar. Toggle di sini menimpa default per role di tenant Anda; tombol reset menghapus penyesuaian dan mengembalikan ke default."
+      },
+      "category": {
+        "finance": "Keuangan",
+        "hr": "Sumber Daya Manusia",
+        "operations": "Operasional",
+        "strategy": "Strategi & Analitik"
+      },
+      "sensitivity": {
+        "low": "Sensitivitas rendah",
+        "medium": "Sensitivitas menengah",
+        "high": "Sensitivitas tinggi"
+      },
+      "cellState": {
+        "default-allow": "Default: diizinkan",
+        "default-deny": "Default: ditolak",
+        "override-allow": "Kustom: diizinkan",
+        "override-deny": "Kustom: ditolak"
+      },
+      "cellHint": {
+        "default-allow": "Klik untuk memblokir role ini.",
+        "default-deny": "Klik untuk mengizinkan role ini.",
+        "override-allow": "Klik untuk kembali ke default.",
+        "override-deny": "Klik untuk kembali ke default."
+      },
+      "resetCapability": "Reset semua",
+      "resetDone": "{count} penyesuaian dihapus.",
+      "saved": "Perubahan disimpan.",
+      "errorSave": "Gagal menyimpan perubahan.",
+      "confirmGrantHigh": "Kapabilitas ini bersifat sensitif tinggi. Yakin mengizinkan role {role}?",
+      "confirmResetCapability": "Reset semua kustom untuk kapabilitas ini ke default katalog?",
+      "history": {
+        "trigger": "Riwayat",
+        "triggerAria": "Buka riwayat perubahan untuk {capability}",
+        "title": "Riwayat perubahan",
+        "subtitle": "Semua perubahan pada kapabilitas \"{capability}\". Urutan terbaru di atas.",
+        "filterRole": "Filter role",
+        "filterAll": "Semua role",
+        "loading": "Memuat riwayat…",
+        "empty": "Belum ada perubahan tercatat untuk kapabilitas ini.",
+        "errorLoad": "Gagal memuat riwayat.",
+        "byActor": "oleh {actor}",
+        "actorUnknown": "Aktor tidak diketahui",
+        "allRoles": "Semua role ({count})",
+        "kind": {
+          "grant": "Diizinkan",
+          "revoke": "Ditolak",
+          "reset_cell": "Kembali ke default",
+          "reset_all": "Reset semua"
+        }
+      }
+    },
+    "lookups": {
+      "backToSettings": "Kembali ke Pengaturan",
+      "kicker": "Admin · Data referensi",
+      "title": "Data Referensi (Lookups)",
+      "subtitle": "Kelola daftar opsi dropdown yang dipakai lintas form — Unit Pengaju, Kebutuhan Transportasi, Area, dan Kategori RAB. Menonaktifkan opsi menyembunyikannya dari form baru tanpa mengganggu record lama.",
+      "activeCount": "{active} aktif / {total} total",
+      "empty": "Belum ada opsi lookup.",
+      "emptyBody": "Pilih domain di bawah lalu tambahkan opsi pertama supaya pengguna punya pilihan.",
+      "addOption": "Tambah opsi",
+      "editOption": "Edit opsi",
+      "deleteOption": "Hapus opsi",
+      "toggleActive": "Ubah status aktif",
+      "domainEmpty": "Belum ada opsi di domain ini.",
+      "editTitle": "Edit opsi",
+      "createTitle": "Tambah opsi {domain}",
+      "editDescription": "Kode sebaiknya singkat & mesin-friendly (huruf besar). Label adalah teks yang tampil di dropdown.",
+      "confirmDelete": "Hapus permanen",
+      "deleteTitle": "Hapus opsi lookup?",
+      "deleteDescription": "Record historis yang sudah menyimpan label tidak akan terpengaruh — label disimpan sebagai snapshot saat submit. Sebaiknya cukup dinonaktifkan kecuali ini pembersihan typo.",
+      "createdToast": "Opsi ditambahkan.",
+      "updatedToast": "Opsi diperbarui.",
+      "deletedToast": "Opsi dihapus.",
+      "activatedToast": "Opsi diaktifkan.",
+      "deactivatedToast": "Opsi dinonaktifkan.",
+      "columns": {
+        "label": "Label",
+        "code": "Kode",
+        "sort": "Urutan",
+        "active": "Aktif",
+        "actions": "Aksi"
+      },
+      "form": {
+        "code": "Kode",
+        "codeHint": "Huruf besar A–Z, angka, tanda hubung atau underscore. Contoh: NOC-JKT.",
+        "label": "Label",
+        "description": "Deskripsi",
+        "descriptionPlaceholder": "Opsional — bantu admin ingat maksud opsi ini.",
+        "sortOrder": "Urutan sort",
+        "sortOrderHint": "Nilai lebih kecil muncul lebih dulu. Default 100.",
+        "isActive": "Ketersediaan",
+        "active": "Aktif — tampil di form.",
+        "inactive": "Nonaktif — disembunyikan dari form baru."
+      },
+      "domains": {
+        "unit_pengaju": "Unit Pengaju",
+        "unit_pengajuHint": "Unit / squad operasional yang mengajukan (Ops-Nusa, NOC-Jakarta, …).",
+        "transport_need": "Kebutuhan Transportasi",
+        "transport_needHint": "Jenis transportasi kunjungan lapangan (motor, mobil rental, carter, …).",
+        "area": "Area",
+        "areaHint": "Pengelompokan wilayah pada form field-ops (Jabodetabek, Jawa Barat, …).",
+        "rab_category": "Kategori RAB",
+        "rab_categoryHint": "Kategori baris pada tabel RAB (Transportasi, Konsumsi, Akomodasi, …).",
+        "department": "Departemen",
+        "departmentHint": "Pengelompokan karyawan — Engineering, Finance, PM, dst. Tampil sebagai saran di form New Employee.",
+        "position": "Jabatan / Posisi",
+        "positionHint": "Job title HR: Agent, Team Lead, Analyst, Manager, … Tampil sebagai saran di form New Employee.",
+        "budget_category": "Kategori Anggaran",
+        "budget_categoryHint": "Enum kategori baris anggaran proyek (Direct Labour, Subcontractor, Tooling, …). Kode WAJIB stabil karena tersimpan di row historis."
+      }
+    },
+    "coa": {
+      "backToSettings": "Kembali ke Pengaturan",
+      "kicker": "Finance · Master data",
+      "title": "Bagan Akun (Chart of Accounts)",
+      "subtitle": "Daftar akun buku besar yang di-curate oleh Finance untuk mengklasifikasi setiap baris anggaran, expense, cash advance, dan petty cash. Deaktivasi akun menyembunyikannya dari form baru; data historis tetap merujuk ke akun tsb.",
+      "activeCount": "{active} aktif / {total} total",
+      "postableCount": "{count} bisa diposting",
+      "empty": "Belum ada akun.",
+      "emptyBody": "Tambahkan akun pertama untuk mengaktifkan klasifikasi CoA di anggaran dan expense. Set default akun perusahaan jasa Indonesia sudah otomatis di-seed — jika tidak muncul, jalankan ulang fungsi seed.",
+      "accountsTitle": "Akun",
+      "accountsHint": "Hierarki berbasis kode numerik — parent adalah pengelompokan, leaf yang bisa diposting. Hanya akun aktif + postable yang muncul di dropdown anggaran.",
+      "addAccount": "Tambah akun",
+      "addChild": "Tambah sub-akun",
+      "edit": "Edit",
+      "searchPlaceholder": "Cari kode, nama, atau deskripsi…",
+      "filterAllTypes": "Semua tipe",
+      "showInactive": "Tampilkan nonaktif",
+      "noMatches": "Tidak ada akun yang cocok dengan filter.",
+      "postable": "Postable",
+      "group": "Grup",
+      "createTitle": "Akun baru",
+      "createDescription": "Kode berupa angka (3–10 digit). Postable = akun leaf yang bisa menerima posting.",
+      "editTitle": "Edit akun",
+      "editDescription": "Rename atau reklasifikasi tetap menjaga referensi historis.",
+      "createdToast": "Akun dibuat.",
+      "updatedToast": "Akun diperbarui.",
+      "activatedToast": "Akun diaktifkan.",
+      "deactivatedToast": "Akun dinonaktifkan.",
+      "failedCreate": "Gagal membuat akun.",
+      "failedUpdate": "Gagal memperbarui akun.",
+      "failedToggle": "Gagal mengubah status.",
+      "cancel": "Batal",
+      "save": "Simpan perubahan",
+      "createAccount": "Buat akun",
+      "codeRequired": "Kode akun wajib diisi.",
+      "codeFormat": "Gunakan 3–10 digit angka.",
+      "codeHint": "Identifier numerik, mis. 5101. Harus unik.",
+      "nameRequired": "Nama akun wajib diisi.",
+      "nameShort": "Nama terlalu pendek.",
+      "namePlaceholder": "mis. Beban Gaji Direct",
+      "normalSideHint": "Otomatis dipilih berdasarkan tipe akun. Ubah hanya untuk contra-account.",
+      "descriptionPlaceholder": "Opsional — bantu Finance mengingat kapan akun ini dipakai.",
+      "parentNone": "— tanpa parent —",
+      "postableHint": "Matikan untuk akun grup/parent yang hanya mengagregasi anak-anaknya.",
+      "columns": {
+        "code": "Kode",
+        "name": "Akun",
+        "type": "Tipe",
+        "postable": "Postable",
+        "active": "Aktif",
+        "actions": "Aksi"
+      },
+      "fields": {
+        "code": "Kode",
+        "name": "Nama",
+        "type": "Tipe",
+        "normalSide": "Sisi normal",
+        "parent": "Akun parent",
+        "postable": "Postable",
+        "description": "Deskripsi"
+      },
+      "types": {
+        "ASSET": "Aset",
+        "LIABILITY": "Kewajiban",
+        "EQUITY": "Ekuitas",
+        "REVENUE": "Pendapatan",
+        "EXPENSE": "Beban"
+      },
+      "sides": {
+        "DEBIT": "Debit",
+        "CREDIT": "Kredit"
+      }
+    },
+    "archives": {
+      "kicker": "Ops · Retensi",
+      "title": "Arsip Cold-Storage",
+      "description": "Registry arsip NDJSON gz yang disimpan di bucket `tenant-archives`. Data keuangan disimpan 10 tahun (rules §22) dan diarsipkan ke cold storage setelah 2 tahun. Row asli baru dipurge setelah verifikasi checksum sukses.",
+      "back": "Kembali ke Dashboard",
+      "registryTitle": "Registry arsip",
+      "registryDescription": "{count} batch terdaftar untuk tenant ini.",
+      "empty": "Belum ada batch yang diarsipkan. Job cron `/api/cron/archive` berjalan Senin dini hari (WIB).",
+      "tableAriaLabel": "Daftar arsip cold-storage",
+      "colSource": "Sumber",
+      "colYear": "Tahun batch",
+      "colRows": "Baris",
+      "colBytes": "Ukuran",
+      "colStatus": "Status",
+      "colChecksum": "Checksum",
+      "colVerified": "Verifikasi",
+      "colActions": "Aksi",
+      "purgedRowCount": "{count} row asli sudah dipurge",
+      "purgedAt": "Dipurge {date}",
+      "actions": {
+        "download": "Unduh",
+        "verify": "Verifikasi",
+        "downloadStarted": "URL bertanda-tangan dibuka. Berlaku 5 menit.",
+        "downloadFailed": "Gagal menghasilkan URL unduh.",
+        "verifySuccess": "Checksum cocok ({checksum}…). Registry ditandai RESTORED.",
+        "verifyFailed": "Verifikasi checksum gagal."
+      }
+    }
+  },
+  "insights": {
+    "kicker": "AI",
+    "title": "AI Insights",
+    "subtitle": "Sinyal AI ter-scope per tenant dan sudah di-redact PII: gross margin, utilisasi resource, kesehatan klien, dan risiko SLA.",
+    "noRunYet": "Belum ada insight. Klik Run untuk memicu analisis baru.",
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Peringatan",
+      "CRITICAL": "Kritis"
+    },
+    "meta": {
+      "model": "Model",
+      "tokens": "Token in/out",
+      "latency": "Latensi",
+      "generatedAt": "Dibuat {date}"
+    },
+    "actions": {
+      "runAll": "Jalankan semua insight",
+      "runThis": "Run",
+      "runAllOk": "{count} insight berhasil diperbarui.",
+      "partialSuccess": "{ok} berhasil, {fail} gagal.",
+      "ranOne": "Insight berhasil diperbarui."
+    },
+    "kinds": {
+      "PREDICT_EXPENSE_IMPACT": {
+        "title": "Dampak pengeluaran",
+        "description": "Dampak pengajuan biaya pending terhadap gross margin proyek.",
+        "empty": "Belum ada data"
+      },
+      "ANALYZE_RESOURCE_UTILIZATION": {
+        "title": "Utilisasi resource",
+        "description": "Beban PM + alokasi karyawan over/under-utilised.",
+        "empty": "Belum ada data"
+      },
+      "ANALYZE_CLIENT_HEALTH": {
+        "title": "Kesehatan klien",
+        "description": "Skor kesehatan per klien berdasarkan sinyal kontrak + proyek.",
+        "empty": "Belum ada data"
+      },
+      "ANALYZE_SLA_BREACH": {
+        "title": "Risiko pelanggaran SLA",
+        "description": "Prediksi pelanggaran SLA 24-48 jam + aksi preventif.",
+        "empty": "Belum ada data"
+      }
+    }
+  },
+  "assignments": {
+    "kicker": "Delivery",
+    "title": "Penugasan",
+    "subtitle": "Tim penugasan lintas proyek — multi-peran, sadar alokasi. 1 PM dapat memegang banyak proyek; total alokasi karyawan lintas proyek aktif tidak boleh > 100%.",
+    "newAssignment": "Penugasan baru",
+    "addTeam": "Tambah tim",
+    "empty": "Belum ada penugasan",
+    "emptyBody": "Tugaskan PM atau anggota tim ke proyek untuk memulai.",
+    "tabs": {
+      "byProject": "Per proyek",
+      "byEmployee": "Per karyawan",
+      "workload": "Beban kerja"
+    },
+    "filters": {
+      "project": "Proyek",
+      "role": "Peran",
+      "status": "Status",
+      "allProjects": "Semua proyek",
+      "allRoles": "Semua peran",
+      "activeOnly": "Hanya aktif",
+      "includeEnded": "Termasuk yang berakhir"
+    },
+    "columns": {
+      "employee": "Karyawan",
+      "project": "Proyek",
+      "role": "Peran",
+      "allocation": "Alokasi",
+      "period": "Periode",
+      "status": "Status",
+      "actions": "Aksi"
+    },
+    "form": {
+      "title": "Penugasan baru",
+      "titleEdit": "Ubah penugasan",
+      "description": "Satu penugasan menghubungkan seorang karyawan ke satu proyek dengan peran & persentase alokasi. Total lintas proyek aktif tidak boleh > 100%.",
+      "project": "Proyek",
+      "projectPlaceholder": "Pilih proyek…",
+      "role": "Peran",
+      "rolePlaceholder": "Pilih peran…",
+      "employee": "Karyawan",
+      "employeePlaceholder": "Pilih karyawan…",
+      "startDate": "Tanggal mulai",
+      "endDate": "Tanggal selesai",
+      "allocation": "Alokasi %",
+      "notes": "Catatan",
+      "notesPlaceholder": "Konteks opsional atau ruang lingkup penugasan",
+      "save": "Simpan",
+      "cancel": "Batal",
+      "idAutoAssigned": "ID otomatis saat menyimpan",
+      "remainingCapacity": "Sisa kapasitas {name}: {pct}%",
+      "capacityWarning": "Melebihi kapasitas: tersisa hanya {remaining}% (diminta {requested}%).",
+      "capacityOk": "Alokasi masih dalam kapasitas."
+    },
+    "roles": {
+      "PRIMARY_PM": "Primary PM",
+      "CO_PM": "Co-PM",
+      "MEMBER": "Anggota",
+      "TECH_LEAD": "Tech Lead",
+      "DEVELOPER": "Developer",
+      "ENGINEER": "Engineer",
+      "QA": "QA",
+      "DESIGNER": "Designer",
+      "DEVOPS": "DevOps",
+      "CONSULTANT": "Konsultan",
+      "SUPPORT": "Support",
+      "SITE_SUPERVISOR": "Supervisor Lapangan",
+      "FIELD_TECHNICIAN": "Teknisi Lapangan"
+    },
+    "status": {
+      "ACTIVE": "Aktif",
+      "ENDED": "Berakhir"
+    },
+    "workload": {
+      "total": "Total alokasi",
+      "remaining": "Sisa",
+      "activeCount": "{count} proyek aktif",
+      "overloaded": "Overload",
+      "healthy": "Sehat",
+      "idle": "Belum ditugaskan"
+    },
+    "actions": {
+      "edit": "Ubah",
+      "end": "Akhiri",
+      "confirmEnd": "Akhiri penugasan ini?",
+      "endedToast": "Penugasan diakhiri.",
+      "createdToast": "Penugasan berhasil dibuat.",
+      "updatedToast": "Penugasan diperbarui."
+    },
+    "list": {
+      "activeAllocation": "Alokasi aktif: {pct}%",
+      "roleGroup": "{role} ({count})"
+    }
+  },
+  "handovers": {
+    "kicker": "Delivery",
+    "title": "Serah terima PM",
+    "subtitle": "Alih tugas Primary PM antar proyek. Wajib disetujui OM + HM, lalu dieksekusi atomik.",
+    "empty": "Belum ada serah terima PM",
+    "emptyBody": "Ajukan serah terima pertama untuk memindahkan kepemilikan proyek secara resmi.",
+    "columns": {
+      "project": "Proyek",
+      "from": "PM lama",
+      "to": "PM baru",
+      "effectiveAt": "Efektif",
+      "status": "Status"
+    },
+    "form": {
+      "new": "Serah terima baru",
+      "title": "Serah terima PM baru",
+      "description": "Isi detail transisi. Alur approval: OM → HM → Eksekusi.",
+      "needsPrereqs": "Anda perlu minimal satu proyek aktif dan dua karyawan berperan Project Manager.",
+      "project": "Proyek",
+      "projectPlaceholder": "Pilih proyek…",
+      "fromPm": "PM lama",
+      "fromPmPlaceholder": "Pilih PM lama…",
+      "toPm": "PM baru",
+      "toPmPlaceholder": "Pilih PM baru…",
+      "effectiveAt": "Efektif tanggal",
+      "reason": "Alasan",
+      "reasonPlaceholder": "Alasan serah terima…",
+      "notes": "Catatan serah terima",
+      "notesPlaceholder": "Konteks, open items, approval yang menunggu…",
+      "cancel": "Batal",
+      "submit": "Kirim untuk approval",
+      "submitted": "Serah terima berhasil diajukan."
+    },
+    "detail": {
+      "kicker": "Serah terima",
+      "back": "Kembali ke daftar",
+      "effectiveAt": "Efektif {date}",
+      "transferTitle": "Transisi",
+      "transferDescription": "Assignment berpindah dari PM lama ke PM baru saat dieksekusi.",
+      "fromPm": "PM lama",
+      "toPm": "PM baru",
+      "reason": "Alasan",
+      "notes": "Catatan serah terima",
+      "initiatedBy": "Diajukan oleh {name} ({role}) · {date}",
+      "timelineTitle": "Riwayat approval",
+      "timelineEmpty": "Belum ada aktivitas approval.",
+      "rejectionReasonTitle": "Alasan penolakan"
+    },
+    "actions": {
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "cancel": "Batal",
+      "execute": "Eksekusi",
+      "approveTitle": "Setujui serah terima?",
+      "approveDescription": "Meneruskan ke peran approver berikutnya.",
+      "rejectTitle": "Tolak serah terima?",
+      "rejectDescription": "Serah terima yang ditolak tidak dapat dibuka ulang.",
+      "executeTitle": "Eksekusi serah terima?",
+      "executeDescription": "Aksi ini akan memindahkan assignment Primary PM secara atomik dan mengakhiri assignment PM lama.",
+      "comment": "Komentar (opsional)",
+      "commentPlaceholder": "Catatan untuk auditor…",
+      "reason": "Alasan penolakan",
+      "reasonPlaceholder": "Jelaskan alasan penolakan…",
+      "confirmApprove": "Konfirmasi setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "confirmExecute": "Konfirmasi eksekusi",
+      "approvedToast": "Serah terima disetujui.",
+      "rejectedToast": "Serah terima ditolak.",
+      "executedToast": "Serah terima dieksekusi. Assignment berhasil dipindahkan."
+    }
+  },
+  "approvals": {
+    "kicker": "Inbox",
+    "title": "Approval — {role}",
+    "subtitle": "Antrean approval untuk peran Anda. Klik item untuk membuka detail dan melakukan aksi.",
+    "empty": "Inbox approval kosong",
+    "emptyBody": "Tidak ada pengajuan yang menunggu tindakan Anda saat ini.",
+    "noRoleTitle": "Peran Anda bukan approver",
+    "noRoleBody": "Hanya Supervisor, PM, OM, Finance, Director, dan Admin yang muncul di inbox approval.",
+    "submittedBy": "oleh {name} ({role})",
+    "amount": "Nominal",
+    "weeklyTotals": "Total mingguan",
+    "attachmentsLabel": "{n} berkas pendukung terlampir",
+    "sections": {
+      "expenses": "Biaya",
+      "cashAdvances": "Kas bon",
+      "hrRequests": "Pengajuan HR",
+      "pettyCash": "Replenishment kas kecil",
+      "budgets": "Anggaran",
+      "budgetRequests": "Permintaan anggaran",
+      "weeklyTimesheets": "Timesheet mingguan"
+    },
+    "nextAction": {
+      "pendingTitle": "Menunggu approval {slot}",
+      "pendingTitleAny": "Menunggu approval",
+      "pendingDescription": "Aksi berikutnya akan dilakukan oleh {slot}.",
+      "pendingSelfBadge": "Giliran Anda",
+      "pendingSelfDescription": "Anda adalah approver berikutnya. Klik Approve atau Reject di bawah.",
+      "approvedTitle": "Sudah disetujui",
+      "approvedDescription": "Approval chain selesai. Item siap untuk tahap berikutnya.",
+      "rejectedTitle": "Ditolak",
+      "rejectedDescription": "Pengajuan ditolak. Lihat alasan di timeline di bawah.",
+      "cancelledTitle": "Dibatalkan",
+      "cancelledDescription": "Pengaju menarik pengajuan sebelum selesai review.",
+      "draftTitle": "Draft — belum dikirim",
+      "draftDescription": "Lengkapi data, lalu klik Kirim untuk memulai approval chain.",
+      "paidTitle": "Sudah dibayar",
+      "paidDescription": "Pembayaran dicatat oleh Finance.",
+      "disbursedTitle": "Sudah dicairkan",
+      "disbursedDescription": "Menunggu bukti settlement dari pengaju.",
+      "settledTitle": "Settlement selesai",
+      "settledDescription": "Uang muka sudah dipertanggungjawabkan.",
+      "returnedTitle": "Settlement dikembalikan",
+      "returnedDescription": "Finance mengembalikan settlement — pengaju harus mengunggah bukti perbaikan."
+    }
+  },
+  "employees": {
+    "kicker": "HR",
+    "title": "Karyawan",
+    "subtitle": "Direktori karyawan tenant — dasar untuk roster, timesheet, payroll, dan gross margin BPO.",
+    "empty": "Belum ada karyawan",
+    "emptyBody": "Tambahkan karyawan pertama untuk mulai mengalokasikan proyek dan menghitung Direct Labor Cost.",
+    "newEmployee": "Tambah karyawan",
+    "expiresIn": "Berakhir dalam {days} hari",
+    "expired": "Kontrak sudah berakhir",
+    "columns": {
+      "employee": "Karyawan",
+      "department": "Departemen",
+      "position": "Jabatan",
+      "employment": "Jenis kontrak",
+      "joinDate": "Tanggal masuk",
+      "endDate": "Tanggal akhir",
+      "availability": "Ketersediaan"
+    },
+    "employmentType": {
+      "PERMANENT": "Permanen",
+      "CONTRACT": "Kontrak",
+      "PROBATION": "Probation",
+      "INTERN": "Magang",
+      "OUTSOURCE": "Outsource",
+      "OUTTASK": "Outtask"
+    },
+    "availability": {
+      "AVAILABLE": "Tersedia",
+      "ASSIGNED": "Dialokasikan",
+      "ON_LEAVE": "Cuti",
+      "INACTIVE": "Nonaktif"
+    },
+    "form": {
+      "createTitle": "Karyawan baru",
+      "createDescription": "Karyawan baru bisa ditambahkan tanpa akun sistem. Undangan aktivasi akun bisa dikirim setelahnya.",
+      "firstName": "Nama depan",
+      "lastName": "Nama belakang",
+      "email": "Email",
+      "phone": "Telepon",
+      "department": "Departemen",
+      "selectDepartment": "Pilih departemen…",
+      "position": "Jabatan",
+      "selectPosition": "Pilih jabatan…",
+      "joinDate": "Tanggal masuk",
+      "employment": "Jenis kontrak",
+      "endDate": "Tanggal akhir",
+      "endDatePermanentHint": "Opsional untuk Permanen — sistem menghitung tanggal pensiun otomatis (55 tahun) dari Tanggal Lahir.",
+      "endDateContractHint": "Wajib untuk Kontrak, Probation, Magang, Outsource, dan Outtask. Menjadi dasar pengingat berakhirnya kontrak.",
+      "dateOfBirth": "Tanggal lahir",
+      "dateOfBirthHint": "Opsional. Dipakai untuk menghitung tanggal pensiun otomatis (55 tahun).",
+      "availability": "Ketersediaan",
+      "created": "Karyawan {name} berhasil ditambahkan."
+    }
+  },
+  "roster": {
+    "kicker": "HR",
+    "title": "Roster shift",
+    "subtitle": "Jadwal shift karyawan per hari — sumber data untuk timesheet dan gross margin real-time.",
+    "empty": "Belum ada jadwal",
+    "emptyBody": "Buat entri roster pertama untuk mulai menjadwalkan shift.",
+    "columns": {
+      "date": "Tanggal",
+      "employee": "Karyawan",
+      "shift": "Shift",
+      "project": "Proyek",
+      "status": "Status"
+    },
+    "statuses": {
+      "PLANNED": "Dijadwalkan",
+      "LEAVE": "Cuti",
+      "SICK": "Sakit",
+      "OFF": "Libur"
+    },
+    "actions": {
+      "new": "Tambah entri"
+    },
+    "form": {
+      "title": "Buat / perbarui entri roster",
+      "description": "Satu entri per (karyawan, tanggal). Konflik akan diperbarui otomatis.",
+      "employee": "Karyawan",
+      "shift": "Shift",
+      "project": "Proyek",
+      "workDate": "Tanggal kerja",
+      "status": "Status",
+      "notes": "Catatan (opsional)",
+      "notesPlaceholder": "Catatan tambahan…",
+      "unassigned": "— Tidak dialokasikan —",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "successToast": "Entri roster tersimpan.",
+      "errorToast": "Gagal menyimpan entri roster."
+    }
+  },
+  "shifts": {
+    "kicker": "HR",
+    "title": "Katalog shift",
+    "subtitle": "Definisi shift kerja per tenant + override per proyek. HR/OM memelihara katalog dasar; PM & Supervisor bisa menambah shift khusus proyek mereka.",
+    "governance": {
+      "title": "Kebijakan editing",
+      "bodyHrOm": "Anda mengelola katalog dasar tenant + override proyek. Perubahan pada tunjangan shift langsung berpengaruh ke payroll.",
+      "bodyPmSpv": "Anda hanya bisa menambah / mengubah shift untuk proyek yang di-assign ke Anda. Tunjangan shift dikunci — mengikuti katalog dasar HR agar tidak berdampak ke payroll."
+    },
+    "sections": {
+      "base": "Katalog dasar",
+      "baseHint": "Berlaku tenant-wide. Dipakai semua proyek yang belum punya override.",
+      "projectOverrides": "Override per proyek",
+      "projectHint": "Shift kustom yang hanya berlaku di proyek terkait. Menimpa shift dasar dengan kode yang sama saat roster memilih proyek tersebut."
+    },
+    "columns": {
+      "code": "Kode",
+      "name": "Nama",
+      "start": "Mulai",
+      "end": "Selesai",
+      "duration": "Durasi",
+      "night": "Malam",
+      "allowance": "Tunjangan",
+      "status": "Status",
+      "actions": "Aksi"
+    },
+    "badges": {
+      "night_yes": "Malam",
+      "night_no": "Non-malam",
+      "active": "Aktif",
+      "inactive": "Non-aktif"
+    },
+    "empty": {
+      "base": "Belum ada shift dasar.",
+      "projects": "Belum ada override shift di proyek manapun."
+    },
+    "actions": {
+      "new": "Tambah shift",
+      "edit": "Ubah",
+      "delete": "Hapus",
+      "deleteConfirm": "Yakin ingin menghapus shift ini? Aksi tidak dapat dibatalkan. Jika shift masih dipakai roster / timesheet, penghapusan akan ditolak.",
+      "successDelete": "Shift dihapus.",
+      "errorDelete": "Gagal menghapus shift."
+    },
+    "form": {
+      "title": "Shift",
+      "description": "Kode + waktu operasional shift. Tunjangan hanya bisa diubah oleh HR/OM.",
+      "code": "Kode",
+      "codeHelp": "Huruf/angka/underscore/dash. Contoh: DAY, NIGHT_A.",
+      "name": "Nama",
+      "startTime": "Mulai",
+      "endTime": "Selesai",
+      "duration": "Durasi (jam)",
+      "durationHelp": "0.5 hingga 24 jam. Otomatis diperiksa terhadap durasi antara mulai & selesai.",
+      "isNight": "Shift malam (kena tunjangan malam)",
+      "allowance": "Tunjangan (IDR/shift)",
+      "allowanceHrOnly": "Hanya HR/OM yang bisa mengubah nilai ini karena langsung masuk ke perhitungan payroll.",
+      "project": "Scope",
+      "projectPlaceholder": "Pilih scope shift…",
+      "projectRequired": "PM/Supervisor wajib memilih proyek — shift dasar hanya milik HR/OM.",
+      "baseCatalog": "— Katalog dasar (tenant-wide) —",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "successToast": "Shift tersimpan.",
+      "errorToast": "Gagal menyimpan shift."
+    }
+  },
+  "timesheets": {
+    "kicker": "HR",
+    "title": "Timesheet",
+    "subtitle": "Jam kerja aktual per hari. Menjadi input direct labour cost & payroll.",
+    "empty": "Belum ada timesheet",
+    "emptyBody": "Ajukan timesheet pertama untuk memulai proses approval dan payroll.",
+    "columns": {
+      "date": "Tanggal",
+      "employee": "Karyawan",
+      "project": "Proyek",
+      "hours": "Jam",
+      "overtime": "Lembur",
+      "status": "Status",
+      "actions": "Aksi"
+    },
+    "actions": {
+      "new": "Ajukan timesheet",
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "approveTitle": "Setujui timesheet?",
+      "approveDescription": "Setelah disetujui, jam ini masuk ke perhitungan payroll.",
+      "rejectTitle": "Tolak timesheet?",
+      "rejectDescription": "Karyawan dapat mengedit dan mengajukan ulang.",
+      "comment": "Komentar (opsional)",
+      "commentPlaceholder": "Catatan untuk auditor…",
+      "reason": "Alasan penolakan",
+      "reasonPlaceholder": "Jelaskan alasan…",
+      "confirmApprove": "Konfirmasi setujui",
+      "confirmReject": "Konfirmasi tolak",
+      "approvedToast": "Timesheet disetujui.",
+      "rejectedToast": "Timesheet ditolak."
+    },
+    "form": {
+      "title": "Ajukan timesheet",
+      "description": "Isi jam kerja aktual. Anda dapat mengedit selama status Draft atau Ditolak.",
+      "employee": "Karyawan",
+      "project": "Proyek",
+      "workDate": "Tanggal kerja",
+      "hoursWorked": "Jam kerja",
+      "hoursOvertime": "Jam lembur",
+      "notes": "Catatan (opsional)",
+      "notesPlaceholder": "Catatan tambahan…",
+      "unassigned": "— Tidak dialokasikan —",
+      "cancel": "Batal",
+      "submit": "Ajukan",
+      "submitting": "Mengirim…",
+      "successToast": "Timesheet berhasil diajukan.",
+      "errorToast": "Gagal mengajukan timesheet."
+    },
+    "weekly": {
+      "viewLink": "Tampilan mingguan",
+      "dailyView": "Tampilan harian",
+      "title": "Timesheet mingguan",
+      "subtitle": "Ajukan satu minggu penuh (Sen-Min) dalam satu paket. PM Anda menyetujui paket secara utuh.",
+      "empty": "Belum ada paket mingguan",
+      "emptyBody": "Isi minggu berjalan untuk memicu approval PM.",
+      "open": "Buka",
+      "newForCurrentWeek": "Isi minggu {week}",
+      "columns": {
+        "week": "Minggu",
+        "employee": "Karyawan",
+        "hours": "Jam",
+        "overtime": "Lembur",
+        "status": "Status",
+        "actions": "Aksi"
+      },
+      "editor": {
+        "title": "Minggu {start} → {end}",
+        "subtitle": "Isi jam kerja per hari. Ajukan untuk mengirim seluruh minggu ke PM untuk approval.",
+        "back": "Kembali ke daftar mingguan",
+        "day": "Hari",
+        "project": "Proyek",
+        "hours": "Jam",
+        "overtime": "Lembur",
+        "notes": "Catatan",
+        "totals": "Total",
+        "unassigned": "— Tidak dialokasikan —",
+        "dayNotesPlaceholder": "Catatan harian…",
+        "notesPlaceholder": "Catatan mingguan untuk reviewer…",
+        "submit": "Ajukan minggu untuk approval",
+        "submitting": "Mengirim…",
+        "submittedToast": "Paket mingguan berhasil diajukan.",
+        "errorToast": "Gagal mengirim paket mingguan.",
+        "rejectionTitle": "Ditolak — mohon direvisi",
+        "timelineTitle": "Riwayat approval"
+      },
+      "actions": {
+        "approve": "Setujui minggu",
+        "reject": "Tolak minggu",
+        "approveTitle": "Setujui paket mingguan?",
+        "approveDescription": "Menyetujui seluruh minggu (semua baris harian). Jam akan masuk agregasi payroll.",
+        "rejectTitle": "Tolak paket mingguan?",
+        "rejectDescription": "Karyawan dapat mengedit dan mengajukan ulang. Berikan alasan spesifik.",
+        "comment": "Komentar (opsional)",
+        "commentPlaceholder": "Catatan untuk auditor…",
+        "reason": "Alasan penolakan",
+        "reasonPlaceholder": "Jelaskan bagian yang perlu diperbaiki…",
+        "confirmApprove": "Konfirmasi setujui",
+        "confirmReject": "Konfirmasi tolak",
+        "approvedToast": "Paket mingguan disetujui.",
+        "rejectedToast": "Paket mingguan ditolak."
+      }
+    }
+  },
+  "payroll": {
+    "kicker": "HR + Finance",
+    "title": "Payroll",
+    "subtitle": "Agregasi bulanan gaji, lembur, dan tunjangan shift per karyawan.",
+    "empty": "Belum ada periode payroll",
+    "emptyBody": "Klik tombol generate untuk memproses periode berjalan.",
+    "columns": {
+      "employee": "Karyawan",
+      "hours": "Jam",
+      "overtime": "Lembur",
+      "base": "Gaji dasar",
+      "overtimePay": "Bayaran lembur",
+      "allowance": "Tunjangan shift",
+      "gross": "Gross",
+      "net": "Net"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "FINALIZED": "Difinalisasi"
+    },
+    "period": {
+      "summary": "{count} karyawan · gross {gross} · net {net}"
+    },
+    "weeklyShareBadge": "{pct}% mingguan",
+    "weeklyShareTooltip": "{weekly}j dari paket mingguan approved · {daily}j daily-only",
+    "actions": {
+      "generate": "Generate {month} {year}",
+      "generating": "Memproses…",
+      "generateSuccess": "Payroll periode berhasil diproses.",
+      "generateError": "Gagal memproses payroll.",
+      "finalize": "Finalisasi",
+      "finalizeSuccess": "Periode difinalisasi.",
+      "finalizeError": "Gagal memfinalisasi periode."
+    }
+  },
+  "portal": {
+    "brand": "ControlDesk Portal",
+    "workspacePrefix": "Workspace",
+    "signOut": "Keluar",
+    "footer": "Portal klien read-only · Didukung oleh ControlDesk",
+    "projectStatus": {
+      "DRAFT": "Draft",
+      "PLANNING": "Perencanaan",
+      "ACTIVE": "Aktif",
+      "ON_HOLD": "Ditunda",
+      "COMPLETED": "Selesai",
+      "ARCHIVED": "Diarsipkan"
+    },
+    "changePassword": {
+      "kicker": "Portal klien",
+      "title": "Ubah password Anda",
+      "subtitle": "Login sebagai {email}. Silakan atur password permanen untuk melanjutkan.",
+      "cardTitle": "Atur password baru",
+      "cardSubtitle": "Diperlukan saat login pertama atau setelah admin melakukan reset.",
+      "currentPassword": "Password saat ini",
+      "newPassword": "Password baru",
+      "confirmPassword": "Konfirmasi password baru",
+      "policyHint": "Minimal 10 karakter, mengandung huruf dan angka. Harus berbeda dari password saat ini.",
+      "submit": "Perbarui password",
+      "submitting": "Memperbarui…",
+      "successToast": "Password diperbarui. Selamat datang di portal."
+    },
+    "login": {
+      "title": "Masuk portal klien",
+      "subtitle": "Gunakan kredensial yang diberikan account manager Anda.",
+      "email": "Email",
+      "emailPlaceholder": "anda@perusahaan.com",
+      "emailRequired": "Email wajib diisi.",
+      "password": "Kata sandi",
+      "passwordPlaceholder": "Kata sandi Anda",
+      "passwordRequired": "Kata sandi wajib diisi.",
+      "submit": "Masuk",
+      "submitting": "Sedang masuk…",
+      "successToast": "Selamat datang kembali."
+    },
+    "dashboard": {
+      "kicker": "Portal klien",
+      "title": "Halo, {client}",
+      "subtitle": "Status real-time dari setiap proyek yang kami kerjakan untuk Anda.",
+      "kpi": {
+        "totalProjects": "Total proyek",
+        "activeProjects": "Proyek aktif",
+        "avgProgress": "Rata-rata progres"
+      },
+      "projectsSection": {
+        "title": "Proyek terbaru",
+        "subtitle": "Enam proyek terbaru yang sedang berjalan.",
+        "viewAll": "Lihat semua",
+        "empty": "Belum ada proyek yang di-assign."
+      }
+    },
+    "projectList": {
+      "kicker": "Portal klien",
+      "title": "Proyek",
+      "subtitle": "Semua proyek yang di-assign ke {client}.",
+      "empty": "Belum ada proyek",
+      "emptyBody": "Saat kami membuka proyek baru untuk Anda, akan tampil di sini."
+    },
+    "projectDetail": {
+      "kicker": "Portal klien · Proyek",
+      "backToList": "Kembali ke daftar proyek",
+      "summary": {
+        "title": "Ringkasan",
+        "progress": "Progres keseluruhan",
+        "startDate": "Mulai",
+        "endDate": "Selesai",
+        "contractType": "Jenis kontrak"
+      },
+      "milestones": {
+        "title": "Timeline milestone",
+        "subtitle": "Deliverable berbasis bobot. Persentase menunjukkan kontribusi tiap milestone ke progres keseluruhan.",
+        "empty": "Belum ada milestone terdefinisi."
+      }
+    },
+    "milestoneStatus": {
+      "PLANNED": "Direncanakan",
+      "IN_PROGRESS": "Berjalan",
+      "AT_RISK": "Berisiko",
+      "DONE": "Selesai",
+      "CANCELLED": "Dibatalkan"
+    },
+    "notifications": {
+      "kicker": "Portal klien · Notifikasi",
+      "title": "Notifikasi",
+      "subtitle": "Update tentang proyek dan milestone {client}.",
+      "empty": "Semua sudah dibaca",
+      "emptyBody": "Update milestone dan pengumuman baru akan muncul di sini.",
+      "unreadBadge": "Belum dibaca",
+      "markRead": "Tandai dibaca",
+      "markAllRead": "Tandai semua dibaca ({count})",
+      "bellLabel": "Notifikasi",
+      "bellLabelWithCount": "{count} notifikasi belum dibaca"
+    },
+    "notificationKind": {
+      "MILESTONE_UPDATE": "Milestone",
+      "PROJECT_UPDATE": "Proyek",
+      "ANNOUNCEMENT": "Pengumuman",
+      "SYSTEM": "Sistem"
+    },
+    "projectFinance": {
+      "title": "Finansial",
+      "subtitle": "Utilisasi budget dan kontrak aktif yang menaungi engagement ini.",
+      "budget": {
+        "utilization": "Utilisasi budget",
+        "utilizationPct": "{pct}% terpakai",
+        "allocated": "Dialokasikan",
+        "spent": "Terpakai",
+        "remaining": "Sisa",
+        "empty": "Belum ada budget yang dialokasikan untuk proyek ini."
+      },
+      "contracts": {
+        "title": "Kontrak terkait",
+        "empty": "Tidak ada kontrak aktif yang overlap dengan proyek ini.",
+        "mrr": "MRR",
+        "active": "Aktif",
+        "draft": "Draft"
+      },
+      "privacyFootnote": "Detail item biaya tidak dibagikan. Total diperbarui setiap kali settlement disetujui."
+    }
+  },
+  "performance": {
+    "kicker": "HR · Performa",
+    "title": "Evaluasi performa",
+    "subtitle": "Karyawan non-permanent dievaluasi menjelang akhir kontrak. SPV draft → PM review → OM keputusan. Konfidensial dari karyawan.",
+    "newEvaluation": "Evaluasi baru",
+    "empty": "Belum ada evaluasi",
+    "emptyBody": "Ketika kontrak karyawan tinggal 30 hari, SPV akan menerima pengingat untuk membuat evaluasi.",
+    "columns": {
+      "employee": "Karyawan",
+      "contractEnd": "Akhir kontrak",
+      "template": "Template",
+      "status": "Status",
+      "score": "Skor",
+      "recommendation": "Rekomendasi",
+      "submittedAt": "Dikirim",
+      "updatedAt": "Diperbarui"
+    },
+    "status": {
+      "DRAFT": "Draft (SPV)",
+      "SUBMITTED_BY_SPV": "Menunggu review PM",
+      "REVIEWED_BY_PM": "Menunggu keputusan OM",
+      "RETURNED_TO_SPV": "Dikembalikan untuk coaching",
+      "APPROVED_BY_OM": "Disetujui OM",
+      "REJECTED_BY_OM": "Ditolak OM",
+      "FINALIZED": "Difinalisasi"
+    },
+    "recommendation": {
+      "EXTEND": "Perpanjang kontrak",
+      "NOT_EXTEND": "Tidak diperpanjang / diterminasi",
+      "EXTEND_WITH_COACHING": "Perpanjang dengan coaching",
+      "EXTEND_PERMANENT": "Angkat sebagai karyawan tetap",
+      "EXTEND_PKWT_3M": "Perpanjang PKWT 3 bulan"
+    },
+    "form": {
+      "employee": "Karyawan",
+      "employeePlaceholder": "Pilih karyawan non-permanent…",
+      "employeeHint": "Hanya karyawan non-permanent dengan tanggal akhir kontrak yang bisa dievaluasi.",
+      "template": "Template",
+      "templatePlaceholder": "Pilih template…",
+      "templateHint": "HR mengelola template di HR › Templates.",
+      "startEvaluation": "Mulai evaluasi",
+      "spvRecommendation": "Rekomendasi ke manajemen",
+      "spvNotes": "Catatan SPV",
+      "spvNotesPlaceholder": "Highlight kekuatan, kekhawatiran, rencana coaching…",
+      "submit": "Kirim untuk direview PM",
+      "pmDecision": "Keputusan PM",
+      "pmApprove": "Setujui & teruskan ke OM",
+      "pmReturn": "Kembalikan ke SPV untuk coaching",
+      "pmNotes": "Catatan coaching (wajib saat dikembalikan)",
+      "omDecision": "Keputusan OM",
+      "omApprove": "Setujui & finalisasi",
+      "omReject": "Tolak",
+      "omNotes": "Catatan (wajib saat menolak)",
+      "answerScorePlaceholder": "Skor 1-5",
+      "answerTextPlaceholder": "Jawaban bebas",
+      "commentPlaceholder": "Komentar / justifikasi (wajib)",
+      "saveItem": "Simpan",
+      "totalScore": "Total skor tertimbang",
+      "returnToList": "Kembali ke daftar",
+      "ratingScale": "Skala penilaian",
+      "metaTitle": "Periode & catatan penilai",
+      "metaSave": "Simpan",
+      "metaSaved": "Metadata tersimpan.",
+      "periodStart": "Periode mulai",
+      "periodEnd": "Periode akhir",
+      "strengths": "Aspek yang menjadi kekuatan",
+      "strengthsPlaceholder": "Ringkasan aspek positif karyawan…",
+      "devAreas": "Aspek yang perlu dikembangkan",
+      "devAreasPlaceholder": "Kesenjangan yang perlu diperbaiki…",
+      "devProposal": "Usulan pengembangan",
+      "devProposalPlaceholder": "Rencana coaching, training, mentoring…",
+      "goalAchievement": "Pencapaian goal (%)",
+      "competencyMeet": "Kompetensi yang memenuhi (%)",
+      "finalPeriodToggle": "Periode Penilaian Akhir",
+      "manajemenAvgLabel": "Rata-rata Manajemen Pekerjaan",
+      "recExtendPermanent": "Angkat sebagai karyawan tetap",
+      "recExtendPkwt3M": "Perpanjang PKWT 3 bulan",
+      "recExtend": "Diperpanjang",
+      "recNotExtend": "Tidak diperpanjang",
+      "recommendationLabel": "Rekomendasi",
+      "recommendationPlaceholder": "Pilih rekomendasi…",
+      "extensionEndDateLabel": "Tanggal akhir kontrak baru",
+      "extensionEndDateHint": "Isi manual. Harus setelah {currentEnd}.",
+      "extensionPreviewLabel": "Perpanjangan",
+      "extensionDateAfterCurrent": "Tanggal akhir kontrak baru harus setelah {currentEnd}.",
+      "notExtendHint": "Setelah OM approve, sistem akan membuat draft UPK otomatis untuk finance."
+    },
+    "detail": {
+      "kicker": "Evaluasi",
+      "back": "Kembali ke daftar evaluasi",
+      "timeline": "Timeline approval",
+      "answersSection": "Item evaluasi",
+      "answersEmpty": "Template ini belum punya item — minta HR memperbarui template.",
+      "kesimpulanTitle": "Kesimpulan / Penilaian Akhir",
+      "kesimpulanSubtitle": "Kriteria pengangkatan PKWT — minimal 2 dari 3 harus terpenuhi.",
+      "kesimpulanMet": "Kriteria terpenuhi",
+      "kesimpulanRecommendPermanent": "Layak diangkat sebagai karyawan tetap",
+      "kesimpulanRecommendReview": "Perlu review — kurang dari 2 kriteria",
+      "kesimpulanIncomplete": "Data belum lengkap",
+      "kesimpulanCurrentRec": "Rekomendasi SPV",
+      "critGoal": "Pencapaian Goal",
+      "critManajemen": "Rata-rata Manajemen",
+      "critCompetency": "Kompetensi terpenuhi",
+      "extensionBadge": "Kontrak diperpanjang"
+    },
+    "templates": {
+      "title": "Template evaluasi",
+      "subtitle": "Form master yang dipakai saat memulai evaluasi baru. Total bobot per item = 100%.",
+      "newTemplate": "Template baru",
+      "editTemplate": "Ubah template",
+      "columns": {
+        "name": "Template",
+        "items": "Item",
+        "weight": "Total bobot",
+        "status": "Status",
+        "updated": "Diperbarui"
+      },
+      "form": {
+        "name": "Nama template",
+        "namePlaceholder": "cth. Review Perpanjangan Kontrak",
+        "description": "Deskripsi",
+        "descriptionPlaceholder": "Konteks opsional untuk HR / SPV (maks 2000 karakter)",
+        "items": "Item evaluasi",
+        "itemsHint": "Setiap item punya bobot (%). Total sebaiknya 100 agar skor bermakna.",
+        "addItem": "Tambah item",
+        "removeItem": "Hapus",
+        "itemName": "Nama item",
+        "itemNamePlaceholder": "cth. Kualitas pekerjaan",
+        "itemDescription": "Panduan",
+        "itemDescriptionPlaceholder": "Panduan opsional untuk SPV",
+        "itemWeight": "Bobot (%)",
+        "itemType": "Tipe",
+        "itemTypeScore": "Skor 1-5",
+        "itemTypeText": "Teks bebas",
+        "itemRequired": "Wajib",
+        "totalWeight": "Total bobot",
+        "weightWarning": "Total bobot sebaiknya 100%. Saat ini: {total}%",
+        "createSuccess": "Template dibuat.",
+        "updateSuccess": "Template diperbarui.",
+        "toggleActive": "Aktifkan",
+        "toggleInactive": "Non-aktifkan"
+      }
+    }
+  },
+  "upk": {
+    "kicker": "HR · UPK",
+    "title": "Catatan UPK",
+    "subtitle": "Draft UPK (Uang Penghentian Kontrak) untuk karyawan non-permanent yang kontraknya tidak diperpanjang. PM draft → Finance approve → Direktur approve (≥ IDR 50 jt) → Paid.",
+    "newDraft": "Draft UPK baru",
+    "empty": "Belum ada catatan UPK",
+    "emptyBody": "Saat evaluasi difinalisasi dengan 'Tidak diperpanjang', draft UPK dibuat otomatis di sini.",
+    "columns": {
+      "employee": "Karyawan",
+      "contractEnd": "Akhir kontrak",
+      "amount": "UPK terhitung",
+      "status": "Status",
+      "submittedAt": "Dikirim",
+      "approvedAt": "Disetujui",
+      "paidAt": "Dibayarkan"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "PENDING_FINANCE": "Menunggu Finance",
+      "PENDING_DIRECTOR": "Menunggu Direktur",
+      "APPROVED": "Disetujui",
+      "REJECTED_BY_FINANCE": "Ditolak Finance",
+      "REJECTED_BY_DIRECTOR": "Ditolak Direktur",
+      "PAID": "Dibayarkan",
+      "CANCELLED": "Dibatalkan"
+    },
+    "form": {
+      "employee": "Karyawan",
+      "baseSalary": "Gaji pokok (IDR / bulan)",
+      "serviceMonths": "Masa kerja (bulan)",
+      "multiplier": "Faktor pengali",
+      "multiplierHint": "Umumnya 1,0 — satu bulan gaji per tahun masa kerja.",
+      "computed": "UPK terhitung",
+      "justification": "Justifikasi",
+      "justificationPlaceholder": "Jelaskan perhitungan, kondisi khusus, dan referensi evaluasi SPV/PM…",
+      "submit": "Kirim ke Finance",
+      "financeApprove": "Setujui",
+      "financeReject": "Tolak",
+      "directorApprove": "Setujui",
+      "directorReject": "Tolak",
+      "markPaid": "Tandai dibayarkan",
+      "paidReference": "Referensi pembayaran (opsional)",
+      "notesPlaceholder": "Tambahkan catatan (wajib saat menolak)…",
+      "directorNeeded": "Nominal ≥ IDR 50 jt — perlu approval Direktur setelah Finance."
+    }
+  },
+  "monthlyReport": {
+    "kicker": "Delivery · Laporan bulanan",
+    "title": "Laporan bulanan",
+    "subtitle": "SPV membuat satu laporan per bulan; PM approve sebelum diteruskan untuk sign-off client dan collection.",
+    "newReport": "Laporan baru",
+    "empty": "Belum ada laporan bulanan",
+    "emptyBody": "SPV membuat satu laporan per bulan kalender. Metrik dihitung otomatis dari milestone, timesheet, dan expense.",
+    "columns": {
+      "period": "Periode",
+      "submitter": "Pengaju",
+      "status": "Status",
+      "submittedAt": "Diajukan",
+      "decidedAt": "Diputuskan",
+      "updatedAt": "Diperbarui"
+    },
+    "status": {
+      "DRAFT_BY_SPV": "Draft (SPV)",
+      "SUBMITTED_TO_PM": "Menunggu review PM",
+      "APPROVED_BY_PM": "Disetujui PM",
+      "RETURNED_TO_SPV": "Dikembalikan untuk revisi",
+      "REJECTED_BY_PM": "Ditolak PM",
+      "SENT_TO_CLIENT": "Terkirim ke client",
+      "APPROVED_BY_CLIENT": "Disetujui client",
+      "BA_GENERATED": "BA dibuat",
+      "HANDED_OFF_TO_COLLECTION": "Diserahkan ke collection",
+      "CANCELLED": "Dibatalkan"
+    },
+    "sections": {
+      "EXECUTIVE_SUMMARY": "Ringkasan eksekutif",
+      "MILESTONE_PROGRESS": "Progress milestone",
+      "HOURS_LOGGED": "Jam kerja",
+      "COSTS_INCURRED": "Biaya",
+      "BLOCKERS": "Kendala & risiko",
+      "NEXT_MONTH_PLAN": "Rencana bulan depan"
+    },
+    "form": {
+      "period": "Periode (bulan)",
+      "periodHint": "Satu laporan per project per bulan kalender.",
+      "sectionContent": "Catatan",
+      "sectionContentPlaceholder": "Tambahkan konteks, poin penting, atau narasi untuk bagian ini…",
+      "saveSection": "Simpan bagian",
+      "spvNotes": "Catatan ke PM",
+      "spvNotesPlaceholder": "Catatan opsional untuk PM (maks 4000 karakter)",
+      "pmNotes": "Catatan PM",
+      "pmNotesPlaceholder": "Berikan feedback (wajib saat return / reject)",
+      "submit": "Submit ke PM",
+      "approve": "Setujui",
+      "return": "Kembalikan untuk revisi",
+      "reject": "Tolak",
+      "cancel": "Batalkan laporan",
+      "requireExecSummary": "Lengkapi ringkasan eksekutif sebelum submit.",
+      "submitSuccess": "Laporan terkirim ke PM.",
+      "approveSuccess": "Laporan disetujui.",
+      "returnSuccess": "Laporan dikembalikan ke SPV.",
+      "rejectSuccess": "Laporan ditolak.",
+      "cancelSuccess": "Laporan dibatalkan."
+    },
+    "sliceB": {
+      "sendTitle": "Kirim ke client",
+      "sendHint": "Kirim laporan ke client via email/WhatsApp/print di luar sistem, lalu tekan tombol di bawah untuk menandai bahwa laporan sudah diteruskan.",
+      "clientEmail": "Email client (opsional)",
+      "sendNotes": "Catatan pengiriman",
+      "sendNotesPlaceholder": "Contoh: dikirim ke Bu Sari via WhatsApp jam 15:00",
+      "sendAction": "Tandai terkirim ke client",
+      "sendSuccess": "Laporan sudah ditandai terkirim ke client.",
+      "clientTitle": "Catat keputusan client",
+      "clientHint": "Setelah client memberi respon, catat di sini. Approve akan lanjut ke generate Berita Acara; Reject mengembalikan laporan ke tahap PM untuk revisi.",
+      "reviewerName": "Nama PIC client",
+      "reviewerEmail": "Email PIC (opsional)",
+      "reviewerNameRequired": "Nama PIC client wajib diisi.",
+      "decidedAt": "Tanggal keputusan",
+      "signature": "Bukti persetujuan (opsional)",
+      "uploadSignature": "Upload",
+      "signatureUploaded": "Bukti terupload.",
+      "clientNotes": "Catatan client / feedback",
+      "clientNotesPlaceholder": "Feedback dari client (wajib bila Reject)",
+      "rejectNotesRequired": "Catatan wajib diisi ketika client menolak.",
+      "clientApprove": "Client Approve",
+      "clientReject": "Client Reject",
+      "clientApproveSuccess": "Persetujuan client tercatat.",
+      "clientRejectSuccess": "Penolakan client tercatat. Laporan kembali ke PM untuk revisi.",
+      "baTitle": "Generate Berita Acara",
+      "baHint": "Nomor BA otomatis (format BA/{tenant}/{tahun}/NNNN). Periode default = periode laporan.",
+      "baPeriodStart": "Periode mulai",
+      "baPeriodEnd": "Periode selesai",
+      "baNotes": "Catatan BA",
+      "baNotesPlaceholder": "Poin tambahan untuk berita acara (opsional)",
+      "baGenerate": "Generate BA",
+      "baGeneratedSuccess": "Berita Acara dibuat: {ba}",
+      "periodInvalid": "Periode selesai harus setelah periode mulai.",
+      "clientCardTitle": "Sign-off client",
+      "sentAt": "Dikirim",
+      "baCardTitle": "Berita Acara",
+      "baPeriod": "Periode",
+      "baGeneratedAt": "Dibuat"
+    }
+  },
+  "reports": {
+    "kicker": "Analitik · Laporan",
+    "title": "Laporan",
+    "subtitle": "Export analitis: budget vs actual, register expense/CA, statement petty cash, portofolio proyek, dan register budget request.",
+    "back": "Kembali",
+    "scopeLabel": "Cakupan",
+    "scope": {
+      "org": "seluruh organisasi",
+      "portfolio": "portofolio Anda",
+      "assigned": "proyek yang di-assign"
+    },
+    "chooseTitle": "Pilih laporan",
+    "placeholderTitle": "Pilih laporan untuk mulai",
+    "placeholderSubtitle": "Klik salah satu laporan di kiri untuk membuka form parameter.",
+    "placeholderBody": "Parameter (rentang tanggal, project, status) akan tampil setelah laporan dipilih. Preview di aplikasi, atau download langsung sebagai CSV; XLSX & PDF menyusul.",
+    "parametersTitle": "Parameter laporan",
+    "parametersHint": "Sesuaikan rentang tanggal & filter lain lalu klik Preview atau salah satu tombol export.",
+    "previewTitle": "Preview",
+    "previewEmpty": "Isi filter lalu klik Preview untuk melihat data.",
+    "list": {
+      "portfolio": {
+        "title": "Portofolio Proyek",
+        "description": "Snapshot semua proyek yang bisa Anda lihat, dengan client, PM, status, contract value, kesehatan budget, dan progress %."
+      },
+      "expenseRegister": {
+        "title": "Register Expense",
+        "description": "Semua expense di rentang tanggal terpilih, dengan kode MA, requester, vendor, nilai, dan status. Filter by project, status, category."
+      },
+      "caRegister": {
+        "title": "Register Cash Advance",
+        "description": "Cash advance di rentang tanggal terpilih dengan kolom disbursement, expected settlement, dan varian."
+      },
+      "pettyCashStatement": {
+        "title": "Statement Petty Cash",
+        "description": "Saldo awal, semua entri terposting, dan saldo akhir untuk sebuah fund pada periode terpilih. Custodian-friendly month-end statement."
+      },
+      "budgetVsActual": {
+        "title": "Budget vs Actual",
+        "description": "Per proyek · fiscal year: planned vs realized di setiap line MA, dengan outstanding advance, remaining headroom, dan utilisasi."
+      },
+      "budgetRequestRegister": {
+        "title": "Register Budget Request",
+        "description": "Semua aktivitas budget-request di rentang tanggal (Increase/Decrease/Transfer), source MA, target MA (untuk Transfer), amount, dan snapshot before → after."
+      }
+    }
+  },
+  "bulkImport": {
+    "kicker": "Pengaturan · Impor Massal",
+    "title": "Impor Massal",
+    "subtitle": "Unggah file Excel (.xlsx / .xls) atau CSV untuk membuat Karyawan, Klien, Proyek, atau Mata Anggaran secara batch. Setiap file di-dry-run terlebih dahulu — tidak ada perubahan sampai Anda menekan Run import.",
+    "meta": {
+      "rowCap": "Batas: 500 baris/file",
+      "fileCap": "Ukuran maks: 5 MB"
+    },
+    "resources": {
+      "EMPLOYEE": {
+        "label": "Karyawan",
+        "subtitle": "Satu baris = satu karyawan. Cocokkan by email — karyawan lama di-update, baru di-insert. Salary dan rekening tetap dientri manual per baris (governance)."
+      },
+      "CLIENT": {
+        "label": "Klien",
+        "subtitle": "Satu baris = satu klien. Cocokkan by nama (case-insensitive). Set kontak + status; kontrak & proyek dihubungkan terpisah."
+      },
+      "PROJECT": {
+        "label": "Proyek",
+        "subtitle": "Satu baris = satu proyek. Cocokkan by kode proyek. Kolom klien menerima nama klien, nomor kontrak, atau project code klien."
+      },
+      "BUDGET_LINE": {
+        "label": "Mata Anggaran",
+        "subtitle": "Satu baris = satu mata anggaran (banyak baris per proyek/tahun dijadikan satu DRAFT budget). Tidak dapat mengubah budget yang sudah APPROVED — gunakan flow Budget Request."
+      }
+    },
+    "panels": {
+      "chooseResource": "Pilih resource",
+      "oneRowRecord": "Satu baris = satu record",
+      "oneCsvGrid": "Satu CSV = satu grid",
+      "columnHeader": "Kolom",
+      "column_col": "Kolom",
+      "column_label": "Label",
+      "column_type": "Tipe",
+      "column_required": "Wajib",
+      "column_example": "Contoh",
+      "required_yes": "wajib",
+      "required_no": "opsional"
+    },
+    "actions": {
+      "downloadTemplate": "Unduh template",
+      "downloadTemplateXlsx": "Unduh .xlsx",
+      "downloadTemplateCsv": "Unduh .csv",
+      "chooseFile": "Pilih file Excel/CSV",
+      "replaceFile": "Ganti file",
+      "dryRun": "Pratinjau dry-run",
+      "runImport": "Jalankan impor",
+      "running": "Berjalan…"
+    },
+    "preview": {
+      "title": "Pratinjau dry-run",
+      "valid": "Baris valid",
+      "invalid": "Baris invalid",
+      "insert": "Akan di-insert",
+      "update": "Akan di-update",
+      "errors": "Error per baris",
+      "sample": "Contoh baris valid"
+    },
+    "result": {
+      "ok": "Impor berhasil di-commit",
+      "failed": "Impor gagal",
+      "inserted": "Ditambahkan",
+      "updated": "Diperbarui",
+      "successToast": "Impor berhasil di-commit.",
+      "errorToast": "Impor gagal."
+    },
+    "history": {
+      "title": "Riwayat impor terkini",
+      "empty": "Belum ada impor. Mulai dengan memilih resource di kiri.",
+      "resource": "Resource",
+      "file": "File",
+      "rows": "Baris",
+      "status": "Status",
+      "when": "Waktu",
+      "status_DRY_RUN": "Dry-run",
+      "status_COMMITTED": "Committed",
+      "status_FAILED": "Gagal"
+    },
+    "info": {
+      "governanceTitle": "Governance",
+      "governanceBody": "Impor massal terbatas untuk HR / Finance / Admin. Setiap batch di-audit-log (BULK_IMPORT). Field sensitif (salary, rekening, role, password) tidak dapat di-impor via file — masukkan per karyawan lewat UI normal.",
+      "atomicTitle": "All-or-nothing",
+      "atomicBody": "Jika ada baris yang gagal validasi, seluruh file ditolak. Perbaiki file dan jalankan dry-run lagi.",
+      "retainTitle": "Retention job",
+      "retainBody": "Job impor (berhasil & gagal) disimpan untuk postmortem — lihat tabel riwayat. Baris yang berhasil di-commit mengikuti policy audit / retention resource-nya masing-masing."
+    }
+  }
+}

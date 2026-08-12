@@ -1,0 +1,45 @@
+# ControlDesk — local development override (auto-loaded by `docker compose`).
+#
+# Why this file exists:
+# ---------------------
+# In development we run Next.js via `pnpm dev` (Turbopack, hot-reload).
+# The `app` service in the base `docker-compose.yml` builds a production
+# image that also binds port 3000 — if it's running, browsers hit the
+# STALE container instead of `pnpm dev`, and none of your code changes
+# show up until the image is rebuilt.
+#
+# This override does two things:
+#   1. Moves `app` behind the `prod` profile so it does NOT start on a
+#      plain `docker compose up`.
+#   2. When you DO start it (`pnpm docker:app`), maps the container to
+#      host port 3001 instead of 3000 so `pnpm dev` (3000) and the
+#      production container (3001) can run side-by-side for comparison
+#      smoke tests.
+#
+# Typical dev workflow (Turbopack hot-reload):
+#   pnpm docker:deps        # redis + mailpit
+#   pnpm dev                # Next.js dev server at http://localhost:3000
+#
+# Production parity smoke test (side-by-side with dev):
+#   pnpm docker:rebuild     # rebuild image with current code
+#   pnpm docker:app         # start container at http://localhost:3001
+#   # compare `:3000` (dev) vs `:3001` (prod build) in two browser tabs
+#   pnpm docker:app:down    # stop prod container when done
+#
+# Caveat: `NEXT_PUBLIC_ROOT_DOMAIN` is baked into the client bundle at
+# build time (defaults to `localhost:3000`), so absolute URLs generated
+# in the prod container (e.g. invite links, cookie domain) will still
+# refer to `:3000`. Tenant-subdomain routing (`demo.localhost:3001`)
+# still works because it's resolved from the incoming Host header by
+# `middleware.ts`, not from `NEXT_PUBLIC_ROOT_DOMAIN`.
+
+services:
+  app:
+    profiles:
+      - prod
+    restart: "no"
+    # Compose merges list fields by APPENDING, so a bare `ports:` list here
+    # would end up binding both 3000 AND 3001 to container:3000 (second
+    # bind fails). The `!override` tag replaces the base list entirely.
+    ports: !override
+      - "3001:3000"

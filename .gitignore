@@ -12,6 +12,9 @@
 
 # testing
 /coverage
+/playwright-report
+/test-results
+/playwright/.cache
 
 # next.js
 /.next/
@@ -32,6 +35,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
@@ -39,3 +43,24 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase local runtime
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+
+# agent scaffolding auto-writes
+AGENTS.md
+CLAUDE.md
+
+# personal / office scratch files that occasionally land in the repo
+# during evaluations, printouts, etc. Not meant to ship with the code.
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+# MS Office lock files (created while a document is open)
+~$*
+

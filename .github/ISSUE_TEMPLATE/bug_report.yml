@@ -1,0 +1,103 @@
+name: Bug report
+description: A user-facing regression in ControlDesk.
+title: "[bug] <one-line summary>"
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing! For **security** issues (data leak, RLS bypass,
+        auth issue, PII exposure), do not use this template — instead follow
+        [SECURITY.md](../../SECURITY.md).
+
+  - type: input
+    id: version
+    attributes:
+      label: ControlDesk version / commit
+      description: Output of `curl http://<tenant>.controldesk.app/api/version`
+      placeholder: 0.1.0 · sha:abc1234 · 2026-08-05T00:00:00Z
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Local dev (`pnpm dev`)
+        - Local Docker (`docker compose up`)
+        - Staging (`staging.controldesk.app`)
+        - Production (`controldesk.app`)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role of the reporter
+      description: Which role were you signed in as when the bug occurred?
+      options:
+        - TENANT_ADMIN
+        - GENERAL_MANAGER
+        - HEAD_MANAGER
+        - OPERATIONS_MANAGER
+        - PROJECT_MANAGER
+        - LEAD_FINANCE
+        - HR_ADMIN
+        - SUPERVISOR
+        - EMPLOYEE
+        - PETTY_CASH_CUSTODIAN
+        - N/A (public / signed out)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What went wrong
+      description: One paragraph, plain language. What did you see?
+      placeholder: The Cash Advance approval button on `/finance/cash-advances/<id>` was disabled for a Supervisor who should be able to approve L1…
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      value: |
+        1.
+        2.
+        3.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: Attach screenshots, error messages, request IDs (`x-request-id` response header), or a link to a Sentry / Axiom event if available.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / audit context
+      description: Redacted `security_audit_logs` rows or `cron_run_log` entries around the timestamp of the bug.
+      render: text
+
+  - type: checkboxes
+    id: rulebook
+    attributes:
+      label: Rulebook alignment
+      options:
+        - label: The behaviour I expected is described by (or implied by) `.cursorrules`.
+        - label: I confirmed this bug reproduces after a fresh `pnpm db:reset`.

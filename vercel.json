@@ -1,0 +1,53 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/digest",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/retention",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/cron/archive",
+      "schedule": "0 19 * * 0"
+    },
+    {
+      "path": "/api/cron/rotation-check",
+      "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/issues-sla-sweeper",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/portal-sessions-cleanup",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/employee-contract-reminders",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/project-contract-reminders",
+      "schedule": "15 1 * * *"
+    },
+    {
+      "path": "/api/cron/google-calendar-drain",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/cron/settlement-reminders",
+      "schedule": "30 1 * * *"
+    },
+    {
+      "path": "/api/cron/ai-insights-sweep",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/approval-idle-nudge",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+name: Feature request
+description: Propose a new module, screen, or capability.
+title: "[feat] <short summary>"
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Product proposals should be grounded in `.cursorrules`. If your
+        proposal contradicts the rulebook, please open a discussion first
+        rather than a feature request.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Who is blocked today, and how much friction does it add?
+      placeholder: |
+        Finance managers spend ~10 min per Cash Advance manually matching
+        the receipt attachment to the settlement row. This scales poorly
+        past ~50 CAs / month.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: One paragraph of the design, plus links to any sketches or Figma.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rules_section
+    attributes:
+      label: Rulebook section this belongs to
+      multiple: true
+      options:
+        - "§7 PM / Employee Assignment"
+        - "§8 Client → Projects (1-to-many)"
+        - "§9 Approval engine (value-based)"
+        - "§10 Petty Cash"
+        - "§11 Cash Advance"
+        - "§12 HRIS (Overtime / Leave / Sick)"
+        - "§13 PM Handover"
+        - "§14 BPO analytics / Gross margin"
+        - "§15 AI Insights"
+        - "§18 Money / Time / Locale"
+        - "§19 File storage"
+        - "§20 Notifications / Realtime"
+        - "§21 Observability + Testing"
+        - "§22 Retention / Migrations / Deployment"
+        - "§23 Accessibility"
+        - "Cross-cutting (multiple)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this feature to ship?
+      value: |
+        - [ ] …
+        - [ ] Unit tests cover the PDP decisions + Zod schemas.
+        - [ ] Playwright walks the critical flow (`e2e/…`).
+        - [ ] Runbook updated if this touches an ops-facing surface.
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What are we intentionally not doing in this iteration?

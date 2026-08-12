@@ -1,0 +1,130 @@
+name: E2E
+
+# Playwright end-to-end suite for ControlDesk.
+#
+# Boots a full local Supabase stack (Postgres + GoTrue + Storage + Studio
+# via `supabase start`), applies every migration, loads the demo seed,
+# spins up the Next.js dev server, then walks every chain suite in
+# `e2e/**`.
+#
+# Runs on every pull request. Slower than `ci.yml` (~7-10 min) so it
+# doesn't gate the fast feedback loop, but MUST pass before merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright:
+    name: playwright chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      # Supabase CLI reads these to expose local endpoints inside the
+      # runner. Values come from the CLI's default config.toml.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_APP_URL: http://demo.localhost:3000
+      APP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      CRON_SECRET: ci-playwright-cron-secret
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Suppresses `nice(5) failed` warnings on some runners.
+      NPM_CONFIG_UPDATE_NOTIFIER: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Ubuntu runners resolve *.localhost to 127.0.0.1 by default, but
+      # we make it explicit so the subdomain routing in `proxy.ts` works
+      # deterministically across GH Actions image versions.
+      - name: Configure /etc/hosts for tenant subdomain
+        run: |
+          echo "127.0.0.1 demo.localhost" | sudo tee -a /etc/hosts
+          cat /etc/hosts | tail -3
+
+      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # in package.json — do NOT pass a `version:` here or the action
+      # errors with "Multiple versions of pnpm specified".
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+
+      # `supabase start` needs Docker — pre-installed on ubuntu-latest.
+      - name: Boot local Supabase stack
+        run: |
+          supabase start
+          supabase status
+
+      - name: Extract Supabase keys into env file
+        run: |
+          ANON=$(supabase status --output env | grep '^ANON_KEY=' | cut -d= -f2- | tr -d '"')
+          SERVICE=$(supabase status --output env | grep '^SERVICE_ROLE_KEY=' | cut -d= -f2- | tr -d '"')
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE" >> "$GITHUB_ENV"
+
+      - name: Apply migrations + seed
+        run: pnpm db:reset
+
+      # `playwright.config.ts` boots `pnpm start` under CI, so we need a
+      # production build first. Doing the build here (and not inside the
+      # webServer step) makes the failure mode obvious and lets us cache
+      # `.next` between steps.
+      - name: Build Next.js (production)
+        run: pnpm build
+
+      - name: Run Playwright suites
+        run: pnpm test:e2e --reporter=github,html
+
+      - name: Upload Playwright report
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Tear down Supabase stack
+        if: always()
+        # Guard against early-fail runs where the Supabase CLI never
+        # got installed; otherwise the job goes red from a shutdown
+        # step that had nothing to shut down.
+        run: |
+          if command -v supabase >/dev/null 2>&1; then
+            supabase stop --no-backup || true
+          else
+            echo "supabase CLI not present — nothing to stop"
+          fi
