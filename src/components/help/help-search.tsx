@@ -9,10 +9,13 @@ import Fuse from "fuse.js";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+// IMPORTANT: this is a client component. Never import from
+// `@/lib/help/articles` here — that module is `"server-only"` and
+// pulls `node:fs`. Pull taxonomy types from the sibling instead.
 import {
   HELP_CATEGORY_META,
   type HelpCategoryId,
-} from "@/lib/help/articles";
+} from "@/lib/help/categories";
 
 type SearchArticle = {
   slug: string;

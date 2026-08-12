@@ -6,6 +6,19 @@ import path from "node:path";
 import matter from "gray-matter";
 import { cache } from "react";
 
+// Pure-data taxonomy lives in a client-safe sibling so client
+// components (`help-search.tsx`, etc.) can `import` it without
+// dragging the "server-only" fs code down with them. Re-exported
+// here to preserve the historical import surface —
+// `import { HELP_CATEGORY_META } from "@/lib/help/articles"` keeps
+// working for the RSC callers that used it before the split.
+export {
+  HELP_CATEGORY_META,
+  HELP_CATEGORY_ORDER,
+  type HelpCategoryId,
+} from "./categories";
+import type { HelpCategoryId } from "./categories";
+
 /**
  * Help-article registry (rules §17).
  *
@@ -44,59 +57,6 @@ import { cache } from "react";
  * so listing the index + rendering one article doesn't re-read the
  * same file twice.
  */
-
-export type HelpCategoryId =
-  | "getting-started"
-  | "user-guides"
-  | "approvals"
-  | "finance"
-  | "hr"
-  | "integrations"
-  | "reference";
-
-export const HELP_CATEGORY_ORDER: readonly HelpCategoryId[] = [
-  "getting-started",
-  "user-guides",
-  "approvals",
-  "finance",
-  "hr",
-  "integrations",
-  "reference",
-] as const;
-
-export const HELP_CATEGORY_META: Record<
-  HelpCategoryId,
-  { titleId: string; titleEn: string }
-> = {
-  "getting-started": {
-    titleId: "Memulai",
-    titleEn: "Getting started",
-  },
-  "user-guides": {
-    titleId: "Panduan pengguna",
-    titleEn: "User guides",
-  },
-  approvals: {
-    titleId: "Alur persetujuan",
-    titleEn: "Approval workflows",
-  },
-  finance: {
-    titleId: "Keuangan",
-    titleEn: "Finance",
-  },
-  hr: {
-    titleId: "HR & Timesheet",
-    titleEn: "HR & Timesheet",
-  },
-  integrations: {
-    titleId: "Integrasi",
-    titleEn: "Integrations",
-  },
-  reference: {
-    titleId: "Referensi",
-    titleEn: "Reference",
-  },
-};
 
 export type HelpArticleManifestEntry = {
   /** URL slug — appears at `/help/{slug}`. Must be stable; changing it breaks any HelpHint pointing at it. */
