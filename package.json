@@ -36,7 +36,9 @@
     "help:reindex:dry": "node --env-file=.env.local scripts/help-reindex.mjs --dry"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.38",
     "@ai-sdk/google": "^4.0.39",
+    "@ai-sdk/openai": "^4.0.40",
     "@base-ui/react": "^1.7.0",
     "@hookform/resolvers": "^5.7.1",
     "@react-pdf/renderer": "^4.5.1",
