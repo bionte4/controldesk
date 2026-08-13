@@ -1,4 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const { loadTenantSmtpConfigMock } = vi.hoisted(() => ({
+  loadTenantSmtpConfigMock: vi.fn(),
+}));
+
+vi.mock("@/lib/integrations/smtp", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/integrations/smtp")>()),
+  loadTenantSmtpConfig: loadTenantSmtpConfigMock,
+}));
 
 import {
   __setTransporterForTests,
@@ -10,6 +19,8 @@ describe("mailer", () => {
 
   beforeEach(() => {
     __setTransporterForTests(null);
+    loadTenantSmtpConfigMock.mockReset();
+    loadTenantSmtpConfigMock.mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -86,10 +97,10 @@ describe("mailer", () => {
       sendMail: async () => ({ messageId: "<fallback@stub>" }),
     });
 
-    // A bogus tenantId that the repository will reject or return null
-    // for is enough — the loader either returns null (falls through)
-    // or throws (caught in resolveConfig, falls through). Either way
-    // the caller lands on env config.
+    loadTenantSmtpConfigMock.mockRejectedValueOnce(
+      new Error("simulated tenant SMTP lookup failure"),
+    );
+
     const res = await sendEmail({
       to: "x@example.com",
       subject: "hi",
