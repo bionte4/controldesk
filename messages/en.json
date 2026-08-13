@@ -1876,6 +1876,8 @@
       "ticketNumberPlaceholder": "SPK-2026-…",
       "unitPengaju": "Unit Pengaju",
       "unitPengajuPlaceholder": "Ops-Nusa / NOC-Jakarta …",
+      "unitPengajuFilteredHint": "List narrowed by this project's policy.",
+      "unitPengajuNoneAllowed": "This project allows no units — contact admin.",
       "justification": "Justifikasi",
       "justificationPlaceholder": "Ringkas kenapa kunjungan/kerja lapangan ini perlu…",
       "cidCompany": "CID / Nama Perusahaan",

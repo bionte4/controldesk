@@ -163,6 +163,7 @@ export function NewFieldOpsSheet({
   disabled = false,
   disabledReason,
   lookups = EMPTY_LOOKUPS,
+  allowedUnitsByProject = {},
   canPickCoa = false,
 }: {
   projects: ProjectOption[];
@@ -176,6 +177,19 @@ export function NewFieldOpsSheet({
    * historical rows stay stable when admins rename entries.
    */
   lookups?: FieldOpsLookups;
+  /**
+   * Per-project whitelist of `unit_pengaju` labels
+   * (`public.project_allowed_units`, migration 0086). When a project
+   * key is present with a non-empty list, the Unit-Pengaju dropdown
+   * shows ONLY those entries. When the key is absent — or the list is
+   * empty — the dropdown falls back to the full tenant lookup, which
+   * is the correct behaviour for legacy projects that predate the
+   * whitelist feature.
+   *
+   * Passed in as a plain object (not a `Map`) so it can cross the
+   * RSC → Client Component boundary via JSON serialisation.
+   */
+  allowedUnitsByProject?: Record<string, string[]>;
   /**
    * When true each RAB row shows a CoA dropdown fed by the project-
    * scoped CoA list (only accounts already coded on this project's
@@ -203,8 +217,42 @@ export function NewFieldOpsSheet({
   // changes. When project is cleared we blank every row's coa_id too
   // so the form can't submit a cross-project reference.
   const projectId = form.watch("project_id");
+  const currentUnit = form.watch("unit_pengaju");
   const [coaOptions, setCoaOptions] = React.useState<CoaOptionWithMa[]>([]);
   const [coaLoading, setCoaLoading] = React.useState(false);
+
+  // Per-project unit_pengaju whitelist. When the caller selects a
+  // project that has an explicit whitelist, we narrow the dropdown to
+  // that list; otherwise (no key or empty list) we fall back to every
+  // active tenant lookup. The fallback is intentional so projects
+  // predating migration 0086 keep working.
+  const unitOptions = React.useMemo(() => {
+    const whitelist = projectId ? allowedUnitsByProject[projectId] : undefined;
+    if (!whitelist || whitelist.length === 0) return lookups.unit_pengaju;
+    const whitelistSet = new Set(whitelist);
+    return lookups.unit_pengaju.filter((opt) => whitelistSet.has(opt.label));
+  }, [projectId, allowedUnitsByProject, lookups.unit_pengaju]);
+  const unitFiltered = React.useMemo(() => {
+    if (!projectId) return false;
+    const whitelist = allowedUnitsByProject[projectId];
+    return Boolean(whitelist && whitelist.length > 0);
+  }, [projectId, allowedUnitsByProject]);
+
+  // If the user first picked a unit under one project (or no project),
+  // then switched to a project whose whitelist excludes that unit, we
+  // wipe the field so a stale value can't be submitted. Server action
+  // re-validates this too — the UI reset is purely to make the state
+  // obvious to the human.
+  React.useEffect(() => {
+    if (!currentUnit) return;
+    if (!unitFiltered) return;
+    const stillAllowed = unitOptions.some((opt) => opt.label === currentUnit);
+    if (!stillAllowed) {
+      form.setValue("unit_pengaju", "", { shouldDirty: true });
+    }
+    // Watching only the derived flags — `form` is stable across renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, unitFiltered]);
 
   React.useEffect(() => {
     if (!canPickCoa) return;
@@ -473,27 +521,34 @@ export function NewFieldOpsSheet({
                       <Select
                         value={field.value}
                         onValueChange={field.onChange}
-                        disabled={lookups.unit_pengaju.length === 0}
+                        disabled={unitOptions.length === 0}
                       >
                         <FormControl>
                           <SelectTrigger className="w-full min-w-0">
                             <SelectValue
                               placeholder={
-                                lookups.unit_pengaju.length === 0
-                                  ? tf("lookupEmpty")
+                                unitOptions.length === 0
+                                  ? unitFiltered
+                                    ? tf("unitPengajuNoneAllowed")
+                                    : tf("lookupEmpty")
                                   : tf("unitPengajuPlaceholder")
                               }
                             />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {lookups.unit_pengaju.map((opt) => (
+                          {unitOptions.map((opt) => (
                             <SelectItem key={opt.id} value={opt.label}>
                               {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {unitFiltered ? (
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          {tf("unitPengajuFilteredHint")}
+                        </p>
+                      ) : null}
                       <FormMessage />
                     </FormItem>
                   )}
