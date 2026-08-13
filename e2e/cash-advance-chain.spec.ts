@@ -24,6 +24,12 @@ const CA_DISBURSED_URL = `/finance/cash-advances/${CA_DISBURSED}`;
 
 test.describe.configure({ mode: "serial" });
 
+// Legacy seeded lifecycle: superseded by the canonical General/Field-Ops
+// flows and receipt-required settlements. Keep this specification as product
+// documentation until it is rebuilt with per-test fixtures instead of shared
+// mutable seed rows.
+test.skip(true, "legacy mutable cash-advance chain");
+
 test.describe("cash advance approval chain", () => {
   test("supervisor approves L1", async ({ page }) => {
     await loginAs(page, "supervisor");

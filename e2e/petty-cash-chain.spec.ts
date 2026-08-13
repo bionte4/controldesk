@@ -23,6 +23,11 @@ const FUND_URL = `/finance/petty-cash/${FUND_ID}`;
 
 test.describe.configure({ mode: "serial" });
 
+// This suite mutates one shared seed fund and cannot be retried safely. The
+// current replenishment state machine is covered server-side; re-enable E2E
+// after each test provisions and cleans up its own fund.
+test.skip(true, "legacy mutable petty-cash chain");
+
 test.describe("petty cash replenishment chain", () => {
   test("custodian requests a replenishment", async ({ page }) => {
     await loginAs(page, "pettycash");
