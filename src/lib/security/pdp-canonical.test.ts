@@ -675,3 +675,96 @@ describe("authorizeCanonical — capability_override", () => {
     );
   });
 });
+
+describe("authorizeCanonical — project_task", () => {
+  it("lets Supervisor+ create and update WBS tasks", () => {
+    expect(decide(actor("SUPERVISOR"), "create", "project_task").effect).toBe(
+      "ALLOW",
+    );
+    expect(decide(actor("PM"), "update", "project_task").effect).toBe("ALLOW");
+    expect(decide(actor("EMPLOYEE"), "create", "project_task").effect).toBe(
+      "DENY",
+    );
+  });
+
+  it("restricts delete to PM+", () => {
+    expect(decide(actor("PM"), "delete", "project_task").effect).toBe("ALLOW");
+    expect(decide(actor("SUPERVISOR"), "delete", "project_task").effect).toBe(
+      "DENY",
+    );
+  });
+});
+
+describe("authorizeCanonical — over-escalation for remaining slots", () => {
+  it("denies OM approval when Field Ops amount is below the OM threshold", () => {
+    const d = decide(
+      actor("OM"),
+      "approve",
+      "cash_advance_field_ops",
+      attrs({
+        pendingSlot: "OM",
+        amountIDR: 1_000_000,
+        thresholds: mergeThresholds("CASH_ADVANCE_FIELD_OPS", null),
+      }),
+    );
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/over-escalated/i);
+  });
+
+  it("flags OM slot as drift on a non-FieldOps chain", () => {
+    const d = decide(
+      actor("OM"),
+      "approve",
+      "budget_request",
+      attrs({
+        pendingSlot: "OM",
+        amountIDR: 80_000_000,
+        thresholds: mergeThresholds("BUDGET_REQUEST", null),
+      }),
+    );
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/over-escalated/i);
+  });
+
+  it("denies PM approval when amount is below the PM threshold", () => {
+    const d = decide(
+      actor("PM"),
+      "approve",
+      "cash_advance_general",
+      attrs({
+        pendingSlot: "PM",
+        amountIDR: 100_000,
+        thresholds: mergeThresholds("CASH_ADVANCE_GENERAL", null),
+      }),
+    );
+    expect(d.effect).toBe("DENY");
+    expect(d.reason).toMatch(/over-escalated/i);
+  });
+
+  it("does not treat FINANCE or SUPERVISOR slots as numeric over-escalation", () => {
+    expect(
+      decide(
+        actor("FINANCE"),
+        "approve",
+        "cash_advance_general",
+        attrs({
+          pendingSlot: "FINANCE",
+          amountIDR: 100,
+          thresholds: mergeThresholds("CASH_ADVANCE_GENERAL", null),
+        }),
+      ).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide(
+        actor("SUPERVISOR"),
+        "approve",
+        "cash_advance_field_ops",
+        attrs({
+          pendingSlot: "SUPERVISOR",
+          amountIDR: 100,
+          thresholds: mergeThresholds("CASH_ADVANCE_FIELD_OPS", null),
+        }),
+      ).effect,
+    ).toBe("ALLOW");
+  });
+});

@@ -270,6 +270,22 @@ describe("RateLimitPresets", () => {
       max: 20,
       windowSeconds: 3600,
     });
+    expect(RateLimitPresets.helpChatPerUser()).toEqual({
+      max: 6,
+      windowSeconds: 60,
+    });
+    expect(RateLimitPresets.helpChatPerTenant()).toEqual({
+      max: 60,
+      windowSeconds: 60,
+    });
+    expect(RateLimitPresets.aiCopilotPerUser()).toEqual({
+      max: 12,
+      windowSeconds: 60,
+    });
+    expect(RateLimitPresets.aiCopilotPerTenant()).toEqual({
+      max: 120,
+      windowSeconds: 60,
+    });
   });
 
   it("returns fresh objects so callers can mutate safely", () => {

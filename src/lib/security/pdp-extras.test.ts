@@ -1159,3 +1159,187 @@ describe("pdp — coa branches", () => {
     ).toBe("DENY");
   });
 });
+
+// ---------------------------------------------------------------------
+// Previously un-hit write switch cases (coverage floor).
+// ---------------------------------------------------------------------
+describe("pdp — cash_advance_settlement", () => {
+  it("allows the owner to submit a settlement", () => {
+    expect(
+      decide({
+        role: "EMPLOYEE",
+        action: "submit",
+        resource: "cash_advance_settlement",
+        attributes: { tenantId: TENANT, ownerEmployeeId: "e-EMPLOYEE" },
+      }).effect,
+    ).toBe("ALLOW");
+  });
+
+  it("denies a non-owner from creating a settlement", () => {
+    expect(
+      decide({
+        role: "EMPLOYEE",
+        action: "create",
+        resource: "cash_advance_settlement",
+        attributes: { tenantId: TENANT, ownerEmployeeId: "someone-else" },
+      }).effect,
+    ).toBe("DENY");
+  });
+
+  it("lets Lead Finance finalize settlement and blocks employees", () => {
+    expect(
+      decide({
+        role: "LEAD_FINANCE",
+        action: "settle",
+        resource: "cash_advance_settlement",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({
+        role: "EMPLOYEE",
+        action: "settle",
+        resource: "cash_advance_settlement",
+      }).effect,
+    ).toBe("DENY");
+  });
+
+  it("denies unsupported settlement verbs", () => {
+    expect(
+      decide({
+        role: "LEAD_FINANCE",
+        action: "delete",
+        resource: "cash_advance_settlement",
+      }).effect,
+    ).toBe("DENY");
+  });
+});
+
+describe("pdp — client_portal_user", () => {
+  it("lets OM create portal users and blocks employees", () => {
+    expect(
+      decide({
+        role: "OPERATIONS_MANAGER",
+        action: "create",
+        resource: "client_portal_user",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({
+        role: "EMPLOYEE",
+        action: "create",
+        resource: "client_portal_user",
+      }).effect,
+    ).toBe("DENY");
+  });
+
+  it("restricts delete to GM", () => {
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "delete",
+        resource: "client_portal_user",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({
+        role: "OPERATIONS_MANAGER",
+        action: "delete",
+        resource: "client_portal_user",
+      }).effect,
+    ).toBe("DENY");
+  });
+
+  it("denies unsupported verbs", () => {
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "submit",
+        resource: "client_portal_user",
+      }).effect,
+    ).toBe("DENY");
+  });
+});
+
+describe("pdp — project writes (non-admin)", () => {
+  it("lets OM create a project and blocks a plain employee", () => {
+    expect(
+      decide({
+        role: "OPERATIONS_MANAGER",
+        action: "create",
+        resource: "project",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({ role: "EMPLOYEE", action: "create", resource: "project" })
+        .effect,
+    ).toBe("DENY");
+  });
+
+  it("denies unsupported project verbs", () => {
+    expect(
+      decide({
+        role: "OPERATIONS_MANAGER",
+        action: "submit",
+        resource: "project",
+      }).effect,
+    ).toBe("DENY");
+  });
+});
+
+describe("pdp — smtp_config + ai_config", () => {
+  it("lets GM manage smtp config and blocks employees", () => {
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "update",
+        resource: "smtp_config",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({ role: "EMPLOYEE", action: "update", resource: "smtp_config" })
+        .effect,
+    ).toBe("DENY");
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "delete",
+        resource: "smtp_config",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({
+        role: "LEAD_FINANCE",
+        action: "submit",
+        resource: "smtp_config",
+      }).effect,
+    ).toBe("DENY");
+  });
+
+  it("lets GM manage ai config and blocks employees", () => {
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "create",
+        resource: "ai_config",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({ role: "EMPLOYEE", action: "create", resource: "ai_config" })
+        .effect,
+    ).toBe("DENY");
+    expect(
+      decide({
+        role: "GENERAL_MANAGER",
+        action: "delete",
+        resource: "ai_config",
+      }).effect,
+    ).toBe("ALLOW");
+    expect(
+      decide({
+        role: "PROJECT_MANAGER",
+        action: "submit",
+        resource: "ai_config",
+      }).effect,
+    ).toBe("DENY");
+  });
+});
