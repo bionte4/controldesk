@@ -31,12 +31,9 @@ async function approveOnDetailPage(
   page: import("@playwright/test").Page,
 ): Promise<void> {
   await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
-  await Promise.all([
-    page.waitForLoadState("networkidle"),
-    page
-      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-      .click(),
-  ]);
+  await page
+    .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+    .click();
 }
 
 test.describe.configure({ mode: "serial" });

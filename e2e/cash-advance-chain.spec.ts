@@ -40,10 +40,7 @@ test.describe("cash advance approval chain", () => {
       name: /confirm approve|konfirmasi.*setujui/i,
     });
     await expect(confirmApprove).toBeVisible();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      confirmApprove.click(),
-    ]);
+    await confirmApprove.click();
 
     await expect(
       page.getByText(/pending .*l2 · project manager|pending l2 · project/i).first(),
@@ -59,12 +56,9 @@ test.describe("cash advance approval chain", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+      .click();
 
     await expect(
       page.getByText(/pending .*l2\.5 · lead finance|pending l2\.5/i).first(),
@@ -76,12 +70,9 @@ test.describe("cash advance approval chain", () => {
     await page.goto(CA_PENDING_URL);
 
     await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+      .click();
 
     // Amount is Rp 1.5jt → threshold matrix skips L3+. Should land at APPROVED.
     await expect(
@@ -102,12 +93,9 @@ test.describe("cash advance approval chain", () => {
     await page
       .getByLabel(/disbursement ref|referensi pencairan|nomor.*trx/i)
       .fill("E2E-TRX-001");
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm disburse|konfirmasi cairkan/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm disburse|konfirmasi cairkan/i })
+      .click();
 
     await expect(
       page.getByText(/disbursed .* awaiting settlement|dicairkan/i).first(),
@@ -133,13 +121,10 @@ test.describe("cash advance settlement chain", () => {
     await page
       .getByLabel(/total spent|total terpakai/i)
       .fill("4000000");
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /^(submit|kirim)$/i })
-        .last()
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /^(submit|kirim)$/i })
+      .last()
+      .click();
 
     // A settlement row with status SUBMITTED should appear.
     await expect(page.getByText("SUBMITTED").first()).toBeVisible({
@@ -158,12 +143,9 @@ test.describe("cash advance settlement chain", () => {
       .getByRole("button", { name: /^(accept|terima)$/i })
       .first()
       .click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm accept|konfirmasi terima/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm accept|konfirmasi terima/i })
+      .click();
 
     // CA status badge should now read Settled.
     await expect(

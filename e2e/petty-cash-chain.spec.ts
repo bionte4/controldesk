@@ -50,15 +50,11 @@ test.describe("petty cash replenishment chain", () => {
       .fill("Top-up bulanan Q3 sesuai imprest ceiling.");
 
     // Submit confirm button (the last "Confirm" / "Kirim" inside the dialog).
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", {
-          name: /^(confirm|submit request|kirim|konfirmasi)$/i,
-        })
-        .last()
-        .click(),
-    ]);
+    await page
+      .getByRole("button", {
+        name: /submit request|kirim pengajuan/i,
+      })
+      .click();
 
     // A PENDING_FINANCE badge should appear in the replenishments list.
     await expect(page.getByText("PENDING_FINANCE").first()).toBeVisible({
@@ -74,12 +70,9 @@ test.describe("petty cash replenishment chain", () => {
       .getByRole("button", { name: /^(approve|setujui)$/i })
       .first()
       .click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+      .click();
 
     await expect(page.getByText("APPROVED").first()).toBeVisible({
       timeout: 10_000,
@@ -99,12 +92,9 @@ test.describe("petty cash replenishment chain", () => {
       .getByLabel(/(disbursement ref|referensi pencairan|nomor.*trx)/i)
       .fill("PC-E2E-TRX-001");
 
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm disburse|konfirmasi cairkan/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm disburse|konfirmasi cairkan/i })
+      .click();
 
     await expect(page.getByText("DISBURSED").first()).toBeVisible({
       timeout: 10_000,

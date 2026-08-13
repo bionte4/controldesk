@@ -44,12 +44,9 @@ test.describe("PM handover lifecycle", () => {
     ).toBeVisible({ timeout: 10_000 });
 
     await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+      .click();
 
     await expect(
       page.getByText(/pending .* head manager|pending.*head/i).first(),
@@ -61,12 +58,9 @@ test.describe("PM handover lifecycle", () => {
     await page.goto(HANDOVER_URL);
 
     await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
+      .click();
 
     await expect(
       page
@@ -83,12 +77,9 @@ test.describe("PM handover lifecycle", () => {
 
     // Execute button appears only on APPROVED for OM/HM/GM/TENANT_ADMIN.
     await page.getByRole("button", { name: /execute|eksekusi/i }).click();
-    await Promise.all([
-      page.waitForLoadState("networkidle"),
-      page
-        .getByRole("button", { name: /confirm execute|konfirmasi eksekusi/i })
-        .click(),
-    ]);
+    await page
+      .getByRole("button", { name: /confirm execute|konfirmasi eksekusi/i })
+      .click();
 
     await expect(page.getByText(/^executed$|selesai/i).first()).toBeVisible({
       timeout: 10_000,

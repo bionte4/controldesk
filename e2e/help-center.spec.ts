@@ -52,7 +52,7 @@ test.describe("Help center — knowledge base", () => {
     await expect(page.getByText(/multi-tenant/i).first()).toBeVisible();
 
     // Back link takes us to the index.
-    await page.getByRole("link", { name: /Kembali|Back to/i }).click();
+    await page.getByRole("button", { name: /Kembali|Back to/i }).click();
     await expect(page).toHaveURL(/\/help$/);
   });
 
