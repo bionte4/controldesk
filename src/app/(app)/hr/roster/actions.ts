@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { assertEmployeeAssignedToProject } from "@/lib/data/assignments";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -28,6 +29,21 @@ export const upsertRosterEntryAction = withSecureAction({
   }),
   handler: async (input, ctx) => {
     const supabase = await createClient();
+
+    // Guardrail — a roster row that carries a `project_id` must map
+    // to an ACTIVE assignment (member OR PM) for the target
+    // employee. This prevents data drift where HR / PM could roster
+    // someone onto a project they aren't formally assigned to and
+    // then have downstream timesheet + costing reports attribute
+    // hours incorrectly. Base-catalog rosters (`project_id` null)
+    // skip the check.
+    if (input.project_id) {
+      const err = await assertEmployeeAssignedToProject({
+        employeeId: input.employee_id,
+        projectId: input.project_id,
+      });
+      if (err) throw new Error(err);
+    }
 
     // Try to update first; if no row exists we insert.
     const { data: existing } = await supabase

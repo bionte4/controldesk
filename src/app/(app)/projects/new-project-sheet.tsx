@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { Check, Flag, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AiCopilot } from "@/components/ai/ai-copilot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -635,22 +636,40 @@ function StepInfo({
       <FormField
         control={form.control}
         name="description"
-        render={({ field }) => (
-          <FormItem className="sm:col-span-2">
-            <FormLabel>{tf("description")}</FormLabel>
-            <FormControl>
-              <Textarea
-                rows={3}
-                value={field.value ?? ""}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                name={field.name}
-                placeholder={tf("descriptionPlaceholder")}
-              />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
+        render={({ field }) => {
+          const clientId = form.watch("client_id");
+          const selectedClient = clients.find((c) => c.id === clientId);
+          return (
+            <FormItem className="sm:col-span-2">
+              <div className="flex items-center justify-between gap-2">
+                <FormLabel>{tf("description")}</FormLabel>
+                <AiCopilot
+                  surface="project_description"
+                  currentValue={field.value ?? ""}
+                  onAccept={(suggestion) => field.onChange(suggestion)}
+                  context={{
+                    project_name: form.watch("name"),
+                    client_name: selectedClient?.name,
+                    start_date: form.watch("start_date"),
+                    end_date: form.watch("end_date"),
+                    contract_value: form.watch("contract_value_idr"),
+                  }}
+                />
+              </div>
+              <FormControl>
+                <Textarea
+                  rows={3}
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  placeholder={tf("descriptionPlaceholder")}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          );
+        }}
       />
     </div>
   );

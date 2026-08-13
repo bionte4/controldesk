@@ -106,6 +106,29 @@ Roster auto-updated by HR Request:
 
 UI: `/hr/roster` → heatmap 24/7 (Tremor / Recharts).
 
+### Roster ↔ project assignment guard (baru — commit `2e8a806`)
+
+`employee_rosters.project_id` bersifat optional. Bila diset, sistem
+memvalidasi bahwa karyawan tersebut memiliki **assignment aktif** ke
+project itu — baik sebagai member (`project_employee_assignments`)
+atau PM (`project_pm_assignments`) — sebelum menyimpan row roster.
+
+Guard bekerja di dua lapisan:
+
+1. **UI**: dropdown "Project" di sheet upsert roster (`/hr/roster`)
+   otomatis **mengecil** menjadi hanya project yang aktif untuk
+   karyawan yang dipilih. Pilihan lama otomatis di-reset kalau
+   karyawan diganti.
+2. **Server action**: `rosterEmployeeAction` memanggil
+   `assertEmployeeAssignedToProject()` (helper di
+   `src/lib/data/assignments.ts`) sebelum INSERT/UPDATE. Kalau attempt
+   ditolak, action mengembalikan error `"The selected project is not
+   an active assignment for this employee."`.
+
+Kalau seorang karyawan harus di-roster untuk project di mana ia belum
+di-assign, buka **Assignments → Add member/PM** dulu, baru kembali ke
+roster.
+
 ## 3. HR Requests
 
 Tabel: `public.hr_requests`, `public.hr_approval_logs` (migration `0010`).
@@ -190,6 +213,18 @@ Entry per hari per employee. Approval satu-per-satu oleh PM/Supervisor.
 | `description`      | `text`              |                                                             |
 | `status`           | `timesheet_status`  | `DRAFT` / `SUBMITTED` / `APPROVED` / `REJECTED`             |
 | `week_id`          | `uuid`              | FK → `timesheet_weeks` bila di-submit via weekly packet     |
+
+**Assignment guard (baru — commit `2e8a806`)**: bila `project_id`
+di-set, sistem memvalidasi karyawan punya assignment aktif ke project
+tersebut. UI form (`/hr/timesheets`, weekly editor
+`/hr/timesheets/weekly/[weekStart]`) memfilter dropdown project agar
+hanya menampilkan project yang aktif untuk karyawan sesi berjalan.
+Server action `submitTimesheetAction` + `submitWeeklyTimesheetAction`
+melakukan validasi ulang via `assertEmployeeAssignedToProject()`
+(daily) atau `loadActiveProjectIdsByEmployee()` (weekly, batch
+per-day). Karyawan **tidak dapat** log jam ke project di luar
+assignment aktif — solusi: minta PM tambahkan mereka ke assignment
+lewat `/assignments` sebelum mengisi timesheet.
 
 ### Weekly timesheet packet
 
@@ -300,6 +335,107 @@ Setelah period `LOCKED`:
 - **DLC ratio** = `DLC / Revenue` per proyek.
 - Warning kalau utilization > 100% budget kategori DIRECT_LABOR.
 
+## 6. Performance Evaluation
+
+Tabel: `public.evaluation_templates`, `public.evaluation_template_items`,
+`public.performance_evaluations`, `public.evaluation_answers`,
+`public.upk_notes`. Migration: `0059` (skeleton) → `0088` (auto-seed
+default templates) → `0089` (project context + reviewer notes).
+
+Modul ini men-drive **contract renewal decision** untuk PKWT — SPV
+mengumpulkan skor kompetensi + goal achievement, PM meninjau, OM
+menyetujui perpanjangan / tidak. Juga sumber data UPK (Unit Penilaian
+Kinerja) untuk keputusan HR lainnya.
+
+Route: `src/app/(app)/hr/performance/*`.
+
+### Template
+
+Setiap tenant otomatis mendapat 2 template default saat provisioning:
+
+- **Contract Renewal Review** — versi English generic, 6 pertanyaan (3 competency, 2 goal, 1 note).
+- **Evaluasi Triwulanan PKWT** — versi Indonesia, 5 pertanyaan.
+
+Template baru dibuat di `/hr/performance/templates` (role
+`TENANT_ADMIN` / `HR_ADMIN`). Setiap item punya `question_kind`
+(`COMPETENCY` / `GOAL` / `NOTE`) + `weight_pct` (harus jumlah 100%
+untuk COMPETENCY + GOAL).
+
+### Evaluation lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> SUBMITTED_BY_SPV: SPV isi jawaban + submit
+    SUBMITTED_BY_SPV --> REVIEWED_BY_PM: PM setuju
+    SUBMITTED_BY_SPV --> RETURNED_TO_SPV: PM minta revisi
+    REVIEWED_BY_PM --> FINALIZED_BY_OM: OM setuju perpanjangan
+    REVIEWED_BY_PM --> RETURNED_TO_SPV: OM minta revisi
+    RETURNED_TO_SPV --> SUBMITTED_BY_SPV: SPV re-submit
+    FINALIZED_BY_OM --> [*]
+    DRAFT --> CANCELLED
+```
+
+Aktor per state:
+
+| State                 | Siapa yang bertindak                        | Aksi utama                                                   |
+| --------------------- | ------------------------------------------- | ------------------------------------------------------------ |
+| `DRAFT`               | SPV karyawan (auto-resolve dari `reports_to`)| Isi jawaban COMPETENCY + GOAL + NOTE                         |
+| `SUBMITTED_BY_SPV`    | PM struktural (auto-resolve dari SPV chain) | Review + approve → `REVIEWED_BY_PM` atau `RETURNED_TO_SPV`   |
+| `REVIEWED_BY_PM`      | OM struktural (auto-resolve dari PM chain)  | Final decision perpanjangan kontrak + durasi extension       |
+| `FINALIZED_BY_OM`     | HR Admin                                    | Trigger UPK note / update kontrak                            |
+
+### Project context + Project Reviewer notes (baru — migration `0089`)
+
+Chain SPV → PM → OM di atas menggunakan **struktur pelaporan** (kolom
+`employees.reports_to_employee_id`). Namun karyawan yang di-assign ke
+project seringkali di-supervisi day-to-day oleh **project PM** yang
+belum tentu sama dengan PM struktural (mis. engineer di project A
+report struktural ke Manager Engineering, tapi PM proyek A yang lihat
+performa harian mereka).
+
+Untuk gap ini, setiap evaluasi bisa optional link ke project + reviewer:
+
+| Kolom                          | Tipe        | Note                                                                        |
+| ------------------------------ | ----------- | --------------------------------------------------------------------------- |
+| `project_id`                   | `uuid?`     | FK → `projects` — set saat create kalau evaluasi cover project kerja tertentu|
+| `project_reviewer_employee_id` | `uuid?`     | Otomatis di-resolve ke `PRIMARY_PM` dari project pada saat DRAFT dibuat     |
+| `project_reviewer_notes`       | `text?`     | Feedback bebas dari PM proyek (kualitas delivery, teknis, observasi harian) |
+| `project_reviewed_at`          | `timestamptz?`| Kapan PM proyek submit catatan                                             |
+
+Alur:
+
+1. **HR / SPV** create evaluasi via `/hr/performance/new`. Dropdown
+   "Konteks proyek (opsional)" hanya menampilkan project yang aktif
+   untuk karyawan (via `loadEmployeeProjectCandidates()`).
+2. Kalau project dipilih, sistem auto-fill `project_reviewer_employee_id`
+   = PRIMARY_PM project itu + kirim notifikasi
+   `EVALUATION_PROJECT_REVIEW_REQUESTED` ke reviewer.
+3. Reviewer buka `/hr/performance/[id]` → **Project Reviewer Card**
+   muncul di bagian atas. Reviewer submit notes via
+   `submitProjectReviewerNotesAction`. Notes bisa di-update selama
+   status evaluation belum `FINALIZED_BY_OM` / `CANCELLED`.
+4. Setelah submit, notifikasi `EVALUATION_PROJECT_REVIEWED` dikirim ke
+   SPV + PM struktural + OM sehingga mereka bisa baca notes sebelum
+   mengambil keputusan approve/return.
+
+**Note**: Kolom-kolom ini opsional — evaluasi karyawan non-project
+(mis. HR staff internal) tetap bisa jalan tanpa project context.
+
+### RLS access
+
+Row visibility (`performance_evaluations_read` policy):
+
+- HR / Management (role `HR_ADMIN` / `TENANT_ADMIN` / `GENERAL_MANAGER`) → semua row di tenant.
+- SPV / PM / OM / project reviewer → hanya row yang mereka bertindak sebagai stakeholder.
+- Employee **tidak** dapat lihat evaluasi diri sendiri (by design — hasil disampaikan HR via one-on-one).
+
+### UI checklist
+
+- List: `/hr/performance` — filter by status + template + contract_end window.
+- Detail: `/hr/performance/[id]` — timeline lengkap (Draft → SPV submit → PM review → OM finalize → UPK) + Project Reviewer Card.
+- Template management: `/hr/performance/templates` — CRUD template + preview item form.
+
 ## Server Actions overview
 
 | Module       | Actions                                                                                        | File                                                     |
@@ -311,6 +447,7 @@ Setelah period `LOCKED`:
 | Daily TS     | `createTimesheetAction`, `submitTimesheetAction`, `approveTimesheetAction`, `rejectTimesheetAction`| `src/app/(app)/hr/timesheets/actions.ts`             |
 | Weekly TS    | `submitWeeklyPacketAction`, `approveWeeklyPacketAction`, `rejectWeeklyPacketAction`            | `src/app/(app)/hr/timesheets/weekly/actions.ts`         |
 | Payroll      | `lockPayrollPeriodAction`, `unlockPayrollPeriodAction`, `exportPayrollCsvAction`               | `src/app/(app)/hr/payroll/actions.ts`                    |
+| Performance  | `startEvaluationAction`, `submitEvaluationAction`, `reviewByPmAction`, `finalizeByOmAction`, `submitProjectReviewerNotesAction` | `src/app/(app)/hr/performance/actions.ts` |
 
 ## Where to look next
 

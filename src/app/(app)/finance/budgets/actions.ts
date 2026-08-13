@@ -11,6 +11,7 @@ import {
 import { resolveThresholds } from "@/lib/rbac/thresholds";
 import { withCanonicalSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
+import { isUnitAllowedForProject } from "@/lib/data/project-allowed-units";
 import { assertProjectAcceptsBudget } from "@/lib/data/projects";
 import {
   budgetSlotForStatus,
@@ -47,6 +48,20 @@ export const createBudgetAction = withCanonicalSecureAction({
     // Fase 2 gate — refuse creating a budget under a DRAFT (BC-only)
     // or terminated project. PLANNING / ACTIVE / ON_HOLD are OK.
     await assertProjectAcceptsBudget(input.project_id);
+    // Migration 0087 gate — Unit Pengaju must satisfy the project's
+    // `project_allowed_units` whitelist (or the project has no
+    // whitelist and any tenant lookup value is fine).
+    if (input.unit_pengaju) {
+      const ok = await isUnitAllowedForProject(
+        input.project_id,
+        input.unit_pengaju,
+      );
+      if (!ok) {
+        throw new Error(
+          `Unit Pengaju "${input.unit_pengaju}" tidak diizinkan untuk project ini.`,
+        );
+      }
+    }
 
     const { data: inserted, error } = await supabase
       .from("budgets")
@@ -56,6 +71,7 @@ export const createBudgetAction = withCanonicalSecureAction({
         fiscal_year: input.fiscal_year,
         title: input.title,
         notes: input.notes ?? null,
+        unit_pengaju: input.unit_pengaju ?? null,
         status: "DRAFT",
         created_by: ctx.actor.employeeId,
         updated_by: ctx.actor.employeeId,
@@ -76,6 +92,7 @@ export const createBudgetAction = withCanonicalSecureAction({
         project_id: input.project_id,
         fiscal_year: inserted.fiscal_year,
         title: input.title,
+        unit_pengaju: input.unit_pengaju ?? null,
         status: inserted.status,
       },
     };

@@ -58,6 +58,7 @@ export function RosterUpsertSheet({
   employees,
   shifts,
   projects,
+  allowedProjectIdsByEmployee,
   defaultDate,
   labels,
 }: {
@@ -67,6 +68,14 @@ export function RosterUpsertSheet({
   employees: Option[];
   shifts: ShiftOption[];
   projects: Option[];
+  /**
+   * Optional whitelist keyed by employee id. When present, the
+   * project dropdown only shows projects the picked employee has an
+   * ACTIVE assignment on. Falls back to the full `projects` list when
+   * no map is passed (e.g. legacy callers) or when the map contains
+   * no entry for the current employee.
+   */
+  allowedProjectIdsByEmployee?: Record<string, string[]>;
   defaultDate: string;
   labels: {
     employee: string;
@@ -163,9 +172,28 @@ export function RosterUpsertSheet({
     () => shifts.find((s) => s.value === shiftId),
     [shifts, shiftId],
   );
+  // Filter project dropdown to just the picked employee's ACTIVE
+  // assignments — server-side validation will otherwise reject on
+  // submit. If no whitelist is passed for this employee, we fall back
+  // to the full list so the form stays usable during migration /
+  // legacy call sites.
+  const visibleProjects = React.useMemo(() => {
+    const allowed = employeeId
+      ? allowedProjectIdsByEmployee?.[employeeId]
+      : undefined;
+    if (!allowed) return projects;
+    const set = new Set(allowed);
+    return projects.filter((p) => set.has(p.value));
+  }, [projects, allowedProjectIdsByEmployee, employeeId]);
+
+  // Reset project selection when the currently-picked project would
+  // no longer be allowed for the newly-picked employee — inline in
+  // the employee-select `onValueChange` (see below) rather than an
+  // effect, which the React Compiler flags as a cascading render.
+
   const selectedProject = React.useMemo(
-    () => projects.find((p) => p.value === projectId),
-    [projects, projectId],
+    () => visibleProjects.find((p) => p.value === projectId),
+    [visibleProjects, projectId],
   );
 
   const onSubmit = handleSubmit((values) => {
@@ -216,7 +244,19 @@ export function RosterUpsertSheet({
               <Label htmlFor="employee_id">{labels.employee}</Label>
               <Select
                 value={employeeId}
-                onValueChange={(v) => setValue("employee_id", v ?? "")}
+                onValueChange={(v) => {
+                  const nextEmp = v ?? "";
+                  setValue("employee_id", nextEmp);
+                  // If the previously picked project isn't in the
+                  // new employee's allowed set, clear it to force a
+                  // re-pick from the filtered list.
+                  const allowed = nextEmp
+                    ? allowedProjectIdsByEmployee?.[nextEmp]
+                    : undefined;
+                  if (allowed && projectId && !allowed.includes(projectId)) {
+                    setValue("project_id", "");
+                  }
+                }}
               >
                 <SelectTrigger id="employee_id" aria-label={labels.employee}>
                   <SelectValue>{selectedEmployee?.label}</SelectValue>
@@ -286,13 +326,20 @@ export function RosterUpsertSheet({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__none">{labels.unassigned}</SelectItem>
-                {projects.map((opt) => (
+                {visibleProjects.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {employeeId &&
+            allowedProjectIdsByEmployee &&
+            (allowedProjectIdsByEmployee[employeeId]?.length ?? 0) === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                {labels.unassigned}
+              </p>
+            ) : null}
           </div>
 
           {/* Date + Status side-by-side — short controls that would

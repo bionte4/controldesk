@@ -442,8 +442,12 @@ export async function verifySignupAction(
   // Audit — persist the confirmation send outcome. Unlike the verify step,
   // we now know the tenant_id, so this row is queryable by ops from the
   // provisioned workspace context.
+  // Hoist narrowed fields out of `reqRow.data` so the `.then()` closure
+  // below doesn't lose the non-null narrowing it inherits from line 300.
+  const auditSlug = reqRow.data.slug;
+  const auditTenantId = provisioned.tenant_id;
   await supa.from("email_outbox").insert({
-    tenant_id: provisioned.tenant_id,
+    tenant_id: auditTenantId,
     to_address: reqRow.data.admin_email,
     from_address:
       emailRes.from ??
@@ -458,15 +462,15 @@ export async function verifySignupAction(
     error_message: emailRes.error ?? null,
     metadata: {
       kind: "signup_confirmation",
-      slug: reqRow.data.slug,
+      slug: auditSlug,
       config_source: emailRes.configSource ?? null,
     },
     sent_at: emailRes.status === "SENT" ? new Date().toISOString() : null,
   }).then(({ error }) => {
     if (error) {
       log.warn("signup confirmation email_outbox insert failed", {
-        slug: reqRow.data.slug,
-        tenant_id: provisioned.tenant_id,
+        slug: auditSlug,
+        tenant_id: auditTenantId,
         error: error.message,
       });
     }

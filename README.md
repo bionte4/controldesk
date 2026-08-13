@@ -144,7 +144,7 @@ pnpm db:types
 
 # 6. Run the app.
 pnpm dev                           # Next.js dev (recommended)
-docker compose up -d --build       # OR the full production-shape stack
+docker compose --env-file .env.local up -d --build   # OR the full production-shape stack
 ```
 
 Open **[http://demo.localhost:3000](http://demo.localhost:3000)** and
@@ -183,7 +183,7 @@ and mismatches force a sign-out.
 | `pnpm db:reset`                | Drop + reapply all migrations + reload seed.                       |
 | `pnpm db:types`                | Regenerate `src/types/database.ts` from the local DB.              |
 | `pnpm db:diff -f <name>`       | Snapshot pending schema changes to a new migration.                |
-| `docker compose up -d --build` | Build + run the containerised stack (`app` + `redis` + `mailpit`). |
+| `docker compose --env-file .env.local up -d --build` | Build + run the containerised stack (`app` + `redis` + `mailpit`). `--env-file` is required because `NEXT_PUBLIC_*` values are baked at build-time and Compose doesn't read `.env.local` for `build.args` by default. |
 
 ## Directory map
 

@@ -98,6 +98,19 @@ export const createPettyCashVoucherSchema = z.object({
     .url("Receipt URL must be a valid URL.")
     .optional()
     .or(z.literal("").transform(() => undefined)),
+  /**
+   * Optional cost-centre tag (migration 0087). Petty-cash vouchers
+   * are not project-scoped (no `project_id` on the table — only
+   * `fund_id`), so any active tenant `unit_pengaju` label is valid.
+   * The value is used purely for reporting attribution when e.g.
+   * one imprest fund covers voucher requests from multiple units.
+   */
+  unit_pengaju: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 });
 export type CreatePettyCashVoucherInput = z.infer<
   typeof createPettyCashVoucherSchema

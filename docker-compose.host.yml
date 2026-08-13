@@ -1,0 +1,30 @@
+# Host-specific production overrides for coexisting with the WorkPulse stack.
+# The public edge proxy already owns ports 80/443 on this VPS.
+services:
+  db:
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.controldesk.conf
+      - -c
+      - shared_buffers=2GB
+      - -c
+      - effective_cache_size=5GB
+      - -c
+      - work_mem=16MB
+      - -c
+      - maintenance_work_mem=512MB
+    ports: !override
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - ./deploy/postgres/pg_hba.controldesk.conf:/etc/postgresql/pg_hba.controldesk.conf:ro
+
+  app:
+    ports:
+      - "127.0.0.1:3100:3000"
+
+  kong:
+    ports:
+      - "127.0.0.1:8100:8000"

@@ -1,0 +1,544 @@
+# ControlDesk — Production Docker Compose stack (self-hosted, single VPS).
+#
+# Target: 5-10 trial tenants pada VPS 4-8 vCPU / 16 GB RAM / 200 GB NVMe.
+# Sesuai rekomendasi Tier B di `docs/ops/production-deployment.md`.
+#
+# Bring the stack up (setelah `.env.production` diisi + `deploy/` files ada):
+#
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Layers:
+#   1. Postgres 17 (Supabase-tuned) — data layer, RLS enforcement.
+#   2. Supabase services (auth, rest, realtime, storage, kong, meta) —
+#      identical to `supabase start` tapi self-managed.
+#   3. ControlDesk app (Next.js standalone) + Redis (rate limit + cache).
+#   4. Caddy — wildcard TLS + reverse proxy (subdomain-per-tenant).
+#   5. Backup sidecar — nightly pg_dump ke S3-compatible.
+#
+# Semua service pakai `restart: unless-stopped` supaya survive VPS reboot.
+# Semua data disimpan di named volume (backup lewat sidecar), bukan bind mount.
+
+x-restart-policy: &restart-policy
+  restart: unless-stopped
+
+x-logging: &logging
+  # Batasi rotasi log docker biar tidak isi disk VPS.
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  # ---------------------------------------------------------------------------
+  # 1. POSTGRES — Supabase-flavoured Postgres 17 dengan RLS + pgcrypto + pg_cron.
+  # ---------------------------------------------------------------------------
+  db:
+    image: supabase/postgres:17.6.1.156
+    container_name: controldesk-db
+    <<: [*restart-policy, *logging]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "pg_isready",
+          "-U",
+          "postgres",
+          "-h",
+          "localhost",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      vector:
+        condition: service_healthy
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - log_min_messages=fatal
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD wajib di .env.production}
+      POSTGRES_DB: postgres
+      # JWT key for GoTrue and PostgREST — semua service Supabase pakai key
+      # yang sama untuk validate token.
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib (min 32 char, generate via `openssl rand -base64 48`)}
+      JWT_EXP: 3600
+    volumes:
+      # Data persistent — JANGAN hapus volume ini di prod.
+      - db-data:/var/lib/postgresql/data:Z
+      # Config tuning untuk 16 GB RAM VPS (shared_buffers 2GB, dsb).
+      - ./deploy/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro,Z
+      # Application migrations are applied after Supabase services initialize.
+      # Do not mount them into /docker-entrypoint-initdb.d/migrations because
+      # that replaces the image's own required bootstrap migrations.
+      - ./deploy/postgres/99-set-service-passwords.sh:/docker-entrypoint-initdb.d/99-set-service-passwords.sh:ro,Z
+    ports:
+      # Postgres port cukup expose ke localhost VPS saja (bukan public).
+      # Buat backup script + admin akses via SSH tunnel.
+      - "127.0.0.1:5432:5432"
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2a. VECTOR — log aggregator untuk semua service Supabase.
+  # ---------------------------------------------------------------------------
+  vector:
+    image: timberio/vector:0.34.0-alpine
+    container_name: controldesk-vector
+    <<: [*restart-policy, *logging]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:9001/health",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    volumes:
+      - ./deploy/vector/vector.yml:/etc/vector/vector.yaml:ro,Z
+      - /var/run/docker.sock:/var/run/docker.sock:ro,Z
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2b. AUTH (GoTrue) — sign-up/sign-in + custom_access_token_hook (migration 0020).
+  # ---------------------------------------------------------------------------
+  auth:
+    image: supabase/gotrue:v2.194.0
+    container_name: controldesk-auth
+    <<: [*restart-policy, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:9999/health",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${API_EXTERNAL_URL:?WAJIB (mis. https://api.controldesk.app)}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres?search_path=auth
+      GOTRUE_SITE_URL: ${SITE_URL:?WAJIB (mis. https://controldesk.app)}
+      GOTRUE_URI_ALLOW_LIST: ${ADDITIONAL_REDIRECT_URLS:-}
+      GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_JWT_ADMIN_ROLES: service_role
+      GOTRUE_JWT_AUD: authenticated
+      GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
+      GOTRUE_JWT_EXP: 3600
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
+      GOTRUE_MAILER_AUTOCONFIRM: "false"
+      GOTRUE_SMTP_HOST: ${SMTP_HOST:?WAJIB (mis. smtp.resend.com)}
+      GOTRUE_SMTP_PORT: ${SMTP_PORT:-587}
+      GOTRUE_SMTP_USER: ${SMTP_USER}
+      GOTRUE_SMTP_PASS: ${SMTP_PASS}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${SMTP_ADMIN_EMAIL:-admin@controldesk.app}
+      GOTRUE_SMTP_SENDER_NAME: ${SMTP_SENDER_NAME:-ControlDesk}
+      # Custom access token hook — WAJIB aktif agar tenant_id claim
+      # ter-inject ke JWT (migration 0020).
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_ENABLED: "true"
+      GOTRUE_HOOK_CUSTOM_ACCESS_TOKEN_URI: pg-functions://postgres/public/custom_access_token_hook
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2c. REST (PostgREST) — auto-generated REST API dari schema Postgres.
+  # ---------------------------------------------------------------------------
+  rest:
+    image: postgrest/postgrest:v14.15
+    container_name: controldesk-rest
+    <<: [*restart-policy, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      PGRST_DB_USE_LEGACY_GUCS: "false"
+      PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
+      PGRST_APP_SETTINGS_JWT_EXP: 3600
+      PGRST_DB_POOL: "20"
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2d. REALTIME — WebSocket subscribe untuk approval inbox + notifications.
+  # ---------------------------------------------------------------------------
+  realtime:
+    image: supabase/realtime:v2.120.3
+    container_name: controldesk-realtime
+    <<: [*restart-policy, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-sSfL",
+          "--head",
+          "-o",
+          "/dev/null",
+          "-H",
+          "Authorization: Bearer ${ANON_KEY}",
+          "http://localhost:4000/api/tenants/realtime-dev/health",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: ${REALTIME_ENC_KEY:?WAJIB (exactly 16 char)}
+      API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
+      SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE:?WAJIB (min 64 char, generate via `openssl rand -base64 48`)}
+      ERL_AFLAGS: "-proto_dist inet_tcp"
+      DNS_NODES: "''"
+      RLIMIT_NOFILE: "10000"
+      APP_NAME: realtime
+      SEED_SELF_HOST: "true"
+      RUN_JANITOR: "true"
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2e. STORAGE — file upload API (attachment finance, HR, dsb.).
+  # ---------------------------------------------------------------------------
+  storage:
+    image: supabase/storage-api:v1.67.20
+    container_name: controldesk-storage
+    <<: [*restart-policy, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+      rest:
+        condition: service_started
+      imgproxy:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5000/status",
+        ]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      ANON_KEY: ${ANON_KEY:?WAJIB (generate lewat script di deploy/scripts/generate-supabase-keys.sh)}
+      SERVICE_KEY: ${SERVICE_ROLE_KEY:?WAJIB (generate bareng ANON_KEY)}
+      POSTGREST_URL: http://rest:3000
+      PGRST_JWT_SECRET: ${JWT_SECRET}
+      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      FILE_SIZE_LIMIT: 26214400  # 25 MB (rules §19: 10 MB umum, 25 MB untuk contract PDF)
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "true"
+      IMGPROXY_URL: http://imgproxy:5001
+    volumes:
+      - storage-data:/var/lib/storage:z
+    networks:
+      - controldesk
+
+  imgproxy:
+    image: darthsim/imgproxy:v3.24.0
+    container_name: controldesk-imgproxy
+    <<: [*restart-policy, *logging]
+    healthcheck:
+      test: ["CMD", "imgproxy", "health"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      IMGPROXY_BIND: ":5001"
+      IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
+      IMGPROXY_USE_ETAG: "true"
+      IMGPROXY_ENABLE_WEBP_DETECTION: "true"
+    volumes:
+      - storage-data:/var/lib/storage:z
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 2f. KONG — API gateway. Semua request client (browser) masuk lewat Kong,
+  # yang route ke auth/rest/realtime/storage berdasarkan path.
+  # ---------------------------------------------------------------------------
+  kong:
+    image: kong:2.8.1
+    container_name: controldesk-kong
+    <<: [*restart-policy, *logging]
+    depends_on:
+      auth:
+        condition: service_started
+      rest:
+        condition: service_started
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
+      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
+      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
+      # The deployment environment must provide this value; never hardcode it.
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    volumes:
+      - ./deploy/kong/kong.yml:/home/kong/kong.yml:ro,Z
+    command:
+      - /bin/sh
+      - -c
+      - |
+        awk '{
+          gsub(/\$$SUPABASE_ANON_KEY/, ENVIRON["SUPABASE_ANON_KEY"]);
+          gsub(/\$$SUPABASE_SERVICE_KEY/, ENVIRON["SUPABASE_SERVICE_KEY"]);
+          gsub(/\$$DASHBOARD_USERNAME/, ENVIRON["DASHBOARD_USERNAME"]);
+          gsub(/\$$DASHBOARD_PASSWORD/, ENVIRON["DASHBOARD_PASSWORD"]);
+          print
+        }' /home/kong/kong.yml > /tmp/kong.yml
+        exec /docker-entrypoint.sh kong docker-start
+    # Kong port TIDAK di-expose ke public — hanya Caddy yang route ke sini.
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 3a. CONTROLDESK APP — Next.js standalone bundle.
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?WAJIB (mis. https://api.controldesk.app)}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${ANON_KEY}
+        NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN:?WAJIB (mis. controldesk.app)}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ControlDesk}
+    image: controldesk/app:prod
+    container_name: controldesk-app
+    <<: [*restart-policy, *logging]
+    depends_on:
+      kong:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    environment:
+      NODE_ENV: production
+      # Server-side Supabase client di dalam container reach Kong lewat
+      # network internal (tidak lewat public HTTPS).
+      SUPABASE_SERVER_URL: http://kong:8000
+      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+      SUPABASE_JWT_SECRET: ${JWT_SECRET}
+      NEXT_PUBLIC_ROOT_DOMAIN: ${NEXT_PUBLIC_ROOT_DOMAIN}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ControlDesk}
+      REDIS_URL: redis://redis:6379
+      # SMTP untuk email transactional (approver notification, invite user).
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_FROM: ${SMTP_FROM:-noreply@controldesk.app}
+      # Cron secret untuk /api/cron/* endpoints (ai-insights sweep, dsb).
+      CRON_SECRET: ${CRON_SECRET:?WAJIB (generate via `openssl rand -base64 32`)}
+      # Encryption untuk data HRIS sensitif (salary, bank_account).
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?WAJIB (rules §22 rotate 90 hari; generate via `openssl rand -base64 32`)}
+      # AI providers (opsional — kalau tidak diisi, AI Insights disabled).
+      GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 3b. REDIS — rate limiting + cache session state.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: controldesk-redis
+    <<: [*restart-policy, *logging]
+    command:
+      - redis-server
+      - --save
+      - "60 1"
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - "512mb"
+      - --maxmemory-policy
+      - "allkeys-lru"
+    volumes:
+      - redis-data:/data:z
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 3c. AI-INSIGHTS-CRON — poll /api/cron/ai-insights-sweep tiap 15 menit.
+  # ---------------------------------------------------------------------------
+  ai-insights-cron:
+    image: alpine:3.20
+    container_name: controldesk-ai-insights-cron
+    <<: [*restart-policy, *logging]
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      TARGET_URL: http://app:3000/api/cron/ai-insights-sweep
+      INTERVAL_SEC: "900"
+      CRON_SECRET: ${CRON_SECRET}
+    command:
+      - sh
+      - -c
+      - |
+        apk add --no-cache curl >/dev/null 2>&1
+        echo "ai-insights cron: polling $$TARGET_URL every $$INTERVAL_SEC s"
+        while true; do
+          curl -fsS -X POST -H "Authorization: Bearer $$CRON_SECRET" "$$TARGET_URL" \
+            -o /dev/null -w 'ai-insights sweep -> HTTP %{http_code} in %{time_total}s\n' \
+            || echo "ai-insights sweep FAILED"
+          sleep "$$INTERVAL_SEC"
+        done
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 4. CADDY — TLS termination + wildcard subdomain routing.
+  # ---------------------------------------------------------------------------
+  caddy:
+    build:
+      context: .
+      dockerfile: deploy/caddy/Dockerfile
+    image: controldesk/caddy:cloudflare
+    container_name: controldesk-caddy
+    <<: [*restart-policy, *logging]
+    depends_on:
+      app:
+        condition: service_healthy
+      kong:
+        condition: service_started
+    environment:
+      # Untuk wildcard *.controldesk.app pakai Cloudflare DNS challenge.
+      # Butuh API token dari Cloudflare (Zone:DNS Edit).
+      CF_API_TOKEN: ${CF_API_TOKEN:?WAJIB (Cloudflare API token untuk DNS-01 challenge)}
+      ROOT_DOMAIN: ${ROOT_DOMAIN:-controldesk.app}
+      API_DOMAIN: ${API_DOMAIN:-api.controldesk.app}
+      ACME_EMAIL: ${ACME_EMAIL:?WAJIB (email untuk Let's Encrypt)}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - controldesk
+
+  # ---------------------------------------------------------------------------
+  # 5. BACKUP SIDECAR — nightly pg_dump ke S3-compatible (R2/B2/S3).
+  # ---------------------------------------------------------------------------
+  backup:
+    image: alpine:3.20
+    container_name: controldesk-backup
+    <<: [*restart-policy, *logging]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: postgres
+      # S3-compatible target — support BackBlaze B2, Cloudflare R2, AWS S3.
+      S3_BUCKET: ${BACKUP_S3_BUCKET:-}
+      S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${BACKUP_S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${BACKUP_S3_SECRET_KEY:-}
+      # Retensi: mundur 30 hari daily, 12 minggu weekly. Rules §22:
+      # audit log 7 tahun — biarkan di-DB, backup ke S3 sebagai copy.
+      BACKUP_RETENTION_DAILY: ${BACKUP_RETENTION_DAILY:-30}
+      # Jam eksekusi: 02:00 WIB (UTC+7) = 19:00 UTC. Cron format: min hour * * *.
+      BACKUP_CRON: "0 19 * * *"
+    volumes:
+      - ./deploy/scripts/backup-postgres.sh:/usr/local/bin/backup.sh:ro,Z
+      - backup-cache:/var/cache/backups
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache postgresql17-client aws-cli tzdata dcron >/dev/null 2>&1
+        chmod +x /usr/local/bin/backup.sh
+        echo "$$BACKUP_CRON /usr/local/bin/backup.sh >> /var/log/backup.log 2>&1" > /etc/crontabs/root
+        echo "backup sidecar: cron schedule '$$BACKUP_CRON' (Asia/Jakarta 02:00 = UTC 19:00)"
+        # Run backup immediately on startup (verify config), then start cron.
+        /usr/local/bin/backup.sh || echo "initial backup FAILED (check env)"
+        crond -f -d 8
+    networks:
+      - controldesk
+
+volumes:
+  db-data:
+    name: controldesk-db-data
+  redis-data:
+    name: controldesk-redis-data
+  storage-data:
+    name: controldesk-storage-data
+  caddy-data:
+    name: controldesk-caddy-data
+  caddy-config:
+    name: controldesk-caddy-config
+  backup-cache:
+    name: controldesk-backup-cache
+
+networks:
+  controldesk:
+    name: controldesk-prod
+    driver: bridge

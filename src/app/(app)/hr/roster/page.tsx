@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { loadActiveProjectIdsByEmployee } from "@/lib/data/assignments";
 import { createClient } from "@/lib/supabase/server";
 import type { AnyDbEmployeeRole } from "@/lib/rbac/roles";
 import {
@@ -175,8 +176,26 @@ async function loadOptions(caller: { id: string; role: AnyDbEmployeeRole }) {
   };
   const shiftRows = (shifts.data ?? []) as unknown as ShiftRow[];
 
+  const employeeRows = (emps.data ?? []) as Array<{
+    id: string;
+    full_name: string;
+    role: string;
+  }>;
+
+  // Batch-load each visible employee's ACTIVE project assignments so
+  // the roster form can filter the project dropdown to just the
+  // proyek the picked employee is actually on. Server-side we still
+  // enforce this in `upsertRosterEntryAction` — this map is UX
+  // polish (dropdown never contains a project that would be rejected).
+  const empIds = employeeRows.map((e) => e.id);
+  const assignmentMap = await loadActiveProjectIdsByEmployee(empIds);
+  const allowedProjectIdsByEmployee: Record<string, string[]> = {};
+  for (const [empId, set] of assignmentMap.entries()) {
+    allowedProjectIdsByEmployee[empId] = Array.from(set);
+  }
+
   return {
-    employees: (emps.data ?? []).map((e) => ({
+    employees: employeeRows.map((e) => ({
       value: e.id,
       label: `${e.full_name} · ${e.role}`,
     })),
@@ -190,6 +209,7 @@ async function loadOptions(caller: { id: string; role: AnyDbEmployeeRole }) {
       value: p.id,
       label: `${p.code} — ${p.name}`,
     })),
+    allowedProjectIdsByEmployee,
   };
 }
 
@@ -239,6 +259,7 @@ export default async function RosterPage() {
           employees={options.employees}
           shifts={options.shifts}
           projects={options.projects}
+          allowedProjectIdsByEmployee={options.allowedProjectIdsByEmployee}
           defaultDate={today}
           labels={{
             employee: t("form.employee"),

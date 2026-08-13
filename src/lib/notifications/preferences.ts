@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 
 import {
   NOTIFICATION_CATEGORIES,
@@ -75,6 +75,28 @@ export const loadPreferencesForUser = cache(
  * Query a specific (category, channel) toggle. Used by the dispatcher
  * on the hot path — one round-trip per notification is acceptable at
  * this scale (rules §20 rate is O(dozens/tenant/day) not O(seconds)).
+ *
+ * ## Why service_role, not session
+ *
+ * RLS on `user_notification_preferences` scopes rows by
+ * `user_id = auth.uid()` — a user only reads their OWN row. The
+ * notification dispatcher, however, needs to consult preferences for
+ * whoever it's about to notify (an approver, a subordinate, a role
+ * broadcast target). Using a session client here silently fails-open
+ * for every recipient that isn't the caller — meaning users who
+ * opted OUT would still receive emails/Telegram/WhatsApp. That's
+ * unacceptable per rules §20.
+ *
+ * Tenant isolation still holds: every query is bounded by
+ * `.eq("tenant_id", input.tenantId)`, and the only callers of this
+ * helper are notification dispatchers (`service.ts`, `email-dispatcher.ts`)
+ * which receive `tenantId` from the trusted `notifyUser()` boundary
+ * (which in turn gets it from `ctx.actor.tenantId` in the Server
+ * Action wrapper, or from an explicit per-tenant cron loop).
+ *
+ * DO NOT call this helper from client-facing UI code — it would
+ * bypass RLS. The Preferences UI reads via `loadPreferencesForUser()`
+ * which stays on the session client for that reason.
  */
 export async function isChannelEnabled(input: {
   tenantId: string;
@@ -82,7 +104,7 @@ export async function isChannelEnabled(input: {
   category: NotificationCategory;
   channel: NotificationChannel;
 }): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("user_notification_preferences")
     .select("enabled")
@@ -99,6 +121,10 @@ export async function isChannelEnabled(input: {
  * Batched variant of `isChannelEnabled` — resolves an array of
  * (category, channel) pairs in one query. Cheaper than N round-trips
  * when we broadcast to a role.
+ *
+ * Same service_role rationale as `isChannelEnabled` above: dispatcher
+ * needs to see recipients' preferences, not just its own. Tenant
+ * isolation is enforced by the `.eq("tenant_id", …)` filter.
  */
 export async function loadEnabledMap(input: {
   tenantId: string;
@@ -106,7 +132,7 @@ export async function loadEnabledMap(input: {
 }): Promise<
   Map<`${NotificationCategory}:${NotificationChannel}`, boolean>
 > {
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
   const { data } = await supabase
     .from("user_notification_preferences")
     .select("category, channel, enabled")

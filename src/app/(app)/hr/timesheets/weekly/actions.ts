@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { loadActiveProjectIdsByEmployee } from "@/lib/data/assignments";
 import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
@@ -43,6 +44,29 @@ export const submitWeeklyTimesheetAction = withSecureAction({
       throw new Error(
         `week_start_date must be ISO Monday (got ${input.week_start_date}).`,
       );
+    }
+
+    // Guardrail — before touching timesheet rows, validate that every
+    // day's `project_id` (when set) maps to an ACTIVE assignment
+    // (member OR PM) for the target employee. Batched into one lookup
+    // per submit so we don't hit the DB 7× for a full week. Internal
+    // hours (null project_id) skip the check.
+    const distinctProjectIds = Array.from(
+      new Set(
+        input.days
+          .map((d) => d.project_id)
+          .filter((p): p is string => typeof p === "string" && p.length > 0),
+      ),
+    );
+    if (distinctProjectIds.length > 0) {
+      const byEmp = await loadActiveProjectIdsByEmployee([input.employee_id]);
+      const allowed = byEmp.get(input.employee_id) ?? new Set<string>();
+      const offending = distinctProjectIds.filter((p) => !allowed.has(p));
+      if (offending.length > 0) {
+        throw new Error(
+          `Project not in active assignments: ${offending.join(", ")}`,
+        );
+      }
     }
 
     // 1. Load existing header (if any).

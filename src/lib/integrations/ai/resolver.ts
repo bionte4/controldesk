@@ -165,18 +165,18 @@ async function resolveConfig(
 async function buildModel(
   cfg: TenantConfig | EnvConfig,
 ): Promise<unknown | null> {
-  const dyn = new Function(
-    "spec",
-    "return import(spec);",
-  ) as (spec: string) => Promise<unknown>;
-
+  // All AI SDKs (google/openai/anthropic) are direct dependencies in
+  // `package.json`, so we import them with static `await import(...)`
+  // module specifiers. That lets Next.js's file tracer copy the SDK
+  // + its transitive `@ai-sdk/provider-utils` / `@ai-sdk/provider`
+  // deps into `.next/standalone/node_modules/` during
+  // `next build`. Any dynamic-Function bypass would hide the imports
+  // from the tracer and cause "SDK not installed on the server"
+  // failures in the Docker `runner` stage — which is what used to
+  // happen before OPENAI + ANTHROPIC were promoted from optional
+  // peers to hard deps.
   try {
     if (cfg.provider === "GOOGLE") {
-      // Direct `await import(...)` — mirrors `verify.ts`. Lets Next.js
-      // file-trace the SDK + its transitive dependencies into the
-      // standalone bundle. Openai/anthropic branches below stay on the
-      // `new Function` bypass because those packages aren't a hard
-      // dependency in package.json yet.
       const mod = (await import("@ai-sdk/google").catch(() => null)) as
         | { google: (id: string) => unknown; createGoogleGenerativeAI?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
@@ -190,7 +190,7 @@ async function buildModel(
       return mod.google(cfg.modelId);
     }
     if (cfg.provider === "OPENAI") {
-      const mod = (await dyn("@ai-sdk/openai").catch(() => null)) as
+      const mod = (await import("@ai-sdk/openai").catch(() => null)) as
         | { openai: (id: string) => unknown; createOpenAI?: (o: { apiKey: string; baseURL?: string }) => (id: string) => unknown }
         | null;
       if (!mod) return null;
@@ -200,7 +200,7 @@ async function buildModel(
       return mod.openai(cfg.modelId);
     }
     if (cfg.provider === "ANTHROPIC") {
-      const mod = (await dyn("@ai-sdk/anthropic").catch(() => null)) as
+      const mod = (await import("@ai-sdk/anthropic").catch(() => null)) as
         | { anthropic: (id: string) => unknown; createAnthropic?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
       if (!mod) return null;
@@ -216,7 +216,7 @@ async function buildModel(
       // custom `baseURL`. `apiKey` is optional — Ollama and LM Studio
       // typically run without auth on a private network.
       if (!cfg.baseUrl) return null;
-      const mod = (await dyn("@ai-sdk/openai").catch(() => null)) as
+      const mod = (await import("@ai-sdk/openai").catch(() => null)) as
         | { createOpenAI?: (o: { apiKey: string; baseURL: string }) => (id: string) => unknown }
         | null;
       if (!mod?.createOpenAI) return null;
@@ -271,5 +271,45 @@ export async function resolveDailyTokenCap(
     return row.dailyTokenCap;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Extended cap-resolution helper that ALSO decides whether the daily
+ * token cap should be enforced for this tenant.
+ *
+ * Rationale: the cap exists as a cost-control safety net for cloud
+ * providers where every output token costs real money (Gemini, GPT-4o,
+ * Claude, …). For an `OPENAI_COMPATIBLE` provider — i.e. an on-prem
+ * LLM like Ollama, LM Studio, or vLLM served from a private LAN — the
+ * marginal cost of a request is $0. Enforcing the same 10k daily cap
+ * on those tenants creates artificial friction (users hitting cap on a
+ * free local model, having to raise the number manually, or reset the
+ * Redis counter). We bypass the cap for on-prem providers instead.
+ *
+ * Cloud providers still use the cap (or the tenant's override) as
+ * before — no change in behaviour for GOOGLE / OPENAI / ANTHROPIC.
+ *
+ * `DISABLED` and "no config" tenants keep the cap because they fall
+ * back to the env-level provider (see `envConfig()` above), which is
+ * almost always a cloud provider in practice.
+ *
+ * Returns `{ cap: null, bypass: false }` when tenantId is missing —
+ * caller decides what to do (typically fall back to
+ * `DEFAULT_DAILY_TOKEN_CAP`).
+ */
+export async function resolveAiCapContext(
+  tenantId: string | undefined,
+): Promise<{ cap: number | null; bypass: boolean }> {
+  if (!tenantId) return { cap: null, bypass: false };
+  try {
+    const row = await loadTenantAiConfig(tenantId);
+    if (!row || !row.isActive) return { cap: null, bypass: false };
+    return {
+      cap: row.dailyTokenCap,
+      bypass: row.provider === "OPENAI_COMPATIBLE",
+    };
+  } catch {
+    return { cap: null, bypass: false };
   }
 }

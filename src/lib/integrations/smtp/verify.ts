@@ -19,8 +19,11 @@ import { log } from "@/lib/observability/log";
  * common misconfigurations (wrong password, wrong port, TLS off on
  * a TLS-only relay) are caught here.
  *
- * The dynamic import mirrors `mailer.ts` — keeps `nodemailer` as
- * an optional dependency for edge / CI environments.
+ * Imports `nodemailer` via plain `await import("nodemailer")` so the
+ * Next.js file tracer follows the reference and copies the SDK into
+ * `.next/standalone/node_modules/`. See `mailer.ts` for the full
+ * rationale — the old `new Function` bypass silently broke the
+ * verify roundtrip inside the Docker `runner` image.
  */
 export async function verifySmtpCredentials(input: {
   host: string;
@@ -33,11 +36,7 @@ export async function verifySmtpCredentials(input: {
   | { ok: false; error: string }
 > {
   try {
-    const dyn = new Function(
-      "spec",
-      "return import(spec);",
-    ) as (spec: string) => Promise<unknown>;
-    const mod = (await dyn("nodemailer")) as {
+    const mod = (await import("nodemailer")) as unknown as {
       default?: { createTransport: (o: unknown) => VerifiableTransporter };
       createTransport?: (o: unknown) => VerifiableTransporter;
     };

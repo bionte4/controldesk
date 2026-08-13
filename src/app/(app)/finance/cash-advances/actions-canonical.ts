@@ -29,6 +29,7 @@ import {
 } from "@/lib/format/money";
 import { createClient } from "@/lib/supabase/server";
 import { assertPostableCoa } from "@/lib/data/coa";
+import { isUnitAllowedForProject } from "@/lib/data/project-allowed-units";
 import { assertProjectOperational } from "@/lib/data/projects";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import { translatorFor } from "@/lib/notifications/localize";
@@ -143,6 +144,22 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
     const supabase = await createClient();
     // Fase 1 gate — refuse ops on projects still in DRAFT/PLANNING.
     await assertProjectOperational(input.project_id);
+    // Migration 0087 gate — General CA carries `unit_pengaju` on the
+    // parent row. Field-Ops CA validates its own copy in
+    // `field-ops-actions.ts` because that flow writes to the 1:1
+    // details table. We only re-check here when the caller actually
+    // supplied a value.
+    if (input.ca_type === "GENERAL" && input.unit_pengaju) {
+      const ok = await isUnitAllowedForProject(
+        input.project_id,
+        input.unit_pengaju,
+      );
+      if (!ok) {
+        throw new Error(
+          `Unit Pengaju "${input.unit_pengaju}" tidak diizinkan untuk project ini.`,
+        );
+      }
+    }
     const amountDb = moneyToDbString(BigInt(input.amount_idr));
     const validCoaId = await assertPostableCoa(input.coa_id);
 
@@ -185,6 +202,13 @@ export const submitCanonicalCashAdvanceAction = withCanonicalSecureAction({
         purpose: input.purpose,
         needed_by: input.needed_by ?? null,
         coa_id: validCoaId,
+        // General CA persists unit_pengaju on the parent row. For
+        // Field-Ops the value lives in cash_advance_field_ops_details
+        // (written by the dedicated field-ops actions), so we leave
+        // the parent column NULL to avoid double-writing the same
+        // datum in two places.
+        unit_pengaju:
+          input.ca_type === "GENERAL" ? (input.unit_pengaju ?? null) : null,
         status: nextStatus satisfies CashAdvanceStatus,
         chain_snapshot: chainSnapshot,
       })

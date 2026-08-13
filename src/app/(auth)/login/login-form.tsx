@@ -29,6 +29,22 @@ import {
 } from "@/lib/validation/auth";
 import { sendMagicLink, signInWithPassword } from "../actions";
 
+// `useSyncExternalStore` snapshot helpers for hydration detection.
+// Extracted to module scope so React sees stable identities and
+// doesn't re-subscribe on every render. Server returns `false`,
+// client returns `true` — the state machine reads exactly like
+// `[hydrated, setHydrated] = useState(false); useEffect(...)`, minus
+// the cascading render that React 19's compiler now flags.
+function hydratedSubscribe() {
+  return () => {};
+}
+function hydratedClientSnapshot() {
+  return true;
+}
+function hydratedServerSnapshot() {
+  return false;
+}
+
 export function LoginForm({ initialError }: { initialError?: string }) {
   const router = useRouter();
   const [error, setError] = React.useState<string | undefined>(initialError);
@@ -42,10 +58,18 @@ export function LoginForm({ initialError }: { initialError?: string }) {
   // navigates the browser to the current URL with credentials in the
   // query string, or is a silent no-op — either way the sign-in never
   // runs and the user perceives a stuck / "cannot log in" state.
-  const [hydrated, setHydrated] = React.useState(false);
-  React.useEffect(() => {
-    setHydrated(true);
-  }, []);
+  //
+  // We used to do this with `useState(false)` + `useEffect(() => setState(true))`,
+  // but React 19's compiler lints that as a cascading render. Instead
+  // we synchronously read a store snapshot — `false` on the server,
+  // `true` on the client — which mirrors what React itself uses for
+  // its `useSyncExternalStore` mount-detection recipe. No effect fires
+  // and no extra render happens after hydration.
+  const hydrated = React.useSyncExternalStore(
+    hydratedSubscribe,
+    hydratedClientSnapshot,
+    hydratedServerSnapshot,
+  );
 
   const passwordForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),

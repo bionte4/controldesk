@@ -147,6 +147,21 @@ export const RateLimitPresets = {
   passwordReset: (): RateLimitOptions => ({ max: 3, windowSeconds: 900 }),
   expensiveMutation: (): RateLimitOptions => ({ max: 30, windowSeconds: 60 }),
   aiCall: (): RateLimitOptions => ({ max: 20, windowSeconds: 60 }),
+  // Help chatbot ("Ask ControlDesk") — cheap to serve when it hits
+  // the mock provider but expensive against a paid LLM. Cap tightly
+  // per user (≤ 6 messages/min) so casual typing bursts don't chain
+  // into a bill spike, and separately per tenant (≤ 60 messages/min)
+  // so a single tenant can't exhaust the daily token pool through
+  // one power user.
+  helpChatPerUser: (): RateLimitOptions => ({ max: 6, windowSeconds: 60 }),
+  helpChatPerTenant: (): RateLimitOptions => ({ max: 60, windowSeconds: 60 }),
+  // Inline AI copilot (Level 3 — refines free-text fields in forms).
+  // Cheaper prompt + shorter output than the chatbot, but hit more
+  // often since it's one-tap in the form. Tight per-user cap to
+  // discourage spammy clicking, generous per-tenant since a busy day
+  // could see multiple users refining descriptions simultaneously.
+  aiCopilotPerUser: (): RateLimitOptions => ({ max: 12, windowSeconds: 60 }),
+  aiCopilotPerTenant: (): RateLimitOptions => ({ max: 120, windowSeconds: 60 }),
   publicApi: (): RateLimitOptions => ({ max: 60, windowSeconds: 60 }),
   // Report exports are heavy (multi-page PDFs can hit 5+ MB) — cap
   // per-user to 20 exports per minute. Preview requests hit the RSC

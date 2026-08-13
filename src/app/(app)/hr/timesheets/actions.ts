@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { assertEmployeeAssignedToProject } from "@/lib/data/assignments";
 import { notifyUser } from "@/lib/notifications/service";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
@@ -28,6 +29,19 @@ export const submitTimesheetAction = withSecureAction({
   }),
   handler: async (input, ctx) => {
     const supabase = await createClient();
+
+    // Guardrail — a timesheet row that carries a `project_id` must
+    // map to an ACTIVE assignment (member OR PM) for the target
+    // employee, otherwise an employee could self-report hours to a
+    // project they aren't assigned to and skew profitability.
+    // Internal / unassigned hours (`project_id` null) skip the check.
+    if (input.project_id) {
+      const err = await assertEmployeeAssignedToProject({
+        employeeId: input.employee_id,
+        projectId: input.project_id,
+      });
+      if (err) throw new Error(err);
+    }
 
     const { data: existing } = await supabase
       .from("timesheets")

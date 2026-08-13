@@ -330,6 +330,59 @@ Sebelum `APPLIED`, budget tetap seperti sebelumnya. Ini penting untuk
 audit — kalau approved lalu APPLIED gagal, ada gap tapi angka nyata
 aman.
 
+## Unit Pengaju — pengaju request per unit organisasi
+
+Kolom `unit_pengaju` menandai **unit / departemen mana yang mengajukan**
+transaksi keuangan — bukan siapa yang login, dan bukan siapa yang
+di-assign ke project. Field ini hanya label kategoris (bebas dipilih
+dari daftar tenant-level lookup atau di-batasi per-project bila
+whitelist di-set).
+
+**Cakupan** (migration `0087` + `a97c433`):
+
+| Modul                | Kolom                                          | Wajib? | Sumber pilihan                                                    |
+| -------------------- | ---------------------------------------------- | ------ | ----------------------------------------------------------------- |
+| Budget baru          | `budgets.unit_pengaju`                         | Opsional | Whitelist `project_allowed_units` untuk project itu, fallback ke tenant `unit_pengaju` lookup |
+| Cash Advance General | `cash_advances.unit_pengaju` (type = `GENERAL`)| Opsional | Sama seperti Budget                                              |
+| Cash Advance Field Ops | `cash_advances.unit_pengaju` (type = `FIELD_OPS`) | Opsional | Sama seperti Budget                                       |
+| Petty Cash Voucher   | `petty_cash_vouchers.unit_pengaju`             | Opsional | Tenant-level `unit_pengaju` lookup saja (petty cash tidak project-scoped) |
+
+### Cara kerja whitelist per-project
+
+Tabel `public.project_allowed_units` (migration `0086`) memungkinkan
+admin **membatasi** daftar unit pengaju yang boleh dipilih untuk
+project tertentu — mis. project "ITPS-DC-2026" hanya boleh diajukan
+oleh unit `ITPS-DC` + `IT-SUPPORT`.
+
+- Bila project punya minimal 1 entry di `project_allowed_units` →
+  dropdown "Unit Pengaju" di form Budget / CA General / Field Ops
+  mengecil ke daftar itu, hint "Filtered by project whitelist" muncul.
+- Bila project **tidak** punya entry di `project_allowed_units` →
+  dropdown menampilkan **seluruh** `unit_pengaju` tenant-level (default
+  seed 9 unit universal dari migration `0090`: NOC, Field Team, Sales,
+  HRD, IT Support, Finance, Management, Project Operations, Lain-lain).
+- Admin kelola whitelist di **`/projects/[id]/settings`** → tab
+  "Allowed Units", atau via SQL langsung untuk seeding bulk (contoh:
+  `scripts/seed-itps-project-allowed-units.sql`).
+
+### Petty Cash — kenapa tidak project-scoped?
+
+Petty cash voucher **tidak punya `project_id`** (imprest fund per lokasi,
+bukan per project). Dropdown "Unit Pengaju" di form voucher karena itu
+selalu tampilkan **semua** tenant-level `unit_pengaju`, tidak ada
+filter whitelist. Bila kebutuhan Anda adalah tracking pengeluaran per
+project, gunakan Expense atau CA (yang punya `project_id`), bukan petty
+cash.
+
+### Server-side enforcement
+
+Selain filter UI, setiap Server Action men-validate ulang lewat
+`isUnitAllowedForProject()` (helper di
+`src/lib/data/project-allowed-units.ts`) — user tidak bisa bypass
+whitelist dengan curl langsung ke Server Action. Kalau `unit_pengaju`
+yang di-submit tidak ada di whitelist project, action mengembalikan
+error `UNIT_NOT_ALLOWED_FOR_PROJECT`.
+
 ## Unified approvals inbox
 
 `/approvals` menampilkan **semua item finance yang butuh approval

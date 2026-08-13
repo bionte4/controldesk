@@ -176,4 +176,91 @@ describe("AI cost cap (in-memory fallback)", () => {
       expect(r.used).toBe(500);
     }
   });
+
+  // -------------------------------------------------------------------------
+  // On-prem bypass (Ollama / LM Studio / vLLM — `OPENAI_COMPATIBLE`
+  // provider). Set by `resolveAiCapContext()` in
+  // `src/lib/integrations/ai/resolver.ts`; the reserve/commit contract
+  // is that `bypass: true` short-circuits BOTH functions with a
+  // successful no-op so the Redis counter stays untouched.
+  // -------------------------------------------------------------------------
+  it("bypass=true short-circuits reserve() with a successful no-op", async () => {
+    const r = await reserve({
+      tenantId: "tenant-ollama",
+      estimatedOutputTokens: 1_000_000,
+      cap: 100,
+      bypass: true,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.used).toBe(0);
+      expect(r.remaining).toBe(100);
+    }
+  });
+
+  it("bypass=true reservations do not consume the counter for later calls", async () => {
+    // First call bypasses — must NOT increment the counter.
+    await reserve({
+      tenantId: "tenant-ollama",
+      estimatedOutputTokens: 500,
+      cap: 1000,
+      bypass: true,
+    });
+    // Second call also bypasses — same story.
+    await reserve({
+      tenantId: "tenant-ollama",
+      estimatedOutputTokens: 800,
+      cap: 1000,
+      bypass: true,
+    });
+    // Third call enforces the cap — counter should still be at 0, so
+    // the full 1000-token budget is available.
+    const enforced = await reserve({
+      tenantId: "tenant-ollama",
+      estimatedOutputTokens: 1000,
+      cap: 1000,
+      bypass: false,
+    });
+    expect(enforced.ok).toBe(true);
+    if (enforced.ok) expect(enforced.used).toBe(1000);
+  });
+
+  it("commit() with bypass=true is a no-op (does not adjust the counter)", async () => {
+    await reserve({
+      tenantId: "tenant-mixed",
+      estimatedOutputTokens: 500,
+      cap: 1000,
+    });
+    // A bypass-flagged commit must NOT touch the counter, even with a
+    // positive delta.
+    await commit({ tenantId: "tenant-mixed", delta: 400, bypass: true });
+    const next = await reserve({
+      tenantId: "tenant-mixed",
+      estimatedOutputTokens: 500,
+      cap: 1000,
+    });
+    // If the bypass had leaked into the counter, `used` would be 1400
+    // and this call would fail. It succeeds because the counter is
+    // still at 500 from the initial reserve.
+    expect(next.ok).toBe(true);
+    if (next.ok) expect(next.used).toBe(1000);
+  });
+
+  it("bypass does not affect the isolation guarantee (no cross-tenant leak)", async () => {
+    // Tenant using on-prem bypass — makes a huge "spend".
+    await reserve({
+      tenantId: "tenant-ollama-isolated",
+      estimatedOutputTokens: 10_000_000,
+      cap: 1000,
+      bypass: true,
+    });
+    // Sibling tenant on cloud provider must still see a fresh counter.
+    const r = await reserve({
+      tenantId: "tenant-cloud-isolated",
+      estimatedOutputTokens: 900,
+      cap: 1000,
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.used).toBe(900);
+  });
 });

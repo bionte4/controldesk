@@ -36,6 +36,7 @@ import {
 } from "@/lib/validation/field-ops-advance";
 import { createClient } from "@/lib/supabase/server";
 import { assertPostableCoa } from "@/lib/data/coa";
+import { isUnitAllowedForProject } from "@/lib/data/project-allowed-units";
 import { assertProjectOperational } from "@/lib/data/projects";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import { snapshotCaFieldOpsChain } from "@/lib/rbac/chain-snapshot";
@@ -97,6 +98,31 @@ function slotToNotifyRoles(
  * higher-rank actor allowed to create field-ops CAs. Returns `false`
  * when a plain EMPLOYEE has no active FIELD_TECHNICIAN assignment.
  */
+/**
+ * Enforce the `public.project_allowed_units` whitelist (migration
+ * 0086). Client already narrows the dropdown, but a hostile POST
+ * could still ship any string — this is the server-side gate.
+ *
+ * When the project has no whitelist rows, every active tenant
+ * lookup is permitted (see `loadAllowedUnitsForProject`'s null vs.
+ * empty-array contract). When a unit is not in the whitelist we
+ * throw with a translatable-ish message; callers surface it in the
+ * `ActionResult` envelope so the form can highlight the field.
+ */
+async function assertUnitAllowedForProject(
+  projectId: string,
+  unitLabel: string | null | undefined,
+): Promise<void> {
+  const trimmed = unitLabel?.trim();
+  if (!trimmed) return;
+  const ok = await isUnitAllowedForProject(projectId, trimmed);
+  if (!ok) {
+    throw new Error(
+      `Unit Pengaju "${trimmed}" tidak diizinkan untuk project ini.`,
+    );
+  }
+}
+
 async function actorMayInitiateFieldOps(input: {
   employeeId: string;
   role: AnyDbEmployeeRole;
@@ -209,6 +235,9 @@ export const saveDraftFieldOpsAction = withCanonicalSecureAction({
     const supabase = await createClient();
     // Fase 1 gate — refuse ops on DRAFT / PLANNING / ARCHIVED projects.
     await assertProjectOperational(input.project_id);
+    // Migration 0086 gate — refuse unit_pengaju outside the project's
+    // whitelist (skipped automatically when the project has no policy).
+    await assertUnitAllowedForProject(input.project_id, input.unit_pengaju);
 
     // 1. Insert parent. `amount` needs a positive placeholder because
     //    the DB has a CHECK (amount > 0); the RAB trigger will overwrite
@@ -349,6 +378,10 @@ export const updateDraftFieldOpsAction = withCanonicalSecureAction({
     ) {
       throw new Error(`Draft locked at status ${current.status}.`);
     }
+    // Migration 0086 gate — refuse unit_pengaju outside the project's
+    // whitelist. Uses the NEW project_id (post-edit) since the user
+    // may have switched projects during this update.
+    await assertUnitAllowedForProject(input.project_id, input.unit_pengaju);
 
     // 1. Update parent metadata.
     const { error: parentErr } = await supabase
@@ -550,6 +583,10 @@ export const submitDraftFieldOpsAction = withCanonicalSecureAction({
     if (detailsErr || !details) {
       throw new Error("Field-ops details row missing.");
     }
+    // Migration 0086 gate — re-verify at submit time in case the admin
+    // has since narrowed the project's whitelist. Same graceful-null
+    // semantics as save/update: no policy = allow anything.
+    await assertUnitAllowedForProject(parent.project_id, details.unit_pengaju);
 
     const { data: rabRows, error: rabErr } = await supabase
       .from("cash_advance_rab_lines")

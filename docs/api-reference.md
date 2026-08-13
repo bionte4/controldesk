@@ -280,6 +280,151 @@ Response:
 }
 ```
 
+## Help center endpoints
+
+### `POST /api/help/ask`
+
+Streaming chatbot backend for the "Ask ControlDesk" tab at `/help`.
+Supports Level 1 (docs-only RAG) by default AND Level 2 ("Ask my
+data" — read-only tool calling) when the client opts in.
+Implementation: `src/app/api/help/ask/route.ts`. Full design:
+[docs/rfc/0001-ask-my-data.md](rfc/0001-ask-my-data.md).
+
+- **Auth** — requires an authenticated employee. Tenant scope is
+  derived from `requireCurrentEmployee()` (never trusts request body).
+- **Rate limit** — two Redis buckets: 6 messages/min per user
+  (`helpChatPerUser`) + 60 messages/min per tenant
+  (`helpChatPerTenant`). 429 with `Retry-After` header on breach.
+- **Token cap** — `reserve(ESTIMATED_OUTPUT_TOKENS)` against the
+  tenant's daily AI budget BEFORE contacting the provider (rules §15).
+  Returns 402 with the current used/cap on overshoot; refunds the
+  reservation on provider failure.
+- **Body** — `{ messages, conversationId?, useTools? }`. `messages`
+  is 1–20 items of `{ role, content }`, each content ≤ 8000 chars.
+  Passing `conversationId` (uuid) + `useTools: true` opts into
+  Level 2; otherwise the route runs Level 1 unchanged.
+- **Response** — `text/plain; charset=utf-8` stream. Consume with
+  `res.body.getReader()`.
+
+Level 2 additions (only when `conversationId` + `useTools` are set
+AND the `ai_chatbot_tools` feature flag is enabled for the tenant —
+defaults ON; platform admins can turn it OFF via
+`/super-admin/features` to degrade the chatbot back to docs-only RAG
+without an app deploy):
+
+- **History persisted** to `tenant_chat_messages` (RLS: owner-only,
+  tenant-scoped, see migration 0085). Each user turn is written
+  immediately; the assistant reply + `tool_calls` trace + retrieval
+  slugs are written at `onFinish`.
+- **Tool registry** (`src/lib/ai/tools/index.ts`) exposes 8 read-only
+  tools bound to the caller: `list_pending_approvals`, `my_projects`,
+  `expense_summary_this_month`, `my_timesheet_this_week`,
+  `my_direct_reports`, `pending_timesheets_to_approve`,
+  `project_status(project_id)`, `budget_remaining(project_id)`.
+  Every user/tenant filter comes from the session; model-supplied
+  arguments cannot override. Tools that take a `project_id` verify
+  the caller is on that project before reading it (ADMIN, DIRECTOR
+  and FINANCE roles may open any project in the tenant); tools that
+  return budget data additionally check `canViewBudget(dbRole)` and
+  return `{ error: "forbidden" }` without touching the DB for
+  Employee/Supervisor.
+- **Bounded tool loop** — `stopWhen: stepCountIs(4)` caps the model
+  to at most 4 tool-call steps per turn. Combined with the 400-token
+  reservation, the request cost is deterministic per invocation.
+
+Error responses:
+
+| Status | Meaning                                                                       |
+| ------ | ----------------------------------------------------------------------------- |
+| 400    | `invalid_body` — Zod schema failed OR no user message in `messages`.          |
+| 402    | `daily_ai_budget_exceeded` — tenant token cap reached today.                  |
+| 429    | `rate_limited` — per-user or per-tenant window exceeded.                      |
+| 500    | `tenant_lookup_failed` — defensive; the session's tenant_id can't be resolved.|
+| 502    | `llm_failed` — provider returned an error mid-stream.                         |
+| 503    | `ai_not_configured` — tenant has no active AI config; admin must set one.     |
+
+Isolation guarantees:
+
+- The tenant name that lands in the system prompt is loaded via
+  `.eq("id", tenantId)` where `tenantId` comes from the session.
+- Retrieval reads `docs/`-derived static content only — no tenant DB
+  reads, so nothing to leak across tenants.
+- Telemetry via `log.info("help_chat_reply", …)` — never persists user
+  content, only slug hits, latency, and token counts.
+
+### `GET /api/help/conversations`
+
+Lists the caller's own recent chatbot conversations for the "Ask AI"
+sidebar. Implementation: `src/app/api/help/conversations/route.ts`.
+
+- **Auth** — `requireCurrentEmployee()`.
+- **RLS** — `tenant_chat_conversations_tenant_read` (migration 0085)
+  enforces `tenant_id = current_tenant_id() AND user_id = auth.uid()`.
+  Tenant admins cannot read colleagues' chats.
+- **Response** — `{ conversations: [{ id, title, updated_at,
+  message_count }] }`. Max 10 rows, sorted by `updated_at desc`.
+  `message_count` counts only `user` + `assistant` roles; `tool`
+  traces are internal.
+
+### `GET /api/help/conversations/{id}`
+
+Hydrates one thread's messages so the client sidebar can resume it.
+
+- **Auth + RLS** — same as list.
+- **Path** — `{id}` must be a UUID. Non-UUID returns 400
+  `invalid_id`; unknown UUID (either non-existent or owned by another
+  user) returns 404 `not_found` — no existence oracle between users.
+- **Response** — `{ id, title, messages: [{ id, role, content,
+  created_at }] }` sorted by `created_at asc`. `tool` role rows are
+  filtered out.
+
+### `DELETE /api/help/conversations/{id}`
+
+Hard-deletes a thread and cascades to its messages.
+
+- **Auth + RLS** — same as above.
+- **Response** — `{ ok: true }` on success. 500 `delete_failed` when
+  the RLS-guarded delete errors; the row is silently untouched if the
+  policy denies (no existence oracle).
+- Telemetry — `log.info("help_conversation_deleted", …)`.
+
+### `POST /api/ai/copilot`
+
+Streaming per-field inline AI copilot (Level 3). Implementation:
+`src/app/api/ai/copilot/route.ts`.
+
+- **Auth** — requires an authenticated employee. Tenant scope from
+  session (never body).
+- **Rate limit** — 12/min per user (`aiCopilotPerUser`) + 120/min
+  per tenant (`aiCopilotPerTenant`).
+- **Token cap** — reserves `surface.maxOutputTokens` (≤ 240 today)
+  against the tenant's daily budget before hitting the LLM.
+- **Body** — `{ surface, input, context }` per
+  `copilotRequestSchema` in `src/lib/ai/copilot-surfaces.ts`.
+- **Response** — `text/plain; charset=utf-8` stream.
+
+Surface allowlist (see `COPILOT_SURFACES`):
+
+| Surface | Wired form field | Whitelisted context keys |
+| --- | --- | --- |
+| `ca_purpose` | CA General → `purpose` | `amount`, `project_name`, `expected_settlement_date` |
+| `field_ops_justification` | CA FieldOps → `justification` | `project_name`, `area`, `tujuan`, `ticket_number`, `transport_need`, `pic_name` |
+| `expense_description` | Project Expense → `notes` | `amount`, `project_name`, `vendor`, `category` |
+| `project_description` | Project wizard → `description` | `project_name`, `client_name`, `start_date`, `end_date`, `contract_value` |
+
+Any context key **not** in the whitelist for the requested surface is
+silently dropped BEFORE the prompt is built. This makes it safe for
+the client to pass any form values as context — the server enforces
+the allowlist, not the caller.
+
+Isolation guarantees:
+
+- Same tenant-lookup pattern as `/api/help/ask` (session `.eq`).
+- No DB reads for user data — client passes context values it
+  already displays; nothing is fetched cross-form.
+- Telemetry via `log.info("ai_copilot_reply", …)` — never persists
+  user content, only surface, tokens, latency, and context key names.
+
 ## Observability endpoints
 
 ### `POST /api/observability/report`

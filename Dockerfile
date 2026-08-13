@@ -1,12 +1,13 @@
 # syntax=docker/dockerfile:1.7
 # ControlDesk — production Dockerfile per rules §2.
-# Multi-stage build against Node 20 Alpine producing a Next.js standalone bundle.
+# Multi-stage build against Node 26 Alpine producing a Next.js standalone bundle.
 
 # -----------------------------------------------------------------------------
 # Stage 1: base — pinned Node runtime + system deps + Corepack (pnpm).
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS base
+FROM node:26-alpine AS base
 RUN apk add --no-cache libc6-compat curl \
+  && npm install --global corepack@0.35.0 \
   && corepack enable
 WORKDIR /app
 ENV NODE_ENV=production \

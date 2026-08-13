@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { AI_INSIGHT_KINDS, runInsight } from "@/lib/ai/generators";
 import { commit, reserve } from "@/lib/ai/cost-cap";
-import { resolveDailyTokenCap } from "@/lib/integrations/ai";
+import { resolveAiCapContext } from "@/lib/integrations/ai";
 import { schemaForKind, type AiInsightKindLiteral } from "@/lib/ai/schemas";
 import type { CurrentEmployee } from "@/lib/auth/session";
 import { log } from "@/lib/observability/log";
@@ -176,7 +176,10 @@ async function sweepTenant(
     return result;
   }
 
-  const cap = await resolveDailyTokenCap(tenant.id);
+  // Load cap + bypass flag once per tenant. `bypass=true` for on-prem
+  // (OPENAI_COMPATIBLE) providers — see resolver.ts + cost-cap.ts for
+  // the full rationale.
+  const { cap, bypass } = await resolveAiCapContext(tenant.id);
 
   for (const kind of AI_INSIGHT_KINDS) {
     try {
@@ -195,6 +198,7 @@ async function sweepTenant(
         tenantId: tenant.id,
         estimatedOutputTokens: ESTIMATED_OUTPUT_TOKENS,
         cap: cap ?? undefined,
+        bypass,
       });
       if (!reservation.ok) {
         result.errors.push({
@@ -213,6 +217,7 @@ async function sweepTenant(
       await commit({
         tenantId: tenant.id,
         delta: outcome.run.tokens_output - ESTIMATED_OUTPUT_TOKENS,
+        bypass,
       });
 
       const schema = schemaForKind(kind);
