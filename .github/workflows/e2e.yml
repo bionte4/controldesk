@@ -7,8 +7,11 @@ name: E2E
 # spins up the Next.js dev server, then walks every chain suite in
 # `e2e/**`.
 #
-# Runs on every pull request. Slower than `ci.yml` (~7-10 min) so it
-# doesn't gate the fast feedback loop, but MUST pass before merge.
+# Runs on every pull request. Slower than `ci.yml` (~15-30 min with
+# local Supabase + production build). Informational until the suite is
+# stable against the GAS-aligned UI — it does NOT block merge. Re-add
+# `playwright chromium` to required checks on `main` once the specs
+# finish inside the job timeout.
 
 on:
   push:

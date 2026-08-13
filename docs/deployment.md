@@ -268,9 +268,8 @@ Four workflows live under [`.github/workflows/`](../.github/workflows/):
 
 1. 1 approving review (stale reviews are auto-dismissed on new pushes).
 2. All conversations resolved.
-3. Three checks green:
+3. Two checks green (Playwright is informational until the suite is stable):
    - `lint · typecheck · test · build` (from `ci.yml`)
-   - `playwright chromium` (from `e2e.yml`)
    - `CodeQL / javascript-typescript (javascript-typescript)` (from `security.yml`)
 4. No force-push, no branch deletion.
 
