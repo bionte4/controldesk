@@ -29,7 +29,11 @@ import type {
   EmploymentType,
 } from "@/types/database";
 
-import { NewEmployeeSheet } from "./new-employee-sheet";
+import { EmployeeRowActions } from "./employee-row-actions";
+import {
+  EmployeeUpsertSheet,
+  type ExistingEmployee,
+} from "./employee-upsert-sheet";
 
 export const metadata: Metadata = {
   title: "Employees",
@@ -38,16 +42,56 @@ export const metadata: Metadata = {
 type EmployeeRow = {
   id: string;
   full_name: string;
+  // Column is nullable in the database schema (legacy import path
+  // allowed placeholder rows without a first name). In practice every
+  // active row has one, but we keep the type honest and coerce when
+  // handing the row to the Edit sheet.
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   phone: string | null;
   department: string | null;
   position_title: string | null;
   role: EmployeeRoleEnum;
+  date_of_birth: string | null;
   join_date: string;
   employment_type: EmploymentType;
   contract_end_date: string | null;
   availability: EmployeeAvailability;
+  reports_to_employee_id: string | null;
 };
+
+/**
+ * Narrow the RSC-side `EmployeeRow` (which carries branded DB enum
+ * types) into the plain-string shape the client `EmployeeUpsertSheet`
+ * expects. This is a pure projection — no runtime cost — but it keeps
+ * the client component free of the `EmployeeRoleEnum | EmploymentType`
+ * imports from `@/types/database`, which would otherwise leak the
+ * database.ts type surface into the "use client" bundle.
+ */
+function toExistingEmployee(row: EmployeeRow): ExistingEmployee {
+  return {
+    id: row.id,
+    // The upsert sheet's Zod schema rejects an empty first name — that
+    // matches business intent and the DB `NOT NULL` we want to
+    // migrate to. If a legacy null slips through here, the user will
+    // see the "First name is required" message on submit, which is
+    // the correct nudge.
+    first_name: row.first_name ?? "",
+    last_name: row.last_name,
+    email: row.email,
+    phone: row.phone,
+    department: row.department,
+    position_title: row.position_title,
+    role: row.role as string,
+    date_of_birth: row.date_of_birth,
+    join_date: row.join_date,
+    employment_type: row.employment_type as string,
+    contract_end_date: row.contract_end_date,
+    availability: row.availability as string,
+    reports_to_employee_id: row.reports_to_employee_id,
+  };
+}
 
 const MS_PER_DAY = 86_400_000;
 
@@ -73,10 +117,14 @@ async function loadEmployees(
   // `canViewEmployeeDirectory()` at the page level.
   const scope = await resolveEmployeeScope(caller);
 
+  // Include the columns the Edit sheet needs to prefill (first_name,
+  // last_name, date_of_birth, reports_to_employee_id) so the row-action
+  // menu can hand a fully-hydrated snapshot straight to
+  // `EmployeeUpsertSheet` without a second round-trip.
   let query = supabase
     .from("employees")
     .select(
-      "id, full_name, email, phone, department, position_title, role, join_date, employment_type, contract_end_date, availability",
+      "id, full_name, first_name, last_name, email, phone, department, position_title, role, date_of_birth, join_date, employment_type, contract_end_date, availability, reports_to_employee_id",
     )
     .order("full_name", { ascending: true })
     .limit(500);
@@ -97,15 +145,19 @@ async function loadEmployees(
   return (data ?? []).map((row) => ({
     id: row.id,
     full_name: row.full_name,
+    first_name: row.first_name,
+    last_name: row.last_name,
     email: row.email,
     phone: row.phone,
     department: row.department,
     position_title: row.position_title,
     role: row.role as EmployeeRoleEnum,
+    date_of_birth: row.date_of_birth,
     join_date: row.join_date,
     employment_type: row.employment_type as EmploymentType,
     contract_end_date: row.contract_end_date,
     availability: row.availability as EmployeeAvailability,
+    reports_to_employee_id: row.reports_to_employee_id,
   }));
 }
 
@@ -160,6 +212,32 @@ export default async function EmployeesPage() {
       attributes: { tenantId: employee.tenant_id },
     }).effect === "ALLOW";
 
+  // `employee:update` PDP is per-row (owner attribute), but every row
+  // in this list has the same tenant scope and the same set of roles
+  // are gated, so a single guard-hit here is a safe proxy for "any of
+  // these rows is editable by the caller". We still pass the actor
+  // into the wrapper action, which re-decides on the exact row.
+  const canEdit =
+    authorize({
+      actor: {
+        userId: employee.user_id,
+        employeeId: employee.id,
+        role: employee.role as EmployeeRole,
+        tenantId: employee.tenant_id,
+      },
+      action: "update",
+      resource: "employee",
+      attributes: { tenantId: employee.tenant_id },
+    }).effect === "ALLOW";
+
+  const departmentLabels = departmentOptions.map((o) => o.label);
+  const positionLabels = positionOptions.map((o) => o.label);
+  const managerOptions = rows.map((row) => ({
+    id: row.id,
+    full_name: row.full_name,
+    role: row.role,
+  }));
+
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
@@ -173,9 +251,16 @@ export default async function EmployeesPage() {
           </p>
         </div>
         {canCreate ? (
-          <NewEmployeeSheet
-            departmentOptions={departmentOptions.map((o) => o.label)}
-            positionOptions={positionOptions.map((o) => o.label)}
+          <EmployeeUpsertSheet
+            departmentOptions={departmentLabels}
+            positionOptions={positionLabels}
+            /* All directory rows are viable "reports_to" candidates —
+               there is intentionally NO role-level restriction here, so
+               tenants can model both flat teams (everyone reports to
+               Admin) and deep hierarchies (Employee → Supervisor → PM
+               → OM). The Zod schema still validates the referenced UUID
+               exists at commit time via the FK constraint. */
+            managerOptions={managerOptions}
           />
         ) : null}
       </header>
@@ -208,6 +293,11 @@ export default async function EmployeesPage() {
                     <ColHead>{tCols("joinDate")}</ColHead>
                     <ColHead>{tCols("endDate")}</ColHead>
                     <ColHead>{tCols("availability")}</ColHead>
+                    {canEdit ? (
+                      <ColHead className="w-16 text-right">
+                        <span className="sr-only">{tCols("actions")}</span>
+                      </ColHead>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -289,6 +379,16 @@ export default async function EmployeesPage() {
                             {tAvail(r.availability)}
                           </Badge>
                         </td>
+                        {canEdit ? (
+                          <td className="px-4 py-3 text-right">
+                            <EmployeeRowActions
+                              row={toExistingEmployee(r)}
+                              departmentOptions={departmentLabels}
+                              positionOptions={positionLabels}
+                              managerOptions={managerOptions}
+                            />
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })}

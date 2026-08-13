@@ -16,6 +16,7 @@ export {
 
 export {
   resolveAiModel,
+  resolveAiCapContext,
   resolveDailyTokenCap,
   type ResolvedAiModel,
 } from "./resolver";

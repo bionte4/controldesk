@@ -125,11 +125,16 @@ async function loadApprovers(
     });
     return [];
   }
-  return (data ?? [])
-    .filter(
-      (r): r is { id: string; user_id: string; full_name: string } =>
-        Boolean(r.user_id) && Boolean(r.id),
-    );
+  // Narrow `user_id` from `string | null` to `string` by filtering
+  // out unlinked employee rows, and drop the `is_active` field the
+  // caller never uses.
+  const rows = data ?? [];
+  const out: Array<{ id: string; user_id: string; full_name: string }> = [];
+  for (const r of rows) {
+    if (!r.id || !r.user_id) continue;
+    out.push({ id: r.id, user_id: r.user_id, full_name: r.full_name });
+  }
+  return out;
 }
 
 async function hasNudgeToday(

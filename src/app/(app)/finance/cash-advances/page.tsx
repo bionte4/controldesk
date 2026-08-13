@@ -18,6 +18,7 @@ import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
+import { loadAllowedUnitsForProjects } from "@/lib/data/project-allowed-units";
 import {
   toCanonicalRole,
   type AnyDbEmployeeRole,
@@ -264,6 +265,18 @@ export default async function CashAdvancesPage() {
     getTranslations("cashAdvances.types"),
   ]);
 
+  // Per-project unit_pengaju whitelist. Serialised into a plain object
+  // because Client Components can't accept `Map` across the RSC/RC
+  // boundary. The Field-Ops sheet keys into this by project ID whenever
+  // the user picks a project; missing key = fall back to full tenant
+  // lookup list (migration 0086 comment explains the fallback intent).
+  const allowedUnitsMap = await loadAllowedUnitsForProjects(
+    projectOptions.map((p) => p.id),
+  );
+  const allowedUnitsByProject: Record<string, string[]> = Object.fromEntries(
+    allowedUnitsMap.entries(),
+  );
+
   // Field-tech gating: the "Pengajuan Operasional" button is enabled
   // whenever the actor has at least one ACTIVE FIELD_TECHNICIAN
   // assignment. Higher-rank roles (Supervisor+, PM, OM, Finance,
@@ -338,6 +351,7 @@ export default async function CashAdvancesPage() {
               canFieldOps ? undefined : t("newFieldOpsDisabled")
             }
             lookups={lookups}
+            allowedUnitsByProject={allowedUnitsByProject}
             canPickCoa={canPickCoa}
           />
           <NewCashAdvanceSheet
@@ -346,6 +360,8 @@ export default async function CashAdvancesPage() {
             disabledReason={canGeneral ? undefined : t("newGeneralDisabled")}
             canFieldOps={canFieldOps}
             canPickCoa={canPickCoa}
+            unitOptions={lookups.unit_pengaju}
+            allowedUnitsByProject={allowedUnitsByProject}
           />
         </div>
       </header>

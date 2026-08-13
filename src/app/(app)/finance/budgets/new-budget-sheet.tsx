@@ -36,6 +36,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  filterUnitOptions,
+  type UnitOption,
+} from "@/lib/finance/unit-pengaju-filter";
+import {
   createBudgetSchema,
   type CreateBudgetInput,
 } from "@/lib/validation/budget";
@@ -49,6 +53,7 @@ type FormValues = {
   fiscal_year: string;
   title: string;
   notes: string;
+  unit_pengaju: string;
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -58,9 +63,27 @@ const DEFAULT_VALUES: FormValues = {
   fiscal_year: String(CURRENT_YEAR),
   title: "",
   notes: "",
+  unit_pengaju: "",
 };
 
-export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
+export function NewBudgetSheet({
+  projects,
+  unitOptions: allUnitOptions = [],
+  allowedUnitsByProject = {},
+}: {
+  projects: ProjectOption[];
+  /**
+   * Tenant `unit_pengaju` lookup, sourced from
+   * `loadFieldOpsFormLookups()` so Field-Ops CA, General CA, and
+   * Budget all read from the same master list.
+   */
+  unitOptions?: readonly UnitOption[];
+  /**
+   * Per-project whitelist (migration 0086). Missing key or empty
+   * list = allow every option; see `filterUnitOptions()`.
+   */
+  allowedUnitsByProject?: Record<string, string[]>;
+}) {
   const t = useTranslations("budgets");
   const tf = useTranslations("budgets.form");
   const tCommon = useTranslations("common");
@@ -76,6 +99,7 @@ export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
         fiscal_year: Number(values.fiscal_year),
         title: values.title,
         notes: values.notes || undefined,
+        unit_pengaju: values.unit_pengaju || undefined,
       });
       if (parsed.success) return { values, errors: {} };
       const errors: Record<string, { type: string; message: string }> = {};
@@ -89,12 +113,31 @@ export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
     },
   });
 
+  const projectId = form.watch("project_id");
+  const currentUnit = form.watch("unit_pengaju");
+  const { unitOptions, unitFiltered } = React.useMemo(
+    () =>
+      filterUnitOptions({
+        projectId,
+        allUnitOptions,
+        allowedUnitsByProject,
+      }),
+    [projectId, allUnitOptions, allowedUnitsByProject],
+  );
+  React.useEffect(() => {
+    if (!currentUnit || !unitFiltered) return;
+    const stillAllowed = unitOptions.some((opt) => opt.label === currentUnit);
+    if (!stillAllowed) form.setValue("unit_pengaju", "", { shouldDirty: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, unitFiltered]);
+
   function onSubmit(values: FormValues) {
     const payload: CreateBudgetInput = {
       project_id: values.project_id,
       fiscal_year: Number(values.fiscal_year),
       title: values.title,
       notes: values.notes || undefined,
+      unit_pengaju: values.unit_pengaju || undefined,
     };
     startTransition(async () => {
       const result = await createBudgetAction(payload);
@@ -231,6 +274,48 @@ export function NewBudgetSheet({ projects }: { projects: ProjectOption[] }) {
                         placeholder={tf("notesPlaceholder")}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="unit_pengaju"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("unitPengaju")}</FormLabel>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      disabled={unitOptions.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              unitOptions.length === 0
+                                ? unitFiltered
+                                  ? tf("unitPengajuNoneAllowed")
+                                  : tf("unitPengajuEmpty")
+                                : tf("unitPengajuPlaceholder")
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {unitOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.label}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {unitFiltered ? (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {tf("unitPengajuFilteredHint")}
+                      </p>
+                    ) : null}
                     <FormMessage />
                   </FormItem>
                 )}

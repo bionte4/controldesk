@@ -16,6 +16,7 @@ import type { CanonicalApprovalSlot } from "@/lib/rbac/roles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { AiCopilot } from "@/components/ai/ai-copilot";
 import {
   Form,
   FormControl,
@@ -708,19 +709,36 @@ export function NewExpenseSheet({
               <FormField
                 control={form.control}
                 name="notes"
-                render={({ field }) => (
-                  <FormItem className="min-w-0">
-                    <FormLabel>{tf("notes")}</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        rows={2}
-                        {...field}
-                        placeholder={tf("notesPlaceholder")}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedProject = projects.find(
+                    (p) => p.id === form.watch("project_id"),
+                  );
+                  return (
+                    <FormItem className="min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <FormLabel>{tf("notes")}</FormLabel>
+                        <AiCopilot
+                          surface="expense_description"
+                          currentValue={field.value ?? ""}
+                          onAccept={(suggestion) => field.onChange(suggestion)}
+                          context={{
+                            amount: form.watch("amount_idr"),
+                            project_name: selectedProject?.label,
+                            category: form.watch("description"),
+                          }}
+                        />
+                      </div>
+                      <FormControl>
+                        <Textarea
+                          rows={2}
+                          {...field}
+                          placeholder={tf("notesPlaceholder")}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               {/* Row 5b: Late-submission justification.

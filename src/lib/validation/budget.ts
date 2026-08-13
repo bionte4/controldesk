@@ -67,6 +67,21 @@ export type BudgetCategory = z.infer<typeof budgetCategorySchema>;
 // ---------------------------------------------------------------------------
 // Header — createBudget.
 // ---------------------------------------------------------------------------
+/**
+ * Optional cost-centre tag (migration 0087). When set, the server
+ * action verifies it against `public.project_allowed_units` for the
+ * chosen project — empty whitelist means every active tenant lookup
+ * label is fine. Empty string coerces to undefined so the DB sees
+ * NULL rather than an empty text value that would violate the CHECK
+ * constraint added in the migration.
+ */
+export const unitPengajuField = z
+  .string()
+  .trim()
+  .max(120, "Unit Pengaju label is too long.")
+  .optional()
+  .transform((val) => (val === "" ? undefined : val));
+
 export const createBudgetSchema = z.object({
   project_id: uuidSchema,
   fiscal_year: z
@@ -85,6 +100,7 @@ export const createBudgetSchema = z.object({
     .max(2000)
     .optional()
     .transform((val) => (val === "" ? undefined : val)),
+  unit_pengaju: unitPengajuField,
 });
 export type CreateBudgetInput = z.infer<typeof createBudgetSchema>;
 

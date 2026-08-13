@@ -16,9 +16,16 @@ import { log } from "@/lib/observability/log";
  *     tenant-agnostic (e.g. workspace signup emails).
  *   • Falls back to a noop transport when SMTP is not configured
  *     anywhere (dev/test with `SMTP_HOST` unset).
- *   • Dynamically imports `nodemailer` so the module tree stays
- *     clean when the runtime does not need it (edge functions,
- *     unit tests, CI without the dependency installed).
+ *   • Imports `nodemailer` via a plain `await import("nodemailer")`
+ *     so Next.js's file tracer follows the reference and copies the
+ *     SDK into `.next/standalone/node_modules/`. Nodemailer IS a
+ *     hard dependency in `package.json` — the old `new Function
+ *     ("spec", "return import(spec))` bypass was intentional at one
+ *     point (to keep the tree clean on Edge / CI without the dep),
+ *     but it broke Docker production builds by hiding the import
+ *     from the tracer. Every workspace-signup email failed silently
+ *     with "mailer: nodemailer unavailable, falling back to noop"
+ *     until we removed the bypass.
  *
  * Contract:
  *   • Never throws. Failures are returned as `{status: "FAILED"}`.
@@ -211,11 +218,12 @@ async function buildTransporter(
   }
 
   try {
-    const dyn = new Function(
-      "spec",
-      "return import(spec);",
-    ) as (spec: string) => Promise<unknown>;
-    const mod = (await dyn("nodemailer")) as {
+    // Plain `await import(...)` — NOT the historical `new Function`
+    // bypass. See the module-level docblock for why: hiding the
+    // import from Next.js's file tracer produced a standalone Docker
+    // image without `nodemailer` in `node_modules`, and the mailer
+    // silently fell back to noop for every signup email.
+    const mod = (await import("nodemailer")) as unknown as {
       default?: { createTransport: (o: unknown) => NodemailerTransporter };
       createTransport?: (o: unknown) => NodemailerTransporter;
     };

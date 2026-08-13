@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
+  Briefcase,
   CalendarClock,
   ClipboardList,
   FileText,
@@ -45,6 +46,16 @@ export type EvaluationEmployeeOption = {
 };
 
 export type EvaluationTemplateOption = { id: string; name: string };
+
+export type EvaluationProjectCandidate = {
+  project_id: string;
+  project_name: string;
+  project_number: string | null;
+  primary_pm_id: string | null;
+  primary_pm_name: string | null;
+};
+
+const NO_PROJECT_VALUE = "__no_project__";
 
 /**
  * Compute the tone for the "days until contract ends" hint. The
@@ -91,9 +102,11 @@ function daysBetween(fromIso: string, toIso: string): number {
 export function NewEvaluationSheet({
   employees,
   templates,
+  projectCandidatesByEmployee,
 }: {
   employees: EvaluationEmployeeOption[];
   templates: EvaluationTemplateOption[];
+  projectCandidatesByEmployee?: Record<string, EvaluationProjectCandidate[]>;
 }) {
   const t = useTranslations("performance.form");
   const tCommon = useTranslations("common");
@@ -102,11 +115,13 @@ export function NewEvaluationSheet({
   const [open, setOpen] = React.useState(false);
   const [empId, setEmpId] = React.useState("");
   const [tplId, setTplId] = React.useState("");
+  const [projectId, setProjectId] = React.useState<string>("");
   const [pending, startTransition] = React.useTransition();
 
   function reset() {
     setEmpId("");
     setTplId("");
+    setProjectId("");
   }
 
   const selectedEmployee = React.useMemo(
@@ -116,6 +131,25 @@ export function NewEvaluationSheet({
   const selectedTemplate = React.useMemo(
     () => templates.find((t) => t.id === tplId) ?? null,
     [tplId, templates],
+  );
+
+  // Resetting `projectId` is handled inline in the employee-select
+  // callback below (see `onValueChange={...}`). Using an effect for
+  // this triggers React Compiler's cascading-render warning because
+  // `setProjectId('')` runs synchronously right after another
+  // setState.
+  const projectCandidates = React.useMemo<EvaluationProjectCandidate[]>(
+    () =>
+      empId ? projectCandidatesByEmployee?.[empId] ?? [] : [],
+    [empId, projectCandidatesByEmployee],
+  );
+
+  const selectedProject = React.useMemo(
+    () =>
+      projectId
+        ? projectCandidates.find((p) => p.project_id === projectId) ?? null
+        : null,
+    [projectId, projectCandidates],
   );
 
   const contractInfo = React.useMemo(() => {
@@ -134,6 +168,7 @@ export function NewEvaluationSheet({
       const res = await startEvaluationAction({
         employee_id: empId,
         template_id: tplId,
+        ...(projectId ? { project_id: projectId } : {}),
       });
       if (res.ok) {
         toast.success("Evaluation started.");
@@ -175,7 +210,13 @@ export function NewEvaluationSheet({
                 <UserRound className="size-4 text-muted-foreground" />
                 <span>{t("employee")}</span>
               </div>
-              <Select value={empId} onValueChange={(v) => setEmpId(v ?? "")}>
+              <Select
+                value={empId}
+                onValueChange={(v) => {
+                  setEmpId(v ?? "");
+                  setProjectId("");
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder={t("employeePlaceholder")} />
                 </SelectTrigger>
@@ -263,6 +304,82 @@ export function NewEvaluationSheet({
                 </div>
               )}
             </div>
+          </div>
+
+          {/*
+            Optional project context — surfaces the employee's ACTIVE
+            project assignments so SPV can attach the eval to the
+            proyek they were actually shipping. Reviewer preview
+            auto-resolves to that project's PRIMARY_PM.
+
+            Kept OUTSIDE the two-column grid so the dropdown gets full
+            width for long project names and the preview card can
+            stack under it on mobile.
+          */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Briefcase className="size-4 text-muted-foreground" />
+              <span>{t("projectContext")}</span>
+              <span className="text-[11px] font-normal text-muted-foreground">
+                · {t("optional")}
+              </span>
+            </div>
+            <Select
+              value={projectId || NO_PROJECT_VALUE}
+              onValueChange={(v) =>
+                setProjectId(v && v !== NO_PROJECT_VALUE ? v : "")
+              }
+              disabled={!empId}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t("projectContextPlaceholder")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_PROJECT_VALUE}>
+                  {t("projectContextNone")}
+                </SelectItem>
+                {projectCandidates.map((p) => (
+                  <SelectItem key={p.project_id} value={p.project_id}>
+                    <span>
+                      {p.project_number ? (
+                        <span className="text-xs font-mono text-muted-foreground mr-1.5">
+                          {p.project_number}
+                        </span>
+                      ) : null}
+                      {p.project_name}
+                      {p.primary_pm_name ? (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          · PM: {p.primary_pm_name}
+                        </span>
+                      ) : null}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {empId && projectCandidates.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">
+                {t("projectContextEmpty")}
+              </p>
+            ) : null}
+            {selectedProject ? (
+              <div className="glass rounded-lg border p-3 text-sm">
+                <div className="font-medium">
+                  {selectedProject.project_name}
+                </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {selectedProject.primary_pm_name ? (
+                    <>
+                      {t("projectReviewerPreview", {
+                        name: selectedProject.primary_pm_name,
+                      })}
+                    </>
+                  ) : (
+                    <>{t("projectReviewerMissing")}</>
+                  )}
+                </p>
+              </div>
+            ) : null}
           </div>
 
           {/*

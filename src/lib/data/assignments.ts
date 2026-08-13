@@ -283,3 +283,93 @@ export const loadEmployeeOptions = cache(async (): Promise<EmployeeOption[]> => 
   if (error) throw new Error(error.message);
   return (data ?? []) as EmployeeOption[];
 });
+
+// ---------------------------------------------------------------------------
+// Assignment lookups by employee — used by any module that writes a
+// `project_id` reference on behalf of an employee (roster, timesheet,
+// performance, cash-advance, expense, …) to keep those writes tied to
+// an ACTIVE assignment.
+// ---------------------------------------------------------------------------
+
+/**
+ * Batch loader — returns a map keyed by `employee_id` with the set
+ * of ACTIVE `project_id`s the employee is currently assigned to. Both
+ * `project_pm_assignments` (PM role) and `project_employee_assignments`
+ * (member role) count — a PM assigned to a project can also log
+ * timesheet / roster hours to it.
+ *
+ * Callers pass one or many employee ids in a single request; the
+ * resulting map is safe to consume synchronously in a client props
+ * payload (plain object serialization).
+ */
+export const loadActiveProjectIdsByEmployee = cache(
+  async (
+    employeeIds: readonly string[],
+  ): Promise<Map<string, Set<string>>> => {
+    const map = new Map<string, Set<string>>();
+    if (employeeIds.length === 0) return map;
+    const supabase = await createClient();
+
+    const [{ data: pea }, { data: pmA }] = await Promise.all([
+      supabase
+        .from("project_employee_assignments")
+        .select("employee_id, project_id")
+        .in("employee_id", employeeIds as string[])
+        .eq("status", "ACTIVE"),
+      supabase
+        .from("project_pm_assignments")
+        .select("pm_employee_id, project_id")
+        .in("pm_employee_id", employeeIds as string[])
+        .eq("status", "ACTIVE"),
+    ]);
+
+    const add = (empId: string, projId: string) => {
+      const set = map.get(empId) ?? new Set<string>();
+      set.add(projId);
+      map.set(empId, set);
+    };
+    for (const r of pea ?? []) add(r.employee_id, r.project_id);
+    for (const r of pmA ?? []) add(r.pm_employee_id, r.project_id);
+    return map;
+  },
+);
+
+/**
+ * Server-side guard — returns `null` when `employee_id` has an
+ * ACTIVE assignment (member OR PM) on `project_id`, or an error
+ * message when not. Callers use it inside a Server Action right
+ * before an INSERT / UPDATE that carries `project_id` to prevent
+ * cross-project data leaks (e.g. an engineer logging timesheet
+ * hours to a project they aren't assigned to).
+ *
+ * Passes `null` project_id straight through as success — the guard
+ * is a no-op when there is no project context. Callers gate on
+ * `if (input.project_id) await assertEmployeeAssignedToProject(...)`.
+ */
+export async function assertEmployeeAssignedToProject(input: {
+  employeeId: string;
+  projectId: string;
+}): Promise<string | null> {
+  const supabase = await createClient();
+  const [{ data: pea, error: peaErr }, { data: pma, error: pmaErr }] =
+    await Promise.all([
+      supabase
+        .from("project_employee_assignments")
+        .select("id")
+        .eq("employee_id", input.employeeId)
+        .eq("project_id", input.projectId)
+        .eq("status", "ACTIVE")
+        .maybeSingle(),
+      supabase
+        .from("project_pm_assignments")
+        .select("id")
+        .eq("pm_employee_id", input.employeeId)
+        .eq("project_id", input.projectId)
+        .eq("status", "ACTIVE")
+        .maybeSingle(),
+    ]);
+  if (peaErr) return peaErr.message;
+  if (pmaErr) return pmaErr.message;
+  if (pea || pma) return null;
+  return "The selected project is not an active assignment for this employee.";
+}

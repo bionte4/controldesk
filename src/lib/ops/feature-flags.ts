@@ -76,6 +76,12 @@ export const FEATURE_REGISTRY = {
       "PDF-exportable monthly reports with slice B (expense register, budget burn, utilization).",
     defaultEnabled: true,
   },
+  ai_chatbot_tools: {
+    label: "AI chatbot tool calling (Level 2)",
+    description:
+      "Enables `/help?tab=ask` to call read-only tools that surface the caller's own tenant data (pending approvals, timesheet, project status, budget remaining). Turning this OFF keeps the chatbot at Level 1 (docs-only RAG) — useful for tenants with heightened data-handling requirements. Level 3 inline copilot and Level 1 chatbot are unaffected.",
+    defaultEnabled: true,
+  },
 } as const satisfies Record<
   string,
   { label: string; description: string; defaultEnabled: boolean }

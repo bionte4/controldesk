@@ -17,6 +17,7 @@ describe("FEATURE_REGISTRY", () => {
       "whatsapp_notifications",
       "bulk_import",
       "advanced_reports",
+      "ai_chatbot_tools",
     ]) {
       expect(FEATURE_REGISTRY).toHaveProperty(key);
     }
@@ -41,6 +42,10 @@ describe("FEATURE_REGISTRY", () => {
   it("wbs_gantt + ai_insights are on by default (GA)", () => {
     expect(FEATURE_REGISTRY.wbs_gantt.defaultEnabled).toBe(true);
     expect(FEATURE_REGISTRY.ai_insights.defaultEnabled).toBe(true);
+  });
+
+  it("ai_chatbot_tools defaults ON — Level 2 was GA before this flag existed and turning it OFF would surprise tenants that already depend on it", () => {
+    expect(FEATURE_REGISTRY.ai_chatbot_tools.defaultEnabled).toBe(true);
   });
 });
 

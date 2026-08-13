@@ -15,6 +15,8 @@ import {
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
+import { loadAllowedUnitsForProjects } from "@/lib/data/project-allowed-units";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
 import { BUDGET_STATUS_LABEL, BUDGET_STATUS_TONE } from "@/lib/budgets/state";
@@ -86,11 +88,23 @@ export default async function BudgetsPage() {
     redirect("/dashboard?error=forbidden");
   }
 
-  const [budgets, projectOptions, t] = await Promise.all([
+  const [budgets, projectOptions, lookups, t] = await Promise.all([
     loadBudgets(),
     loadProjectOptions(),
+    loadFieldOpsFormLookups(),
     getTranslations("budgets"),
   ]);
+
+  // Migration 0087 — Unit Pengaju dropdown for the New Budget sheet.
+  // Reuses the Field-Ops lookups (single `unit_pengaju` master list)
+  // and the same per-project whitelist so accounting only maintains
+  // one policy surface.
+  const allowedUnitsMap = await loadAllowedUnitsForProjects(
+    projectOptions.map((p) => p.id),
+  );
+  const allowedUnitsByProject: Record<string, string[]> = Object.fromEntries(
+    allowedUnitsMap.entries(),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -104,7 +118,11 @@ export default async function BudgetsPage() {
             {t("subtitle")}
           </p>
         </div>
-        <NewBudgetSheet projects={projectOptions} />
+        <NewBudgetSheet
+          projects={projectOptions}
+          unitOptions={lookups.unit_pengaju}
+          allowedUnitsByProject={allowedUnitsByProject}
+        />
       </header>
 
       {budgets.length === 0 ? (

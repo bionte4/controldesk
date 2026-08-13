@@ -78,6 +78,76 @@
     "name": "ControlDesk",
     "tagline": "One workspace for projects, people, cash, and clients."
   },
+  "help": {
+    "eyebrow": "Help Center",
+    "title": "Help & guides",
+    "subtitle": "Browse user guides, approval workflows, and module references. Content ships with the product and stays up to date.",
+    "searchPlaceholder": "Search articles — e.g. \"submit expense\", \"field ops cash advance\"...",
+    "clearSearch": "Clear search",
+    "searchResultsLabel": "Search results",
+    "noResults": "No results for \"{query}\". Try different keywords or browse the categories below.",
+    "readArticle": "Read article",
+    "backToIndex": "Back to Help Center",
+    "openFullGuide": "Open full guide",
+    "hintTrigger": "Show help: {title}",
+    "tabBrowse": "Browse articles",
+    "tabAsk": "Ask AI",
+    "translationFallback": "This article is not yet available in English — showing the Indonesian version. Ask your admin to contribute a translation via a pull request against docs/…",
+    "ask": {
+      "welcomeTitle": "Hi! I'm the ControlDesk documentation assistant.",
+      "welcomeBody": "I only answer from product docs — not from your project or finance data. Great for 'how do I…' and 'what is…' questions.",
+      "suggestion1": "How do I submit an expense and what's the approval flow?",
+      "suggestion2": "What's the difference between General and Field Ops cash advances?",
+      "suggestion3": "Who can approve a budget request over IDR 50 million?",
+      "inputPlaceholder": "Type your question… (Enter to send, Shift+Enter for a new line)",
+      "footerHint": "Answers come from the docs. Verify via the citation links in each reply.",
+      "send": "Send",
+      "sending": "Sending…",
+      "reset": "New conversation",
+      "history": {
+        "title": "Recent conversations",
+        "empty": "No saved conversations yet.",
+        "newButton": "New conversation",
+        "loadFailed": "Failed to load history.",
+        "resumeFailed": "Failed to open the conversation.",
+        "deleteFailed": "Failed to delete the conversation.",
+        "delete": "Delete conversation",
+        "deleteConfirm": "Permanently delete this conversation?",
+        "untitled": "Untitled conversation",
+        "loading": "Loading…",
+        "messagesCount": "{count, plural, =1 {# message} other {# messages}}",
+        "srToggleOpen": "Show conversation history",
+        "srToggleClose": "Hide conversation history"
+      },
+      "error": {
+        "rate_limitedTitle": "Slow down",
+        "rate_limitedBody": "You've sent too many messages in a short time. Please wait a minute and try again.",
+        "quota_exceededTitle": "Daily AI quota reached",
+        "quota_exceededBody": "This workspace has hit today's AI token cap. Ask your admin to raise the quota, or try again tomorrow.",
+        "not_configuredTitle": "AI is not configured",
+        "not_configuredBody": "An admin has not enabled AI in Settings → Integrations → AI. Ask them to configure it first.",
+        "networkTitle": "Connection problem",
+        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again."
+      }
+    }
+  },
+  "aiCopilot": {
+    "triggerLabel": "Draft with AI",
+    "title": "AI copilot",
+    "streaming": "Drafting…",
+    "thinking": "Waiting for the AI to compose a suggestion…",
+    "emptyPreview": "No suggestion yet.",
+    "cancel": "Cancel",
+    "regenerate": "Regenerate",
+    "accept": "Use this",
+    "footerHint": "The AI drafts from what you've already typed and the form context. Verify before saving.",
+    "error": {
+      "rate_limited": "Too many AI requests in a short time. Please wait a moment.",
+      "quota_exceeded": "This workspace has hit today's AI token cap.",
+      "not_configured": "AI is not configured for this workspace yet. Ask an admin to enable it in Settings → Integrations → AI.",
+      "network": "Couldn't reach the AI service. Please try again."
+    }
+  },
   "profile": {
     "kicker": "My account",
     "form": {
@@ -366,7 +436,8 @@
       "integrations": "Integrations",
       "approvalThresholds": "Approval thresholds",
       "capabilities": "Capabilities",
-      "features": "Active features"
+      "features": "Active features",
+      "help": "Help"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",
@@ -521,7 +592,15 @@
       "returnedBody": "PM asked you to adjust the evaluation before resubmitting.",
       "approvedTitle": "Evaluation approved by OM",
       "rejectedTitle": "Evaluation rejected by OM",
-      "finalizedTitle": "Evaluation finalized"
+      "finalizedTitle": "Evaluation finalized",
+      "projectReviewRequested": {
+        "title": "Project review requested — evaluation for {name}",
+        "body": "SPV tagged you as the project reviewer for {name}'s evaluation. Please add your notes before the OM decides."
+      },
+      "projectReviewed": {
+        "title": "Project reviewer notes received",
+        "body": "The project reviewer submitted their notes. Consider them before forwarding to PM."
+      }
     },
     "upk": {
       "draftTitle": "UPK draft awaiting your input",
@@ -1453,6 +1532,11 @@
       "titleField": "Title",
       "notes": "Notes (optional)",
       "notesPlaceholder": "Context or assumptions for reviewers…",
+      "unitPengaju": "Requesting Unit",
+      "unitPengajuPlaceholder": "Pick the unit bearing the cost…",
+      "unitPengajuFilteredHint": "List narrowed by this project's policy.",
+      "unitPengajuEmpty": "Admin has not populated the unit list yet.",
+      "unitPengajuNoneAllowed": "This project allows no units — contact admin.",
       "submit": "Create budget",
       "created": "Budget draft created."
     },
@@ -1641,6 +1725,11 @@
       "coaEmptyHint": "Finance has not linked any Chart of Accounts to this project's budget lines yet.",
       "coaNone": "— No CoA (Finance will classify) —",
       "coaHint": "Only CoAs registered on this project's budget lines are shown.",
+      "unitPengaju": "Requesting Unit",
+      "unitPengajuPlaceholder": "Pick the unit bearing the cost…",
+      "unitPengajuFilteredHint": "List narrowed by this project's policy.",
+      "unitPengajuEmpty": "Admin has not populated the unit list yet.",
+      "unitPengajuNoneAllowed": "This project allows no units — contact admin.",
       "chainPreviewTitle": "Approval chain",
       "chainPreviewEmpty": "Enter an amount to preview approvers.",
       "chainPreviewAuto": "Instant approval (below thresholds).",
@@ -1805,6 +1894,8 @@
       "ticketNumberPlaceholder": "SPK-2026-…",
       "unitPengaju": "Unit Pengaju",
       "unitPengajuPlaceholder": "Ops-Nusa / NOC-Jakarta …",
+      "unitPengajuFilteredHint": "List narrowed by this project's policy.",
+      "unitPengajuNoneAllowed": "This project allows no units — contact admin.",
       "justification": "Justifikasi",
       "justificationPlaceholder": "Ringkas kenapa kunjungan/kerja lapangan ini perlu…",
       "cidCompany": "CID / Nama Perusahaan",
@@ -1907,6 +1998,10 @@
       "coaPlaceholder": "Select GL account…",
       "coaNone": "— No CoA —",
       "coaHint": "Optional. Only active, postable accounts are shown.",
+      "unitPengaju": "Requesting Unit",
+      "unitPengajuPlaceholder": "Pick the unit bearing the cost…",
+      "unitPengajuNone": "— Unspecified —",
+      "unitPengajuHint": "Optional. Cost-centre tag for reporting; petty-cash vouchers are not project-scoped.",
       "receiptUrl": "Receipt URL (optional)",
       "submit": "Record voucher",
       "recorded": "Voucher recorded."
@@ -3143,7 +3238,8 @@
       "employment": "Employment",
       "joinDate": "Join date",
       "endDate": "End date",
-      "availability": "Availability"
+      "availability": "Availability",
+      "actions": "Actions"
     },
     "employmentType": {
       "PERMANENT": "Permanent",
@@ -3159,9 +3255,26 @@
       "ON_LEAVE": "On leave",
       "INACTIVE": "Inactive"
     },
+    "role": {
+      "EMPLOYEE": "Employee",
+      "SUPERVISOR": "Supervisor",
+      "PROJECT_MANAGER": "Project Manager",
+      "OPERATIONS_MANAGER": "Operations Manager",
+      "HEAD_MANAGER": "Head Manager",
+      "GENERAL_MANAGER": "General Manager",
+      "PETTY_CASH_CUSTODIAN": "Petty Cash Custodian",
+      "LEAD_FINANCE": "Lead Finance",
+      "HR_ADMIN": "HR Admin",
+      "TENANT_ADMIN": "Tenant Admin"
+    },
     "form": {
       "createTitle": "New employee",
       "createDescription": "You can add an employee before they activate a system account. Invite them later from the row menu.",
+      "editTitle": "Edit employee",
+      "editDescription": "Update this employee's details. Every change is recorded in the audit log.",
+      "edit": "Edit",
+      "rowActions": "Row actions",
+      "updated": "Employee {name} updated.",
       "firstName": "First name",
       "lastName": "Last name",
       "email": "Email",
@@ -3170,6 +3283,12 @@
       "selectDepartment": "Select department…",
       "position": "Position",
       "selectPosition": "Select position…",
+      "role": "Role (RBAC)",
+      "roleHint": "Drives approval chains, capability gates, and dashboard scope. Change later carries an audit-log entry.",
+      "reportsTo": "Reports to",
+      "reportsToNone": "— No manager",
+      "reportsToHint": "Optional. Used for org-chart views and the manager-scope dashboard (OM cascade).",
+      "reportsToEmptyHint": "No existing employees to report to yet — add managers first, or leave blank.",
       "joinDate": "Join date",
       "employment": "Employment",
       "endDate": "End date",
@@ -3638,7 +3757,14 @@
       "extensionEndDateHint": "Enter manually. Must be after {currentEnd}.",
       "extensionPreviewLabel": "Extension",
       "extensionDateAfterCurrent": "New contract end date must be after {currentEnd}.",
-      "notExtendHint": "After OM approval, a UPK draft will be auto-created for finance."
+      "notExtendHint": "After OM approval, a UPK draft will be auto-created for finance.",
+      "projectContext": "Project context",
+      "projectContextPlaceholder": "Pick a covered project (optional)…",
+      "projectContextNone": "No project context (structural evaluation)",
+      "projectContextEmpty": "This employee has no active project assignments — structural evaluation only.",
+      "projectReviewerPreview": "Auto-assigned project reviewer: {name}. The reviewer may add notes before the OM decides.",
+      "projectReviewerMissing": "This project has no PRIMARY_PM yet — HR can pick a reviewer later from the detail page.",
+      "optional": "optional"
     },
     "detail": {
       "kicker": "Evaluation",
@@ -3656,7 +3782,24 @@
       "critGoal": "Goal achievement",
       "critManajemen": "Management average",
       "critCompetency": "Competency met",
-      "extensionBadge": "Contract extension"
+      "extensionBadge": "Contract extension",
+      "projectReviewer": {
+        "title": "Project review",
+        "subtitle": "Feedback from the PM leading the project this employee is assigned to. Runs in parallel with the SPV → PM → OM chain.",
+        "projectLabel": "Covered project",
+        "reviewerLabel": "Project reviewer",
+        "reviewerMissing": "Not set — ask HR to assign a reviewer",
+        "reviewedAtHint": "Latest notes submitted {date}",
+        "notesLabel": "Project reviewer notes",
+        "notesPlaceholder": "Day-to-day observations, delivery quality, technical fit, role suitability, readiness for renewal…",
+        "notesHint": "Visible to SPV, PM, OM, and HR. Not visible to the employee.",
+        "submitNotes": "Submit notes",
+        "updateNotes": "Update notes",
+        "saved": "Project reviewer notes saved.",
+        "errorEmpty": "Please add project notes first.",
+        "pending": "No notes from the project reviewer yet.",
+        "lockedForReviewer": "The evaluation is past the OM step — notes are locked."
+      }
     },
     "templates": {
       "title": "Evaluation templates",

@@ -67,7 +67,7 @@ export default async function Home() {
             <Button
               size="sm"
               nativeButton={false}
-              render={<Link href="/register" />}
+              render={<Link href="/register-org" />}
             >
               {t("ctaCreateWorkspace")}
               <ArrowUpRight className="size-3.5" />
@@ -106,7 +106,7 @@ export default async function Home() {
           <Button
             size="lg"
             nativeButton={false}
-            render={<Link href="/register" />}
+            render={<Link href="/register-org" />}
           >
             {t("ctaPrimary")}
             <ArrowUpRight className="size-4" />

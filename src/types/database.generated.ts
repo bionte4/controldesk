@@ -899,6 +899,7 @@ export type Database = {
           tenant_id: string
           title: string
           total_planned_amount: number
+          unit_pengaju: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -917,6 +918,7 @@ export type Database = {
           tenant_id: string
           title: string
           total_planned_amount?: number
+          unit_pengaju?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -935,6 +937,7 @@ export type Database = {
           tenant_id?: string
           title?: string
           total_planned_amount?: number
+          unit_pengaju?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1457,6 +1460,7 @@ export type Database = {
           supervisor_approved_at: string | null
           supervisor_approver_id: string | null
           tenant_id: string
+          unit_pengaju: string | null
           updated_at: string
         }
         Insert: {
@@ -1494,6 +1498,7 @@ export type Database = {
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
           tenant_id: string
+          unit_pengaju?: string | null
           updated_at?: string
         }
         Update: {
@@ -1531,6 +1536,7 @@ export type Database = {
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
           tenant_id?: string
+          unit_pengaju?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -3764,6 +3770,10 @@ export type Database = {
           pm_employee_id: string | null
           pm_notes: string | null
           pm_reviewed_at: string | null
+          project_id: string | null
+          project_reviewed_at: string | null
+          project_reviewer_employee_id: string | null
+          project_reviewer_notes: string | null
           spv_employee_id: string
           spv_notes: string | null
           spv_recommendation:
@@ -3798,6 +3808,10 @@ export type Database = {
           pm_employee_id?: string | null
           pm_notes?: string | null
           pm_reviewed_at?: string | null
+          project_id?: string | null
+          project_reviewed_at?: string | null
+          project_reviewer_employee_id?: string | null
+          project_reviewer_notes?: string | null
           spv_employee_id: string
           spv_notes?: string | null
           spv_recommendation?:
@@ -3832,6 +3846,10 @@ export type Database = {
           pm_employee_id?: string | null
           pm_notes?: string | null
           pm_reviewed_at?: string | null
+          project_id?: string | null
+          project_reviewed_at?: string | null
+          project_reviewer_employee_id?: string | null
+          project_reviewer_notes?: string | null
           spv_employee_id?: string
           spv_notes?: string | null
           spv_recommendation?:
@@ -3905,6 +3923,34 @@ export type Database = {
           {
             foreignKeyName: "performance_evaluations_pm_employee_id_fkey"
             columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
             isOneToOne: false
             referencedRelation: "v_employee_workload"
             referencedColumns: ["employee_id"]
@@ -4187,6 +4233,7 @@ export type Database = {
           receipt_url: string | null
           status: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id: string
+          unit_pengaju: string | null
           updated_at: string
           void_reason: string | null
           voided_at: string | null
@@ -4205,6 +4252,7 @@ export type Database = {
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id: string
+          unit_pengaju?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null
@@ -4223,6 +4271,7 @@ export type Database = {
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id?: string
+          unit_pengaju?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null
@@ -4794,6 +4843,72 @@ export type Database = {
           },
           {
             foreignKeyName: "portal_notifications_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_allowed_units: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          tenant_id: string
+          unit_label: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          tenant_id: string
+          unit_label: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          tenant_id?: string
+          unit_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_allowed_units_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allowed_units_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allowed_units_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "project_allowed_units_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_allowed_units_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -6568,6 +6683,116 @@ export type Database = {
           },
         ]
       }
+      tenant_chat_conversations: {
+        Row: {
+          created_at: string
+          employee_id: string
+          id: string
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          employee_id: string
+          id?: string
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          employee_id?: string
+          id?: string
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_chat_conversations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_chat_conversations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_chat_conversations_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "tenant_chat_conversations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          retrieval: Json | null
+          role: string
+          tenant_id: string
+          tool_calls: Json | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          retrieval?: Json | null
+          role: string
+          tenant_id: string
+          tool_calls?: Json | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          retrieval?: Json | null
+          role?: string
+          tenant_id?: string
+          tool_calls?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_chat_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_chat_messages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_feature_flags: {
         Row: {
           enabled: boolean
@@ -7950,6 +8175,10 @@ export type Database = {
         }[]
       }
       seed_default_coa: { Args: { p_tenant: string }; Returns: undefined }
+      seed_default_eval_templates: {
+        Args: { p_tenant: string }
+        Returns: undefined
+      }
       seed_default_master_data: {
         Args: { p_tenant: string }
         Returns: undefined
@@ -8225,6 +8454,8 @@ export type Database = {
         | "TIMESHEET_REJECTED"
         | "BULK_IMPORT_COMPLETED"
         | "APPROVAL_IDLE_24H"
+        | "EVALUATION_PROJECT_REVIEW_REQUESTED"
+        | "EVALUATION_PROJECT_REVIEWED"
       payroll_period_status: "DRAFT" | "FINALIZED"
       petty_cash_replenishment_status:
         | "PENDING_FINANCE"
@@ -8743,6 +8974,8 @@ export const Constants = {
         "TIMESHEET_REJECTED",
         "BULK_IMPORT_COMPLETED",
         "APPROVAL_IDLE_24H",
+        "EVALUATION_PROJECT_REVIEW_REQUESTED",
+        "EVALUATION_PROJECT_REVIEWED",
       ],
       payroll_period_status: ["DRAFT", "FINALIZED"],
       petty_cash_replenishment_status: [

@@ -43,8 +43,10 @@ import {
 import { recordPettyCashVoucherAction } from "./actions";
 
 export type CoaOption = { id: string; code: string; name: string };
+export type UnitOption = { id: string; label: string };
 
 const COA_NONE = "__none__";
+const UNIT_NONE = "__unit_none__";
 
 type FormValues = {
   amount_idr: string;
@@ -53,6 +55,7 @@ type FormValues = {
   description: string;
   incurred_on: string;
   receipt_url: string;
+  unit_pengaju: string;
 };
 
 const DEFAULT_VALUES: FormValues = {
@@ -62,11 +65,13 @@ const DEFAULT_VALUES: FormValues = {
   description: "",
   incurred_on: new Date().toISOString().slice(0, 10),
   receipt_url: "",
+  unit_pengaju: "",
 };
 
 export function NewVoucherSheet({
   fundId,
   coaOptions = [],
+  unitOptions = [],
 }: {
   fundId: string;
   /**
@@ -75,6 +80,13 @@ export function NewVoucherSheet({
    * we default to showing the picker whenever accounts exist.
    */
   coaOptions?: readonly CoaOption[];
+  /**
+   * Tenant `unit_pengaju` lookup (migration 0087). Petty-cash
+   * vouchers are attributed by `fund_id`, not `project_id`, so no
+   * per-project narrowing applies — every active tenant label is
+   * a valid choice.
+   */
+  unitOptions?: readonly UnitOption[];
 }) {
   const t = useTranslations("pettyCash");
   const tf = useTranslations("pettyCash.voucherForm");
@@ -97,6 +109,10 @@ export function NewVoucherSheet({
         description: values.description,
         incurred_on: values.incurred_on,
         receipt_url: values.receipt_url || undefined,
+        unit_pengaju:
+          values.unit_pengaju && values.unit_pengaju !== UNIT_NONE
+            ? values.unit_pengaju
+            : undefined,
       });
       if (parsed.success) return { values, errors: {} };
       const errors: Record<string, { type: string; message: string }> = {};
@@ -122,6 +138,10 @@ export function NewVoucherSheet({
       description: values.description,
       incurred_on: values.incurred_on,
       receipt_url: values.receipt_url || undefined,
+      unit_pengaju:
+        values.unit_pengaju && values.unit_pengaju !== UNIT_NONE
+          ? values.unit_pengaju
+          : undefined,
     };
     startTransition(async () => {
       const result = await recordPettyCashVoucherAction(payload);
@@ -267,6 +287,49 @@ export function NewVoucherSheet({
                     </Select>
                     <p className="text-[10px] text-muted-foreground">
                       {tf("coaHint")}
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+
+            {unitOptions.length > 0 ? (
+              <FormField
+                control={form.control}
+                name="unit_pengaju"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("unitPengaju")}</FormLabel>
+                    <Select
+                      value={field.value || UNIT_NONE}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={tf("unitPengajuPlaceholder")}>
+                            {(value) => {
+                              if (!value || value === UNIT_NONE) {
+                                return tf("unitPengajuNone");
+                              }
+                              return value;
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent alignItemWithTrigger={false}>
+                        <SelectItem value={UNIT_NONE}>
+                          {tf("unitPengajuNone")}
+                        </SelectItem>
+                        {unitOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.label}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[10px] text-muted-foreground">
+                      {tf("unitPengajuHint")}
                     </p>
                     <FormMessage />
                   </FormItem>

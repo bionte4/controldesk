@@ -5,7 +5,7 @@ import { cache } from "react";
 import { sendEmail } from "@/lib/notify/mailer";
 import { renderEmailBody } from "@/lib/notify/templates/skeleton";
 import { log } from "@/lib/observability/log";
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getRootDomain } from "@/lib/tenant/resolve";
 import type { NotificationKind } from "@/types/database";
 
@@ -25,12 +25,30 @@ import { isChannelEnabled } from "./preferences";
  *      spam like every timesheet approval hitting the inbox.
  *   2. `isChannelEnabled(EMAIL)` — user must not have opted out of
  *      EMAIL for the kind's category in Preferences.
- *   3. Recipient must have an `employees.email` row on file.
- *   4. Tenant metadata must load (slug + name) — needed for the
- *      absolute CTA URL and email header.
+ *   3. Recipient must have an `employees.email` row on file **inside
+ *      the caller-supplied tenant** (explicit `.eq("tenant_id", …)`).
+ *   4. Tenant metadata must load AND the returned row's id must equal
+ *      the caller-supplied tenantId — defensive equality check to
+ *      catch any hypothetical bug that returns a foreign row.
  *
- * Each dispatched email lands as one row in `email_outbox` — success
- * or failure — so ops can trace "who was supposed to be notified".
+ * ## Tenant isolation
+ *
+ * We use `createServiceRoleClient()` here instead of a session client
+ * for two reasons:
+ *   1. The outbox RLS policy only allows service_role INSERT; using
+ *      the session client silently fails the audit row (email sent
+ *      but no `email_outbox` trace — ops cannot answer "was user X
+ *      supposed to be emailed?").
+ *   2. `notifyUser()` is called from BOTH Server Actions (session
+ *      context) AND cron routes (no session). One code path must
+ *      work in both worlds.
+ *
+ * Service-role bypasses RLS, so tenant isolation now rests on THREE
+ * explicit filters:
+ *   • `employees.tenant_id = input.tenantId` on the recipient query.
+ *   • `tenants.id = input.tenantId` on the tenant meta query.
+ *   • `tenant.id === input.tenantId` sanity check post-load.
+ * A cross-tenant unit test locks this in.
  *
  * `?from=email` is appended to the CTA URL so downstream approval
  * server actions can log `via_email=true` in the audit trail. Non-goal
@@ -56,7 +74,7 @@ export async function dispatchNotificationEmail(input: {
   });
   if (!allowed) return;
 
-  const supabase = await createClient();
+  const supabase = createServiceRoleClient();
 
   const recipient = await loadRecipient(supabase, {
     tenantId: input.tenantId,
@@ -75,6 +93,18 @@ export async function dispatchNotificationEmail(input: {
   if (!tenant) {
     log.warn("email_dispatch_missing_tenant", {
       tenant_id: input.tenantId,
+      kind: input.kind,
+    });
+    return;
+  }
+  // Defense-in-depth: the query filters on `id = input.tenantId`, so
+  // the returned row MUST match. If it doesn't, something is very wrong
+  // (schema drift, mocked Supabase in a test that returns a foreign
+  // row, or a Postgres bug). Bail rather than send to the wrong tenant.
+  if (tenant.id !== input.tenantId) {
+    log.error("email_dispatch_tenant_mismatch", {
+      tenant_id_expected: input.tenantId,
+      tenant_id_loaded: tenant.id,
       kind: input.kind,
     });
     return;
@@ -159,7 +189,7 @@ type Recipient = {
  * dedup benefit within a single Server Action fan-out.
  */
 async function loadRecipient(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   input: { tenantId: string; userId: string },
 ): Promise<Recipient | null> {
   const { data } = await supabase
@@ -176,25 +206,31 @@ async function loadRecipient(
   };
 }
 
-type TenantMeta = { name: string; slug: string };
+type TenantMeta = { id: string; name: string; slug: string };
 
 /**
- * Load tenant name + slug. Wrapped in `cache()` because `notifyRoles()`
- * fan-out calls `notifyUser()` many times for the same tenant in one
- * request — no need to hit `tenants` for every recipient.
+ * Load tenant id + name + slug. `id` is projected so the caller can
+ * verify the returned row actually matches the requested tenantId
+ * (defense-in-depth against schema drift or mocking bugs).
+ *
+ * Wrapped in `cache()` because `notifyRoles()` fan-out calls
+ * `notifyUser()` many times for the same tenant in one request — no
+ * need to hit `tenants` for every recipient. `cache()` scope is
+ * per-render (per request), so cache never bleeds across tenants.
  */
 const loadTenantMeta = cache(
   async (
-    supabase: Awaited<ReturnType<typeof createClient>>,
+    supabase: ReturnType<typeof createServiceRoleClient>,
     tenantId: string,
   ): Promise<TenantMeta | null> => {
     const { data } = await supabase
       .from("tenants")
-      .select("name, slug")
+      .select("id, name, slug")
       .eq("id", tenantId)
       .maybeSingle();
     if (!data) return null;
     return {
+      id: (data.id as string) ?? "",
       name: (data.name as string) ?? "ControlDesk",
       slug: (data.slug as string) ?? "",
     };

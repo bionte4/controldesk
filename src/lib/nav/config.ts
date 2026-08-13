@@ -1,6 +1,5 @@
 import {
   Archive,
-  ArrowLeftRight,
   BadgeDollarSign,
   Banknote,
   BookOpen,
@@ -138,13 +137,15 @@ export const NAV_SECTIONS: NavSection[] = [
       // /hr/employees (People > Karyawan) as of the Employees module. The
       // legacy `/team` URL still resolves via a server redirect so old
       // bookmarks remain valid; see `src/app/(app)/team/page.tsx`.
-      {
-        titleKey: "handovers",
-        href: "/handovers",
-        icon: ArrowLeftRight,
-        // PM handover notes — capability `view_handover`.
-        capabilityId: "view_handover",
-      },
+      //
+      // NOTE: "PM Handovers" nav entry retired per .cursorrules §13.
+      // The dedicated module is DEPRECATED in favour of editing
+      // `project_employee_assignments` directly (set outgoing PM to
+      // `Completed`, insert new row for the incoming PM). The
+      // `/handovers` route still resolves for backward-compat until
+      // the Fase 0.4 migration drops the `pm_handovers` table
+      // entirely, but we no longer surface it in the sidebar so new
+      // tenants don't discover a workflow that's going away.
     ],
   },
   {
@@ -297,6 +298,15 @@ export const NAV_SECTIONS: NavSection[] = [
         titleKey: "preferences",
         href: "/settings/preferences",
         icon: Sparkles,
+      },
+      {
+        // In-app knowledge base — visible to every authenticated user
+        // for the same reason preferences is (universal, non-admin).
+        // Content is static from `docs/`; no RLS surface. See
+        // `src/lib/help/articles.ts` for the manifest.
+        titleKey: "help",
+        href: "/help",
+        icon: BookOpen,
       },
       {
         titleKey: "users",

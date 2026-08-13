@@ -8,6 +8,23 @@ tetap sinkron dengan kode.
 Docs di tree ini menjelaskan "bagaimana" — cara menjalankan, mengembangkan,
 dan mengoperasikan ControlDesk. `.cursorrules` adalah "apa" dan "kenapa".
 
+> **End-user link**: Kalau Anda adalah pengguna aplikasi (bukan developer),
+> subset user-facing dari docs ini juga tersedia langsung di dalam aplikasi
+> pada route `/help` — search-friendly, tanpa perlu clone repo. Manifest-nya
+> di [`src/lib/help/articles.ts`](../src/lib/help/articles.ts). Untuk
+> menambah artikel baru: tulis Markdown-nya di `docs/`, lalu tambahkan
+> satu baris di manifest tersebut.
+>
+> **Translation (opsional per locale)**: Bahasa Indonesia adalah canonical
+> source untuk setiap artikel help. Untuk menyediakan versi English,
+> buat sibling file dengan suffix `.en.md` — misal `docs/product/overview.md`
+> (ID, canonical) berpasangan dengan `docs/product/overview.en.md` (EN,
+> optional). Loader (`loadHelpArticle`) otomatis pilih varian yang sesuai
+> `NEXT_LOCALE` user; kalau varian EN tidak ada, ID di-serve dengan banner
+> "translation not available yet" — user tidak akan diam-diam dapat konten
+> Indonesia saat memilih English. Tidak perlu update manifest karena
+> `source` di manifest selalu menunjuk file canonical (ID).
+
 ## Baca dulu berdasarkan role Anda
 
 | Role Anda                                    | Mulai di sini                                                                       |
@@ -237,3 +254,33 @@ seriusnya dengan patch ke kode. Aturan:
    yang dieksekusi di test atau kutipan dari kode nyata di repo.
 
 Untuk lint doc + broken links check, ada workflow `.github/workflows/docs.yml` (planned).
+
+## Contributing translations for `/help`
+
+Semua artikel di [`src/lib/help/articles.ts`](../src/lib/help/articles.ts)
+punya sumber canonical dalam Bahasa Indonesia. Untuk menyediakan versi
+English kepada tenant / user yang toggle EN:
+
+1. **Buat file sibling** dengan suffix `.en.md`. Contoh: kalau canonical
+   ada di `docs/product/overview.md`, translation-nya di
+   `docs/product/overview.en.md`. Isinya **hanya** English — bukan
+   dual-column, bukan side-by-side.
+2. **Preserve struktur heading**. `#`, `##`, `###` harus paralel dengan
+   canonical supaya anchor link antar-varian tetap kompatibel (referrer
+   `/help/overview#getting-started` misal, tetap valid di kedua varian).
+3. **Jangan ubah manifest**. Loader otomatis mencoba `.en.md` dulu; kalau
+   tidak ada, fallback ke canonical `.md` + tampilkan banner "translation
+   not available yet". Manifest tetap satu entry per artikel.
+4. **Preserve frontmatter kalau ada**. Kalau canonical punya frontmatter
+   `title:` atau `summary:`, translation harus punya field yang sama
+   dengan versi English. Kalau tidak, loader derive dari `# Heading` +
+   paragraf pertama otomatis.
+5. **Kode + path + i18n key harus tetap literal**. Jangan translate nama
+   Server Action, route path, atau i18n key. Hanya translate prose.
+6. **Update tidak butuh migration atau rebuild**. Loader baca dari disk
+   fresh setiap request (memoised per-request via `React.cache()`).
+   Deploy ulang container sudah cukup.
+
+Terjemahan lain (`.ja.md`, `.de.md`, dll) technically didukung oleh loader
+— cukup tambahkan locale ke `LOCALES` di `src/lib/i18n/config.ts` dan
+lengkapi `messages/{locale}.json`. Prioritas Fase 1: hanya EN.

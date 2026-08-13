@@ -35,23 +35,22 @@ export async function verifyAiCredentials(input: {
   }
 
   try {
-    const dyn = new Function(
-      "spec",
-      "return import(spec);",
-    ) as (spec: string) => Promise<unknown>;
-
     let model: unknown = null;
 
+    // All three AI SDKs (`@ai-sdk/google`, `@ai-sdk/openai`,
+    // `@ai-sdk/anthropic`) are first-party dependencies in
+    // `package.json`. We import them via `await import(...)` (a
+    // static-analysable module specifier) so Next.js's file tracer
+    // follows the import chain and copies the SDK + its transitive
+    // `@ai-sdk/provider-utils` / `@ai-sdk/provider` deps into
+    // `.next/standalone/node_modules/`. The historic `new Function
+    // ("spec", "return import(spec)")` bypass was needed only when
+    // openai/anthropic were optional peers — now that they're hard
+    // deps, using the bypass would actively hide them from the
+    // tracer and produce "SDK not installed on the server" errors in
+    // the Docker `runner` stage.
+
     if (input.provider === "GOOGLE") {
-      // Direct `await import(...)` (not the `new Function` bypass used for
-      // the optional openai/anthropic branches below) so Next.js's file
-      // tracer follows the import chain and copies `@ai-sdk/google` +
-      // its transitive `@ai-sdk/provider-utils` / `@ai-sdk/provider` deps
-      // into `.next/standalone/node_modules/`. Without this, the prod
-      // Docker `runner` stage boots without the SDK and every verify
-      // call fails with "SDK not installed on the server." (This is
-      // safe here because `@ai-sdk/google` is a first-party dependency
-      // in package.json — resolve-at-build-time is guaranteed.)
       const mod = (await import("@ai-sdk/google").catch(() => null)) as
         | { google: (id: string) => unknown; createGoogleGenerativeAI?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
@@ -72,7 +71,7 @@ export async function verifyAiCredentials(input: {
     }
 
     if (input.provider === "OPENAI") {
-      const mod = (await dyn("@ai-sdk/openai").catch(() => null)) as
+      const mod = (await import("@ai-sdk/openai").catch(() => null)) as
         | { openai: (id: string) => unknown; createOpenAI?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
       if (!mod) {
@@ -89,7 +88,7 @@ export async function verifyAiCredentials(input: {
     }
 
     if (input.provider === "ANTHROPIC") {
-      const mod = (await dyn("@ai-sdk/anthropic").catch(() => null)) as
+      const mod = (await import("@ai-sdk/anthropic").catch(() => null)) as
         | { anthropic: (id: string) => unknown; createAnthropic?: (o: { apiKey: string }) => (id: string) => unknown }
         | null;
       if (!mod) {
@@ -112,7 +111,7 @@ export async function verifyAiCredentials(input: {
           error: "Base URL is required for OPENAI_COMPATIBLE providers.",
         };
       }
-      const mod = (await dyn("@ai-sdk/openai").catch(() => null)) as
+      const mod = (await import("@ai-sdk/openai").catch(() => null)) as
         | { createOpenAI?: (o: { apiKey: string; baseURL: string }) => (id: string) => unknown }
         | null;
       if (!mod?.createOpenAI) {
