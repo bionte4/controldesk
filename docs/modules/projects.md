@@ -355,58 +355,52 @@ Setelah level 4 dan issue masih OPEN, cron tetap kirim reminder harian
 kemudian `REOPENED`, mulai lagi dari level 0 dengan SLA baru dihitung
 dari waktu reopen.
 
-## PM Handover
+## PM Handover — DEPRECATED per rules §13
 
-Migration: `0013_pm_handovers.sql`.
+> **Status:** dihentikan. Menu "Handovers" **sudah dihapus dari sidebar**
+> (commit `9e52119`) dan tabel `pm_handovers` akan di-drop di migration
+> Fase 0.4. Baris lama akan diarsipkan ke cold storage. Doc ini
+> dipertahankan hanya sebagai referensi historis — **jangan** bangun
+> feature baru yang bergantung pada modul ini.
 
-Serah terima proyek dari PM lama ke PM baru — critical event yang
-memerlukan approval OM + Director dan otomatis migrasi state.
+### Ganti PM tanpa modul handover
 
-### Why handover terpisah?
+Rules §13 sudah mengatur cara baru mengganti PM (align dengan GAS ERP):
 
-Ganti PM adalah operasi **stateful** — kalau langsung diedit di
-`project_pm_assignments`, semua pending approvals + tasks aktif akan
-tertahan di PM lama yang sudah tidak involved. Handover flow bikin
-audit lengkap + transfer atomic.
+1. Buka **Assignments → Filter by project → PM tab**.
+2. Set row PM lama `status = 'Completed'` (tombol "End Assignment").
+3. Insert row baru untuk PM baru: `role = 'PRIMARY_PM'`,
+   `status = 'Active'`. Sistem otomatis:
+   - Menutup handoff via audit trigger (record `old_values` / `new_values`
+     ke `security_audit_logs`).
+   - Rebind pending approvals via RLS policy — approver berikutnya
+     resolve dari PM aktif saat evaluasi, bukan saat submit.
+4. Kirim notifikasi manual via tombol **"Notify handover"** di header
+   Assignment atau via `POST /api/notifications/manual` untuk kirim
+   pesan template ke PM baru.
 
-### Schema
+Karena semua efek stateful (assignment swap, pending approval
+rebinding) sekarang di-handle otomatis oleh RLS + audit trigger, tidak
+ada lagi kebutuhan state machine terpisah. Kalau butuh multi-approver
+untuk change PM (mis. OM + Director sign-off), pakai **Issues module**
+(§26 rules) — buat issue tipe `HANDOVER_APPROVAL`, minta approval via
+alur SLA business-hours standar, dan setelah closed baru assignment
+di-swap manual.
 
-`public.pm_handovers`:
+### Data historis
 
-| Kolom                     | Tipe                   | Note                                              |
-| ------------------------- | ---------------------- | ------------------------------------------------- |
-| `id`                      | `uuid`                 |                                                   |
-| `project_id`              | `uuid`                 |                                                   |
-| `outgoing_pm_id`          | `uuid`                 |                                                   |
-| `incoming_pm_id`          | `uuid`                 |                                                   |
-| `handover_date`           | `date`                 | Rencana kalender effective                        |
-| `reason`                  | `text`                 | Justifikasi (resign, rotasi, cuti panjang, dst)  |
-| `notes`                   | `text`                 | Catatan serah terima (task list, pending items)  |
-| `status`                  | `handover_status`      | State machine di bawah                            |
-| `created_by`              | `uuid`                 |                                                   |
-| `approved_om_id`          | `uuid`                 | Nullable                                          |
-| `approved_director_id`    | `uuid`                 | Nullable                                          |
-| `applied_at`              | `timestamptz`          | Kapan transisi diaplikasikan                      |
+Jika Anda perlu audit siapa PM proyek X pada tanggal Y, gunakan:
 
-### State machine
-
+```sql
+select ass.pm_employee_id, ass.assignment_role, ass.started_at,
+       coalesce(ass.ended_at, 'now') as ended_at
+from public.project_pm_assignments ass
+where ass.project_id = 'X'
+order by ass.started_at;
 ```
-DRAFT → PENDING_OM → PENDING_DIRECTOR → APPROVED → APPLIED
-   ↓          ↓                ↓
-CANCELLED   REJECTED       REJECTED
-```
 
-- **APPROVED**: dua approval sudah masuk, tapi belum transfer state.
-- **APPLIED**: transaksi DB dijalankan — semua efek berikut atomic:
-  1. `UPDATE project_pm_assignments` — set outgoing PM `status=INACTIVE`, `unassigned_at=NOW()`; INSERT row baru untuk incoming PM `status=ACTIVE`, `assignment_role='PRIMARY_PM'`.
-  2. `UPDATE expenses / cash_advances / budget_requests` yang status-nya masih PENDING dan `assignee_pm_id=outgoing` → set `assignee_pm_id=incoming`.
-  3. `UPDATE project_milestones` yang `owner_id=outgoing` → `owner_id=incoming`.
-  4. Kirim notifikasi ke incoming PM: "Anda menerima handover proyek X dari Y."
-  5. Insert audit log dengan `action_type='HANDOVER_APPLIED'`.
-
-Kalau salah satu step gagal → seluruh transaksi rollback + status
-tetap `APPROVED`. Ops bisa re-trigger `applyHandoverAction` setelah
-memperbaiki root cause.
+Jendela waktu terbaca dari `started_at`/`ended_at` — tabel
+`pm_handovers` lama tetap dapat di-SELECT sampai migration 0.4 dijalankan.
 
 ## Server Actions overview
 

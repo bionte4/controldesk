@@ -102,6 +102,14 @@ export const HELP_MANIFEST: readonly HelpArticleManifestEntry[] = [
     category: "getting-started",
     source: "docs/product/glossary.md",
   },
+  {
+    // Personal account settings (theme, locale, notification channels,
+    // Telegram / WhatsApp link). Visible to every authenticated user,
+    // matches the sidebar Preferences entry.
+    slug: "preferences",
+    category: "getting-started",
+    source: "docs/product/preferences.md",
+  },
 
   // User guides — role-based operational playbooks
   {
