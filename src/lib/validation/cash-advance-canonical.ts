@@ -79,6 +79,19 @@ export const submitCanonicalCashAdvanceSchema = z.object({
   coa_id: uuidSchema
     .nullish()
     .transform((v) => (v === null || v === undefined ? undefined : v)),
+  /**
+   * Optional cost-centre tag (migration 0087). For General CA the
+   * value lands on `cash_advances.unit_pengaju` and is validated by
+   * the server action against `project_allowed_units` when the
+   * project has a whitelist. Field-Ops CA uses a separate schema
+   * (`field-ops-advance.ts`) so this field only applies to General.
+   */
+  unit_pengaju: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 });
 export type SubmitCanonicalCashAdvanceInput = z.infer<
   typeof submitCanonicalCashAdvanceSchema

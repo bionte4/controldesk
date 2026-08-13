@@ -899,6 +899,7 @@ export type Database = {
           tenant_id: string
           title: string
           total_planned_amount: number
+          unit_pengaju: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -917,6 +918,7 @@ export type Database = {
           tenant_id: string
           title: string
           total_planned_amount?: number
+          unit_pengaju?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -935,6 +937,7 @@ export type Database = {
           tenant_id?: string
           title?: string
           total_planned_amount?: number
+          unit_pengaju?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -1457,6 +1460,7 @@ export type Database = {
           supervisor_approved_at: string | null
           supervisor_approver_id: string | null
           tenant_id: string
+          unit_pengaju: string | null
           updated_at: string
         }
         Insert: {
@@ -1494,6 +1498,7 @@ export type Database = {
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
           tenant_id: string
+          unit_pengaju?: string | null
           updated_at?: string
         }
         Update: {
@@ -1531,6 +1536,7 @@ export type Database = {
           supervisor_approved_at?: string | null
           supervisor_approver_id?: string | null
           tenant_id?: string
+          unit_pengaju?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -4187,6 +4193,7 @@ export type Database = {
           receipt_url: string | null
           status: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id: string
+          unit_pengaju: string | null
           updated_at: string
           void_reason: string | null
           voided_at: string | null
@@ -4205,6 +4212,7 @@ export type Database = {
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id: string
+          unit_pengaju?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null
@@ -4223,6 +4231,7 @@ export type Database = {
           receipt_url?: string | null
           status?: Database["public"]["Enums"]["petty_cash_voucher_status"]
           tenant_id?: string
+          unit_pengaju?: string | null
           updated_at?: string
           void_reason?: string | null
           voided_at?: string | null

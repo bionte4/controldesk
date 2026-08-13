@@ -38,6 +38,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { caCanonicalChain } from "@/lib/cash-advance/state-canonical";
+import {
+  filterUnitOptions,
+  type UnitOption,
+} from "@/lib/finance/unit-pengaju-filter";
 import { addBusinessDays } from "@/lib/format/business-days";
 import { formatInTz } from "@/lib/format/date";
 import { formatIDR } from "@/lib/format/money";
@@ -69,6 +73,7 @@ type FormValues = {
   purpose: string;
   needed_by: string;
   coa_id: string;
+  unit_pengaju: string;
 };
 
 const DEFAULT_VALUES: FormValues = {
@@ -78,6 +83,7 @@ const DEFAULT_VALUES: FormValues = {
   purpose: "",
   needed_by: "",
   coa_id: "",
+  unit_pengaju: "",
 };
 
 /**
@@ -112,8 +118,21 @@ export function NewCashAdvanceSheet({
   disabledReason,
   canFieldOps = false,
   canPickCoa = false,
+  unitOptions: allUnitOptions = [],
+  allowedUnitsByProject = {},
 }: {
   projects: ProjectOption[];
+  /**
+   * Tenant `unit_pengaju` lookup (see `loadFieldOpsFormLookups`).
+   * Empty array = admin hasn't populated the master list yet; the
+   * dropdown renders disabled with a hint.
+   */
+  unitOptions?: readonly UnitOption[];
+  /**
+   * Per-project whitelist (migration 0086). Same shape as Field-Ops
+   * & Budget forms; empty entry = fall back to the full lookup.
+   */
+  allowedUnitsByProject?: Record<string, string[]>;
   /**
    * When true the trigger button is rendered inert. Used by the page to
    * gate field-technicians away from the "General" flow — they should
@@ -160,6 +179,7 @@ export function NewCashAdvanceSheet({
           values.coa_id && values.coa_id !== COA_NONE
             ? values.coa_id
             : undefined,
+        unit_pengaju: values.unit_pengaju || undefined,
       });
       if (parsed.success) return { values, errors: {} };
       const errors: Record<string, { type: string; message: string }> = {};
@@ -177,6 +197,25 @@ export function NewCashAdvanceSheet({
   const amountRaw = form.watch("amount_idr");
   const amountIDR = parseAmount(amountRaw);
   const projectId = form.watch("project_id");
+  const currentUnit = form.watch("unit_pengaju");
+
+  // Migration 0086 — narrow Unit Pengaju options by the project's
+  // allowed list. Shared helper keeps every finance form in lockstep.
+  const { unitOptions, unitFiltered } = React.useMemo(
+    () =>
+      filterUnitOptions({
+        projectId,
+        allUnitOptions,
+        allowedUnitsByProject,
+      }),
+    [projectId, allUnitOptions, allowedUnitsByProject],
+  );
+  React.useEffect(() => {
+    if (!currentUnit || !unitFiltered) return;
+    const stillAllowed = unitOptions.some((opt) => opt.label === currentUnit);
+    if (!stillAllowed) form.setValue("unit_pengaju", "", { shouldDirty: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, unitFiltered]);
 
   const [coaOptions, setCoaOptions] = React.useState<CoaOptionWithMa[]>([]);
   const [coaLoading, setCoaLoading] = React.useState(false);
@@ -244,6 +283,7 @@ export function NewCashAdvanceSheet({
         values.coa_id && values.coa_id !== COA_NONE
           ? values.coa_id
           : undefined,
+      unit_pengaju: values.unit_pengaju || undefined,
     };
     startTransition(async () => {
       const result = await submitCanonicalCashAdvanceAction(payload);
@@ -490,6 +530,48 @@ export function NewCashAdvanceSheet({
                     </FormItem>
                   );
                 }}
+              />
+
+              <FormField
+                control={form.control}
+                name="unit_pengaju"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("unitPengaju")}</FormLabel>
+                    <Select
+                      value={field.value ?? ""}
+                      onValueChange={field.onChange}
+                      disabled={unitOptions.length === 0}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              unitOptions.length === 0
+                                ? unitFiltered
+                                  ? tf("unitPengajuNoneAllowed")
+                                  : tf("unitPengajuEmpty")
+                                : tf("unitPengajuPlaceholder")
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {unitOptions.map((opt) => (
+                          <SelectItem key={opt.id} value={opt.label}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {unitFiltered ? (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {tf("unitPengajuFilteredHint")}
+                      </p>
+                    ) : null}
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
               {canPickCoa ? (

@@ -360,6 +360,8 @@ export default async function CashAdvancesPage() {
             disabledReason={canGeneral ? undefined : t("newGeneralDisabled")}
             canFieldOps={canFieldOps}
             canPickCoa={canPickCoa}
+            unitOptions={lookups.unit_pengaju}
+            allowedUnitsByProject={allowedUnitsByProject}
           />
         </div>
       </header>

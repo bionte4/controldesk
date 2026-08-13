@@ -50,6 +50,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { filterUnitOptions } from "@/lib/finance/unit-pengaju-filter";
 import { formatIDR } from "@/lib/format/money";
 import { caFieldOpsApprovalChain } from "@/lib/rbac/roles";
 import { ApprovalChainProgress } from "@/components/approvals/approval-chain-progress";
@@ -221,22 +222,18 @@ export function NewFieldOpsSheet({
   const [coaOptions, setCoaOptions] = React.useState<CoaOptionWithMa[]>([]);
   const [coaLoading, setCoaLoading] = React.useState(false);
 
-  // Per-project unit_pengaju whitelist. When the caller selects a
-  // project that has an explicit whitelist, we narrow the dropdown to
-  // that list; otherwise (no key or empty list) we fall back to every
-  // active tenant lookup. The fallback is intentional so projects
-  // predating migration 0086 keep working.
-  const unitOptions = React.useMemo(() => {
-    const whitelist = projectId ? allowedUnitsByProject[projectId] : undefined;
-    if (!whitelist || whitelist.length === 0) return lookups.unit_pengaju;
-    const whitelistSet = new Set(whitelist);
-    return lookups.unit_pengaju.filter((opt) => whitelistSet.has(opt.label));
-  }, [projectId, allowedUnitsByProject, lookups.unit_pengaju]);
-  const unitFiltered = React.useMemo(() => {
-    if (!projectId) return false;
-    const whitelist = allowedUnitsByProject[projectId];
-    return Boolean(whitelist && whitelist.length > 0);
-  }, [projectId, allowedUnitsByProject]);
+  // Per-project unit_pengaju whitelist. Shared helper keeps Budget /
+  // General CA / Field-Ops forms in lockstep — see
+  // `src/lib/finance/unit-pengaju-filter.ts` for the contract.
+  const { unitOptions, unitFiltered } = React.useMemo(
+    () =>
+      filterUnitOptions({
+        projectId,
+        allUnitOptions: lookups.unit_pengaju,
+        allowedUnitsByProject,
+      }),
+    [projectId, allowedUnitsByProject, lookups.unit_pengaju],
+  );
 
   // If the user first picked a unit under one project (or no project),
   // then switched to a project whose whitelist excludes that unit, we

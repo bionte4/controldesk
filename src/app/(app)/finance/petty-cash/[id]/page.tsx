@@ -26,6 +26,7 @@ import type {
 
 import { listAttachmentsSigned } from "@/lib/attachments";
 import { loadPostableAccounts } from "@/lib/data/coa";
+import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
 
 import { NewVoucherSheet, type CoaOption } from "../new-voucher-sheet";
 import { RequestReplenishmentDialog } from "../request-replenishment-sheet";
@@ -171,6 +172,13 @@ export default async function PettyCashFundDetailPage(props: {
         name: a.name,
       }))
     : [];
+  // Migration 0087 — voucher form's Unit Pengaju dropdown reads from
+  // the same tenant lookup as Field-Ops CA / Budget / General CA.
+  // Empty list = admin has never populated the master; the field
+  // simply hides in that case (see NewVoucherSheet).
+  const voucherUnitOptions = canVoucher
+    ? (await loadFieldOpsFormLookups()).unit_pengaju
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -185,7 +193,11 @@ export default async function PettyCashFundDetailPage(props: {
         </Button>
         <div className="flex flex-wrap items-center gap-2">
           {canVoucher ? (
-            <NewVoucherSheet fundId={fund.id} coaOptions={coaOptions} />
+            <NewVoucherSheet
+              fundId={fund.id}
+              coaOptions={coaOptions}
+              unitOptions={voucherUnitOptions}
+            />
           ) : null}
           {canRequestRepl ? (
             <RequestReplenishmentDialog fundId={fund.id} />

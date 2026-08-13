@@ -110,6 +110,12 @@ export const recordPettyCashVoucherAction = withSecureAction({
         description: input.description,
         incurred_on: input.incurred_on,
         receipt_url: input.receipt_url ?? null,
+        // Migration 0087 — cost-centre tag. Free-choice here (no
+        // project scope). We deliberately do NOT re-check against
+        // `lookup_options` on the server: petty-cash vouchers are
+        // low-friction and a moderator can retire mislabelled rows
+        // via a normal admin workflow if needed.
+        unit_pengaju: input.unit_pengaju ?? null,
         status: "RECORDED",
       })
       .select("id, amount")
@@ -142,6 +148,7 @@ export const recordPettyCashVoucherAction = withSecureAction({
         fund_id: input.fund_id,
         amount: amountDb,
         category: input.category,
+        unit_pengaju: input.unit_pengaju ?? null,
       },
     };
   },
