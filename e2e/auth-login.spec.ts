@@ -8,7 +8,11 @@ test.describe("auth — login", () => {
     await expect(
       page.getByRole("heading", { level: 1 }).first(),
     ).toBeVisible();
-    // The topbar shows the signed-in user.
+    // Full name lives in the user-menu dropdown (avatar trigger only
+    // shows initials in the topbar chrome).
+    await page
+      .getByRole("button", { name: /open user menu|buka menu pengguna/i })
+      .click();
     await expect(
       page.getByText(DEMO_USERS.supervisor.name, { exact: false }),
     ).toBeVisible();
