@@ -1,0 +1,162 @@
+# ControlDesk — Kong API gateway declarative config (DB-less mode).
+#
+# Kong route request dari Caddy ke service Supabase yang sesuai berdasar
+# path prefix. Semua service internal (auth/rest/realtime/storage) TIDAK
+# di-expose ke public — hanya Kong port 8000 yang publik (di-fronted Caddy).
+#
+# Path map:
+#   /auth/v1/*     -> GoTrue (auth)
+#   /rest/v1/*     -> PostgREST (rest)
+#   /realtime/v1/* -> Realtime WebSocket (realtime)
+#   /storage/v1/*  -> Storage API (storage)
+#   /pg/*          -> pg-meta (opsional, hanya kalau Studio dipakai)
+
+_format_version: "3.0"
+_transform: true
+
+# ---------------------------------------------------------------------------
+# Consumers — ANON key (public) + SERVICE_ROLE key (backend only).
+# ---------------------------------------------------------------------------
+consumers:
+  - username: anon
+    keyauth_credentials:
+      - key: $SUPABASE_ANON_KEY
+
+  - username: service_role
+    keyauth_credentials:
+      - key: $SUPABASE_SERVICE_KEY
+
+# ---------------------------------------------------------------------------
+# ACLs — group untuk basic auth ke Studio (kalau dipakai).
+# ---------------------------------------------------------------------------
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+# ---------------------------------------------------------------------------
+# Basic auth (untuk kunci Studio kalau di-expose — di prod idealnya tidak).
+# ---------------------------------------------------------------------------
+basicauth_credentials:
+  - consumer: service_role
+    username: $DASHBOARD_USERNAME
+    password: $DASHBOARD_PASSWORD
+
+# ---------------------------------------------------------------------------
+# Services + Routes
+# ---------------------------------------------------------------------------
+services:
+  # -------------------------------------------------------------------------
+  # 1. AUTH (GoTrue) — sign-in/sign-up/OTP/password reset.
+  # -------------------------------------------------------------------------
+  - name: auth-v1-open
+    url: http://auth:9999/verify
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/verify
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open-callback
+    url: http://auth:9999/callback
+    routes:
+      - name: auth-v1-open-callback
+        strip_path: true
+        paths:
+          - /auth/v1/callback
+    plugins:
+      - name: cors
+
+  - name: auth-v1-open-authorize
+    url: http://auth:9999/authorize
+    routes:
+      - name: auth-v1-open-authorize
+        strip_path: true
+        paths:
+          - /auth/v1/authorize
+    plugins:
+      - name: cors
+
+  - name: auth-v1
+    _comment: "GoTrue: /auth/v1/* -> http://auth:9999/*"
+    url: http://auth:9999/
+    routes:
+      - name: auth-v1-all
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  # -------------------------------------------------------------------------
+  # 2. REST (PostgREST) — auto-generated CRUD API dari schema Postgres.
+  # -------------------------------------------------------------------------
+  - name: rest-v1
+    _comment: "PostgREST: /rest/v1/* -> http://rest:3000/*"
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1-all
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: true
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  # -------------------------------------------------------------------------
+  # 3. REALTIME (Phoenix) — WebSocket subscribe untuk notif live.
+  # -------------------------------------------------------------------------
+  - name: realtime-v1
+    _comment: "Realtime: /realtime/v1/* -> ws://realtime:4000/socket/*"
+    url: http://realtime:4000/socket/
+    protocol: http
+    routes:
+      - name: realtime-v1-all
+        strip_path: true
+        paths:
+          - /realtime/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
+
+  # -------------------------------------------------------------------------
+  # 4. STORAGE — upload/download file (avatar, receipt, dsb.).
+  # -------------------------------------------------------------------------
+  - name: storage-v1
+    _comment: "Storage: /storage/v1/* -> http://storage:5000/*"
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1-all
+        strip_path: true
+        paths:
+          - /storage/v1/
+    plugins:
+      - name: cors

@@ -1,0 +1,185 @@
+# ControlDesk — Caddy reverse proxy configuration untuk production VPS.
+#
+# Terminate TLS untuk 3 hostname:
+#   1. controldesk.app          -> app (Next.js, marketing landing)
+#   2. *.controldesk.app        -> app (subdomain-per-tenant, mis. demo.controldesk.app)
+#   3. api.controldesk.app      -> kong (Supabase gateway)
+#
+# Wildcard TLS pakai DNS-01 challenge (Cloudflare) supaya bisa cover
+# `*.controldesk.app` tanpa perlu HTTP-01 challenge per-subdomain.
+# Alternatif: pakai ZeroSSL API dengan DNS provider lain.
+
+{
+	# Email admin untuk Let's Encrypt notifications (renewal warnings).
+	email {$ACME_EMAIL}
+
+	# Log semua request in structured JSON — ambil ke Loki/Grafana kalau
+	# butuh observability. `format json` supaya parseable.
+	log {
+		output stdout
+		format json
+		level INFO
+	}
+
+	# Server-wide security headers (di-inject di setiap response). HSTS
+	# 1 tahun karena kita commit ke HTTPS-only.
+	servers {
+		metrics
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Snippet: common security + compression headers.
+# ---------------------------------------------------------------------------
+(security_headers) {
+	header {
+		# HSTS 1 tahun + preload. Rules §23 accessibility: no downgrade.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+		# Anti clickjacking + MIME sniff.
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+
+		# Permissions Policy — matikan API browser yang tidak ControlDesk pakai.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+		# CSP dasar. Adjust `connect-src` kalau butuh domain AI provider tambahan.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://{$API_DOMAIN} wss://{$API_DOMAIN} https://*.googleapis.com https://api.openai.com https://api.anthropic.com; frame-ancestors 'self';"
+
+		# Sembunyikan tech stack.
+		-Server
+		-X-Powered-By
+	}
+
+	encode zstd gzip
+}
+
+# ---------------------------------------------------------------------------
+# Snippet: rate limit — 60 req/min per IP untuk mitigasi brute-force login.
+# ---------------------------------------------------------------------------
+(rate_limit) {
+	@ratelimited {
+		path /api/auth/*
+		path /portal/login
+	}
+	# NOTE: Caddy built-in tidak punya rate limiter — kita rely pada
+	# rate limit di app-level via Redis (rules §3). Snippet ini reserved
+	# kalau nanti pakai plugin `caddy-ratelimit`.
+}
+
+# ---------------------------------------------------------------------------
+# 1. Root domain + wildcard subdomain -> app.
+#
+# Wildcard *.{ROOT_DOMAIN} handle:
+#   - demo.controldesk.app       -> tenant `demo`
+#   - itps.controldesk.app       -> tenant `itps`
+#   - <slug>.controldesk.app     -> any tenant subdomain
+#
+# Middleware Next.js (src/proxy.ts + resolveTenantFromHost) resolve
+# subdomain menjadi tenant_id.
+# ---------------------------------------------------------------------------
+{$ROOT_DOMAIN}, *.{$ROOT_DOMAIN} {
+	tls {
+		# DNS-01 challenge — WAJIB untuk wildcard cert. Cloudflare token
+		# perlu scope Zone:DNS:Edit di zona ROOT_DOMAIN.
+		dns cloudflare {$CF_API_TOKEN}
+		resolvers 1.1.1.1 8.8.8.8
+	}
+
+	import security_headers
+
+	# Health check endpoint — Caddy bypass rate limit, langsung ke app.
+	handle /api/health {
+		reverse_proxy app:3000
+	}
+
+	# Static assets Next.js (immutable — cache 1 tahun).
+	@static {
+		path /_next/static/*
+	}
+	handle @static {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy app:3000
+	}
+
+	# Everything else -> Next.js app.
+	handle {
+		reverse_proxy app:3000 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Real-IP {remote_host}
+			# 90s timeout — server actions dengan AI generation bisa lama.
+			transport http {
+				dial_timeout 10s
+				response_header_timeout 90s
+				read_timeout 90s
+			}
+		}
+	}
+
+	# 5xx custom error — kirim ke halaman error Next.js.
+	handle_errors {
+		respond "Service temporarily unavailable ({err.status_code})" {err.status_code}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# ---------------------------------------------------------------------------
+# 2. api.{ROOT_DOMAIN} -> Kong (Supabase API gateway).
+#
+# Publik: `NEXT_PUBLIC_SUPABASE_URL=https://api.controldesk.app` di-bake ke
+# browser bundle. Browser hit Kong -> Kong route ke auth/rest/realtime/storage.
+# ---------------------------------------------------------------------------
+{$API_DOMAIN} {
+	tls {
+		dns cloudflare {$CF_API_TOKEN}
+		resolvers 1.1.1.1 8.8.8.8
+	}
+
+	import security_headers
+
+	# CORS untuk allow browser fetch dari root domain (Next.js RSC pakai
+	# server-side call, tapi client-side Supabase client hit dari browser).
+	@options method OPTIONS
+	handle @options {
+		header Access-Control-Allow-Origin "https://{$ROOT_DOMAIN}"
+		header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+		header Access-Control-Allow-Headers "authorization, apikey, x-client-info, content-type, x-supabase-api-version, prefer, range"
+		header Access-Control-Allow-Credentials "true"
+		header Access-Control-Max-Age "3600"
+		respond 204
+	}
+
+	handle {
+		header Access-Control-Allow-Origin "https://{$ROOT_DOMAIN}"
+		header Access-Control-Allow-Credentials "true"
+
+		reverse_proxy kong:8000 {
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Real-IP {remote_host}
+			transport http {
+				dial_timeout 10s
+				response_header_timeout 60s
+				read_timeout 300s  # Realtime WS long-lived, kasih margin.
+			}
+		}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# ---------------------------------------------------------------------------
+# 3. Redirect www subdomain -> apex (opsional, tapi standar SEO).
+# ---------------------------------------------------------------------------
+www.{$ROOT_DOMAIN} {
+	redir https://{$ROOT_DOMAIN}{uri} permanent
+}
