@@ -14,6 +14,7 @@ import {
   reviewEvaluationByPmSchema,
   startEvaluationSchema,
   submitEvaluationBySpvSchema,
+  submitProjectReviewerNotesSchema,
   toggleEvaluationTemplateActiveSchema,
   updateEvaluationMetaSchema,
   updateEvaluationTemplateSchema,
@@ -269,6 +270,56 @@ export const startEvaluationAction = withSecureAction({
       }
     }
 
+    // Optional project context (migration 0089). SPV may attach the
+    // evaluation to a specific project the employee is actively on;
+    // we validate membership + resolve the project reviewer to the
+    // PRIMARY_PM by default. SPV / HR can override the reviewer via
+    // `project_reviewer_employee_id` — otherwise it stays null and
+    // the form on the detail page will surface a "pick reviewer"
+    // prompt for HR to fill in later.
+    let projectId: string | null = null;
+    let projectReviewerId: string | null = null;
+    if (input.project_id) {
+      const { data: pea, error: peaErr } = await supabase
+        .from("project_employee_assignments")
+        .select("id")
+        .eq("tenant_id", ctx.actor.tenantId)
+        .eq("employee_id", emp.id)
+        .eq("project_id", input.project_id)
+        .eq("status", "ACTIVE")
+        .maybeSingle();
+      if (peaErr) throw new Error(peaErr.message);
+      if (!pea) {
+        throw new Error(
+          "The selected project is not an active assignment for this employee.",
+        );
+      }
+      projectId = input.project_id;
+
+      if (input.project_reviewer_employee_id) {
+        // Verify the override reviewer belongs to the same tenant.
+        const { data: rev, error: revErr } = await supabase
+          .from("employees")
+          .select("id")
+          .eq("id", input.project_reviewer_employee_id)
+          .eq("tenant_id", ctx.actor.tenantId)
+          .maybeSingle();
+        if (revErr) throw new Error(revErr.message);
+        if (!rev) throw new Error("Project reviewer not found.");
+        projectReviewerId = input.project_reviewer_employee_id;
+      } else {
+        // Auto-suggest the project's active PRIMARY_PM.
+        const { data: ppa } = await supabase
+          .from("project_pm_assignments")
+          .select("pm_employee_id")
+          .eq("project_id", projectId)
+          .eq("status", "ACTIVE")
+          .eq("assignment_role", "PRIMARY_PM")
+          .maybeSingle();
+        projectReviewerId = ppa?.pm_employee_id ?? null;
+      }
+    }
+
     const { data: inserted, error: insErr } = await supabase
       .from("performance_evaluations")
       .insert({
@@ -282,11 +333,53 @@ export const startEvaluationAction = withSecureAction({
         status: "DRAFT" as EvaluationStatus,
         period_start_date: input.period_start_date ?? null,
         period_end_date: input.period_end_date ?? null,
+        project_id: projectId,
+        project_reviewer_employee_id: projectReviewerId,
       })
       .select("id")
       .single();
     if (insErr || !inserted) {
       throw new Error(insErr?.message ?? "Failed to create evaluation.");
+    }
+
+    // Nudge the project reviewer so they know they've been tagged —
+    // fire-and-forget, keep parallel to the rest of the flow.
+    if (projectReviewerId) {
+      try {
+        const { data: revEmp } = await supabase
+          .from("employees")
+          .select("user_id")
+          .eq("id", projectReviewerId)
+          .maybeSingle();
+        if (revEmp?.user_id) {
+          const { t } = await translatorFor({
+            employeeId: projectReviewerId,
+            namespace: "notifications.evaluations",
+          });
+          await notifyUser({
+            tenantId: ctx.actor.tenantId,
+            recipient: {
+              userId: revEmp.user_id,
+              employeeId: projectReviewerId,
+            },
+            kind: "EVALUATION_PROJECT_REVIEW_REQUESTED",
+            title: t("projectReviewRequested.title", {
+              name: emp.full_name,
+            }),
+            body: t("projectReviewRequested.body", {
+              name: emp.full_name,
+            }),
+            actionUrl: `/hr/performance/${inserted.id}`,
+            payload: {
+              evaluation_id: inserted.id,
+              employee_id: emp.id,
+              project_id: projectId,
+            },
+          });
+        }
+      } catch {
+        // Non-fatal — the eval itself was created.
+      }
     }
 
     revalidatePath("/hr/performance");
@@ -297,6 +390,110 @@ export const startEvaluationAction = withSecureAction({
         employee_id: emp.id,
         template_id: input.template_id,
         contract_end_date: emp.contract_end_date,
+        project_id: projectId,
+        project_reviewer_employee_id: projectReviewerId,
+      },
+    };
+  },
+});
+
+/**
+ * Project reviewer submits (or updates) their feedback. Guardrails:
+ *   * Caller must equal `project_reviewer_employee_id` on the row.
+ *   * Evaluation must be in a pre-OM status (DRAFT / SUBMITTED_BY_SPV
+ *     / REVIEWED_BY_PM / RETURNED_TO_SPV) — once OM decides, the
+ *     reviewer channel locks.
+ * On success we set `project_reviewer_notes` + `project_reviewed_at`
+ * and ping the SPV so they can incorporate the input into the final
+ * write-up.
+ */
+export const submitProjectReviewerNotesAction = withSecureAction({
+  schema: submitProjectReviewerNotesSchema,
+  resource: "evaluation",
+  action: "update",
+  auditAction: "UPDATE",
+  auditResourceName: "performance_evaluations",
+  resolveAttributes: async (_input, ctx) => ({
+    tenantId: ctx.actor.tenantId,
+  }),
+  handler: async (input, ctx) => {
+    const supabase = await createClient();
+    const { data: parent, error: parErr } = await supabase
+      .from("performance_evaluations")
+      .select(
+        "id, status, project_reviewer_employee_id, spv_employee_id, employee_id, project_id",
+      )
+      .eq("id", input.id)
+      .eq("tenant_id", ctx.actor.tenantId)
+      .maybeSingle();
+    if (parErr) throw new Error(parErr.message);
+    if (!parent) throw new Error("Evaluation not found.");
+    if (!parent.project_reviewer_employee_id) {
+      throw new Error(
+        "This evaluation has no project reviewer assigned. Ask HR to set one.",
+      );
+    }
+    if (parent.project_reviewer_employee_id !== ctx.actor.employeeId) {
+      throw new Error(
+        "Only the assigned project reviewer may submit these notes.",
+      );
+    }
+    const openStatuses: EvaluationStatus[] = [
+      "DRAFT",
+      "SUBMITTED_BY_SPV",
+      "REVIEWED_BY_PM",
+      "RETURNED_TO_SPV",
+    ];
+    if (!openStatuses.includes(parent.status as EvaluationStatus)) {
+      throw new Error(
+        "The evaluation is already past the OM step — notes are locked.",
+      );
+    }
+
+    const patch: TablesUpdate<"performance_evaluations"> = {
+      project_reviewer_notes: input.project_reviewer_notes,
+      project_reviewed_at: new Date().toISOString(),
+    };
+    const { error: upErr } = await supabase
+      .from("performance_evaluations")
+      .update(patch)
+      .eq("id", parent.id);
+    if (upErr) throw new Error(upErr.message);
+
+    try {
+      const { data: spv } = await supabase
+        .from("employees")
+        .select("user_id, full_name")
+        .eq("id", parent.spv_employee_id)
+        .maybeSingle();
+      if (spv?.user_id) {
+        const { t } = await translatorFor({
+          employeeId: parent.spv_employee_id,
+          namespace: "notifications.evaluations",
+        });
+        await notifyUser({
+          tenantId: ctx.actor.tenantId,
+          recipient: {
+            userId: spv.user_id,
+            employeeId: parent.spv_employee_id,
+          },
+          kind: "EVALUATION_PROJECT_REVIEWED",
+          title: t("projectReviewed.title"),
+          body: t("projectReviewed.body"),
+          actionUrl: `/hr/performance/${parent.id}`,
+          payload: { evaluation_id: parent.id },
+        });
+      }
+    } catch {
+      // Non-fatal.
+    }
+
+    revalidatePath(`/hr/performance/${parent.id}`);
+    return {
+      result: { id: parent.id },
+      auditResourceId: parent.id,
+      auditNewValues: {
+        project_reviewer_notes: input.project_reviewer_notes,
       },
     };
   },

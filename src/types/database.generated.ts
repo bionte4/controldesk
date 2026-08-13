@@ -3770,6 +3770,10 @@ export type Database = {
           pm_employee_id: string | null
           pm_notes: string | null
           pm_reviewed_at: string | null
+          project_id: string | null
+          project_reviewed_at: string | null
+          project_reviewer_employee_id: string | null
+          project_reviewer_notes: string | null
           spv_employee_id: string
           spv_notes: string | null
           spv_recommendation:
@@ -3804,6 +3808,10 @@ export type Database = {
           pm_employee_id?: string | null
           pm_notes?: string | null
           pm_reviewed_at?: string | null
+          project_id?: string | null
+          project_reviewed_at?: string | null
+          project_reviewer_employee_id?: string | null
+          project_reviewer_notes?: string | null
           spv_employee_id: string
           spv_notes?: string | null
           spv_recommendation?:
@@ -3838,6 +3846,10 @@ export type Database = {
           pm_employee_id?: string | null
           pm_notes?: string | null
           pm_reviewed_at?: string | null
+          project_id?: string | null
+          project_reviewed_at?: string | null
+          project_reviewer_employee_id?: string | null
+          project_reviewer_notes?: string | null
           spv_employee_id?: string
           spv_notes?: string | null
           spv_recommendation?:
@@ -3911,6 +3923,34 @@ export type Database = {
           {
             foreignKeyName: "performance_evaluations_pm_employee_id_fkey"
             columns: ["pm_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_evaluations_project_reviewer_employee_id_fkey"
+            columns: ["project_reviewer_employee_id"]
             isOneToOne: false
             referencedRelation: "v_employee_workload"
             referencedColumns: ["employee_id"]
@@ -8135,6 +8175,10 @@ export type Database = {
         }[]
       }
       seed_default_coa: { Args: { p_tenant: string }; Returns: undefined }
+      seed_default_eval_templates: {
+        Args: { p_tenant: string }
+        Returns: undefined
+      }
       seed_default_master_data: {
         Args: { p_tenant: string }
         Returns: undefined
@@ -8410,6 +8454,8 @@ export type Database = {
         | "TIMESHEET_REJECTED"
         | "BULK_IMPORT_COMPLETED"
         | "APPROVAL_IDLE_24H"
+        | "EVALUATION_PROJECT_REVIEW_REQUESTED"
+        | "EVALUATION_PROJECT_REVIEWED"
       payroll_period_status: "DRAFT" | "FINALIZED"
       petty_cash_replenishment_status:
         | "PENDING_FINANCE"
@@ -8928,6 +8974,8 @@ export const Constants = {
         "TIMESHEET_REJECTED",
         "BULK_IMPORT_COMPLETED",
         "APPROVAL_IDLE_24H",
+        "EVALUATION_PROJECT_REVIEW_REQUESTED",
+        "EVALUATION_PROJECT_REVIEWED",
       ],
       payroll_period_status: ["DRAFT", "FINALIZED"],
       petty_cash_replenishment_status: [

@@ -17,6 +17,7 @@ import { formatDateOnly } from "@/lib/format/date";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import type { EmployeeRole } from "@/lib/rbac/roles";
+import { loadEmployeeProjectCandidates } from "@/lib/data/performance";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ContractRecommendation,
@@ -86,6 +87,26 @@ export default async function PerformanceEvaluationsPage() {
     .eq("is_active", true)
     .order("name", { ascending: true });
 
+  // Batch-fetch each eligible employee's active project assignments +
+  // that project's PRIMARY_PM so the sheet can offer a project-context
+  // dropdown without an extra roundtrip per selection.
+  const projectCandidates = await loadEmployeeProjectCandidates(
+    (empRaw ?? []).map((e) => e.id),
+  );
+  const projectCandidatesByEmp: Record<
+    string,
+    {
+      project_id: string;
+      project_name: string;
+      project_number: string | null;
+      primary_pm_id: string | null;
+      primary_pm_name: string | null;
+    }[]
+  > = {};
+  for (const [empId, list] of projectCandidates.entries()) {
+    projectCandidatesByEmp[empId] = list;
+  }
+
   type Row = {
     id: string;
     status: EvaluationStatus;
@@ -133,6 +154,7 @@ export default async function PerformanceEvaluationsPage() {
               contract_end_date: e.contract_end_date as string,
             }))}
             templates={(tplRaw ?? []).map((t) => ({ id: t.id, name: t.name }))}
+            projectCandidatesByEmployee={projectCandidatesByEmp}
           />
         </div>
       </header>

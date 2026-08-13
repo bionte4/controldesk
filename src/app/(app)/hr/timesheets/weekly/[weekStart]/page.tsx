@@ -68,7 +68,7 @@ export default async function WeeklyEditorPage({ params, searchParams }: PagePro
       employeeId: requestedEmployeeId,
       weekStartDate: weekStart,
     }),
-    loadProjectOptions(),
+    loadProjectOptions(requestedEmployeeId),
   ]);
 
   const isSelf = requestedEmployeeId === currentEmployee.id;
@@ -208,17 +208,48 @@ type ProjectOption = {
   label: string;
 };
 
-async function loadProjectOptions(): Promise<ProjectOption[]> {
+/**
+ * Only surface projects the target employee has an ACTIVE assignment
+ * on (member OR PM). Previously this loaded every project in the
+ * tenant — which let an employee log timesheet hours to projects
+ * they aren't formally on, skewing profitability & utilization.
+ * Server-side we also enforce this in `submitWeeklyTimesheetAction`
+ * (see weekly/actions.ts) — the client filter is UX polish so the
+ * dropdown never contains a project that would be rejected on
+ * submit.
+ */
+async function loadProjectOptions(
+  employeeId: string,
+): Promise<ProjectOption[]> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("projects")
-    .select("id, code, name")
-    .order("code", { ascending: true })
-    .limit(200);
-  return (data ?? []).map((p) => ({
-    value: p.id,
-    label: `${p.code} — ${p.name}`,
-  }));
+  const [{ data: memberRows }, { data: pmRows }] = await Promise.all([
+    supabase
+      .from("project_employee_assignments")
+      .select("project:projects!inner(id, code, name)")
+      .eq("employee_id", employeeId)
+      .eq("status", "ACTIVE"),
+    supabase
+      .from("project_pm_assignments")
+      .select("project:projects!inner(id, code, name)")
+      .eq("pm_employee_id", employeeId)
+      .eq("status", "ACTIVE"),
+  ]);
+  type ProjRel = { id: string; code: string | null; name: string } | null;
+  const bag = new Map<string, { code: string | null; name: string }>();
+  for (const r of memberRows ?? []) {
+    const proj = r.project as unknown as ProjRel;
+    if (proj?.id) bag.set(proj.id, { code: proj.code, name: proj.name });
+  }
+  for (const r of pmRows ?? []) {
+    const proj = r.project as unknown as ProjRel;
+    if (proj?.id) bag.set(proj.id, { code: proj.code, name: proj.name });
+  }
+  return Array.from(bag.entries())
+    .map(([id, { code, name }]) => ({
+      value: id,
+      label: code ? `${code} — ${name}` : name,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 type DayDefault = {

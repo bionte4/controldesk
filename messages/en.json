@@ -592,7 +592,15 @@
       "returnedBody": "PM asked you to adjust the evaluation before resubmitting.",
       "approvedTitle": "Evaluation approved by OM",
       "rejectedTitle": "Evaluation rejected by OM",
-      "finalizedTitle": "Evaluation finalized"
+      "finalizedTitle": "Evaluation finalized",
+      "projectReviewRequested": {
+        "title": "Project review requested — evaluation for {name}",
+        "body": "SPV tagged you as the project reviewer for {name}'s evaluation. Please add your notes before the OM decides."
+      },
+      "projectReviewed": {
+        "title": "Project reviewer notes received",
+        "body": "The project reviewer submitted their notes. Consider them before forwarding to PM."
+      }
     },
     "upk": {
       "draftTitle": "UPK draft awaiting your input",
@@ -3749,7 +3757,14 @@
       "extensionEndDateHint": "Enter manually. Must be after {currentEnd}.",
       "extensionPreviewLabel": "Extension",
       "extensionDateAfterCurrent": "New contract end date must be after {currentEnd}.",
-      "notExtendHint": "After OM approval, a UPK draft will be auto-created for finance."
+      "notExtendHint": "After OM approval, a UPK draft will be auto-created for finance.",
+      "projectContext": "Project context",
+      "projectContextPlaceholder": "Pick a covered project (optional)…",
+      "projectContextNone": "No project context (structural evaluation)",
+      "projectContextEmpty": "This employee has no active project assignments — structural evaluation only.",
+      "projectReviewerPreview": "Auto-assigned project reviewer: {name}. The reviewer may add notes before the OM decides.",
+      "projectReviewerMissing": "This project has no PRIMARY_PM yet — HR can pick a reviewer later from the detail page.",
+      "optional": "optional"
     },
     "detail": {
       "kicker": "Evaluation",
@@ -3767,7 +3782,24 @@
       "critGoal": "Goal achievement",
       "critManajemen": "Management average",
       "critCompetency": "Competency met",
-      "extensionBadge": "Contract extension"
+      "extensionBadge": "Contract extension",
+      "projectReviewer": {
+        "title": "Project review",
+        "subtitle": "Feedback from the PM leading the project this employee is assigned to. Runs in parallel with the SPV → PM → OM chain.",
+        "projectLabel": "Covered project",
+        "reviewerLabel": "Project reviewer",
+        "reviewerMissing": "Not set — ask HR to assign a reviewer",
+        "reviewedAtHint": "Latest notes submitted {date}",
+        "notesLabel": "Project reviewer notes",
+        "notesPlaceholder": "Day-to-day observations, delivery quality, technical fit, role suitability, readiness for renewal…",
+        "notesHint": "Visible to SPV, PM, OM, and HR. Not visible to the employee.",
+        "submitNotes": "Submit notes",
+        "updateNotes": "Update notes",
+        "saved": "Project reviewer notes saved.",
+        "errorEmpty": "Please add project notes first.",
+        "pending": "No notes from the project reviewer yet.",
+        "lockedForReviewer": "The evaluation is past the OM step — notes are locked."
+      }
     },
     "templates": {
       "title": "Evaluation templates",

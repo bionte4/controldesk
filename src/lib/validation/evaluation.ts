@@ -131,6 +131,13 @@ export const startEvaluationSchema = z.object({
   template_id: uuidSchema,
   pm_employee_id: uuidSchema.optional(),
   om_employee_id: uuidSchema.optional(),
+  // Optional project context (migration 0089). When set, SPV picked a
+  // specific project the employee is actively assigned to; the action
+  // verifies membership + auto-suggests `project_reviewer_employee_id`
+  // from the project's PRIMARY_PM. Both are nullable so evaluations
+  // without a project context keep working exactly like before.
+  project_id: uuidSchema.optional(),
+  project_reviewer_employee_id: uuidSchema.optional(),
   // PKWT alignment (migration 0062). Both dates are optional at draft
   // time — SPV may fill them mid-cycle. If provided, `end` must be
   // strictly >= `start` (enforced via refine below).
@@ -394,4 +401,26 @@ export const decideEvaluationByOmSchema = z
   );
 export type DecideEvaluationByOmInput = z.infer<
   typeof decideEvaluationByOmSchema
+>;
+
+/**
+ * Project reviewer notes submission (migration 0089).
+ *
+ * Only the employee referenced by `project_reviewer_employee_id` on
+ * the evaluation may call this — validated action-side. The reviewer
+ * may submit + edit notes any time before OM decides (statuses
+ * DRAFT / SUBMITTED_BY_SPV / REVIEWED_BY_PM / RETURNED_TO_SPV); once
+ * the evaluation reaches APPROVED_BY_OM / REJECTED_BY_OM / FINALIZED
+ * the notes lock.
+ */
+export const submitProjectReviewerNotesSchema = z.object({
+  id: uuidSchema,
+  project_reviewer_notes: z
+    .string()
+    .trim()
+    .min(1, "Isi catatan proyek reviewer.")
+    .max(4000),
+});
+export type SubmitProjectReviewerNotesInput = z.infer<
+  typeof submitProjectReviewerNotesSchema
 >;

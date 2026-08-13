@@ -576,7 +576,15 @@
       "returnedBody": "PM meminta Anda menyesuaikan evaluasi sebelum resubmit.",
       "approvedTitle": "Evaluasi disetujui OM",
       "rejectedTitle": "Evaluasi ditolak OM",
-      "finalizedTitle": "Evaluasi difinalisasi"
+      "finalizedTitle": "Evaluasi difinalisasi",
+      "projectReviewRequested": {
+        "title": "Diminta ulasan proyek — evaluasi {name}",
+        "body": "SPV melibatkan Anda sebagai project reviewer untuk evaluasi {name}. Silakan tulis catatan sebelum keputusan OM."
+      },
+      "projectReviewed": {
+        "title": "Catatan project reviewer diterima",
+        "body": "Project reviewer telah menyampaikan catatan. Silakan pertimbangkan sebelum submit ke PM."
+      }
     },
     "upk": {
       "draftTitle": "Draft UPK menunggu input Anda",
@@ -3749,7 +3757,14 @@
       "extensionEndDateHint": "Isi manual. Harus setelah {currentEnd}.",
       "extensionPreviewLabel": "Perpanjangan",
       "extensionDateAfterCurrent": "Tanggal akhir kontrak baru harus setelah {currentEnd}.",
-      "notExtendHint": "Setelah OM approve, sistem akan membuat draft UPK otomatis untuk finance."
+      "notExtendHint": "Setelah OM approve, sistem akan membuat draft UPK otomatis untuk finance.",
+      "projectContext": "Konteks proyek",
+      "projectContextPlaceholder": "Pilih proyek yang di-cover (opsional)…",
+      "projectContextNone": "Tanpa konteks proyek (evaluasi struktural)",
+      "projectContextEmpty": "Karyawan ini belum ada penugasan proyek aktif — evaluasi struktural saja.",
+      "projectReviewerPreview": "Project reviewer otomatis: {name}. Reviewer bisa menulis catatan sebelum keputusan OM.",
+      "projectReviewerMissing": "Proyek ini belum punya PRIMARY_PM — HR bisa menentukan reviewer nanti di halaman detail.",
+      "optional": "opsional"
     },
     "detail": {
       "kicker": "Evaluasi",
@@ -3767,7 +3782,24 @@
       "critGoal": "Pencapaian Goal",
       "critManajemen": "Rata-rata Manajemen",
       "critCompetency": "Kompetensi terpenuhi",
-      "extensionBadge": "Kontrak diperpanjang"
+      "extensionBadge": "Kontrak diperpanjang",
+      "projectReviewer": {
+        "title": "Ulasan proyek",
+        "subtitle": "Umpan balik dari Project Manager yang memimpin proyek tempat karyawan ini di-assign. Berjalan paralel dengan chain SPV → PM → OM.",
+        "projectLabel": "Proyek yang di-cover",
+        "reviewerLabel": "Project reviewer",
+        "reviewerMissing": "Belum ditentukan — minta HR menetapkan reviewer",
+        "reviewedAtHint": "Catatan terakhir dikirim {date}",
+        "notesLabel": "Catatan project reviewer",
+        "notesPlaceholder": "Observasi harian, kualitas delivery, penilaian teknis, kesesuaian dengan role, kesiapan menghadapi kontrak berikutnya…",
+        "notesHint": "Catatan ini terlihat oleh SPV, PM, OM, dan HR. Belum terlihat oleh karyawan.",
+        "submitNotes": "Kirim catatan",
+        "updateNotes": "Perbarui catatan",
+        "saved": "Catatan project reviewer tersimpan.",
+        "errorEmpty": "Isi catatan proyek dulu.",
+        "pending": "Belum ada catatan dari project reviewer.",
+        "lockedForReviewer": "Evaluasi sudah melewati step OM — catatan terkunci."
+      }
     },
     "templates": {
       "title": "Template evaluasi",

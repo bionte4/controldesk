@@ -107,6 +107,8 @@ const KIND_ICON: Record<NotificationKind, LucideIcon> = {
   TIMESHEET_REJECTED: XCircle,
   BULK_IMPORT_COMPLETED: Upload,
   APPROVAL_IDLE_24H: Clock,
+  EVALUATION_PROJECT_REVIEW_REQUESTED: ClipboardList,
+  EVALUATION_PROJECT_REVIEWED: ClipboardCheck,
 };
 
 const KIND_TONE: Record<NotificationKind, string> = {
@@ -152,6 +154,8 @@ const KIND_TONE: Record<NotificationKind, string> = {
   TIMESHEET_REJECTED: "text-rose-500 dark:text-rose-300",
   BULK_IMPORT_COMPLETED: "text-sky-500 dark:text-sky-300",
   APPROVAL_IDLE_24H: "text-amber-500 dark:text-amber-300",
+  EVALUATION_PROJECT_REVIEW_REQUESTED: "text-indigo-500 dark:text-indigo-300",
+  EVALUATION_PROJECT_REVIEWED: "text-sky-500 dark:text-sky-300",
 };
 
 export function NotificationsBell({

@@ -25,6 +25,7 @@ import {
 } from "@/lib/validation/evaluation";
 
 import { EvaluationActionsPanel } from "./actions-panel";
+import { ProjectReviewerCard } from "./project-reviewer-card";
 
 // PKWT kesimpulan thresholds (from the paper form): 2 of these 3 must
 // be met to recommend permanent conversion.
@@ -60,7 +61,7 @@ export default async function EvaluationDetailPage(props: {
   const { data: rowRaw } = await supabase
     .from("performance_evaluations")
     .select(
-      "*, employee:employee_id(id, full_name, employment_type), template:template_id(id, name), spv:spv_employee_id(id, full_name), pm:pm_employee_id(id, full_name), om:om_employee_id(id, full_name)",
+      "*, employee:employee_id(id, full_name, employment_type), template:template_id(id, name), spv:spv_employee_id(id, full_name), pm:pm_employee_id(id, full_name), om:om_employee_id(id, full_name), project:project_id(id, name, project_number), project_reviewer:project_reviewer_employee_id(id, full_name)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -99,6 +100,17 @@ export default async function EvaluationDetailPage(props: {
     spv_employee_id: string;
     pm_employee_id: string | null;
     om_employee_id: string | null;
+    // Project context (migration 0089).
+    project_id: string | null;
+    project_reviewer_employee_id: string | null;
+    project_reviewer_notes: string | null;
+    project_reviewed_at: string | null;
+    project: {
+      id: string;
+      name: string;
+      project_number: string | null;
+    } | null;
+    project_reviewer: { id: string; full_name: string } | null;
   };
 
   // Items + answers.
@@ -197,6 +209,15 @@ export default async function EvaluationDetailPage(props: {
             {evalRow.total_score ? (
               <span>· {t("form.totalScore")}: {Number(evalRow.total_score).toFixed(1)}</span>
             ) : null}
+            {evalRow.project ? (
+              <span>
+                ·{" "}
+                {evalRow.project.project_number
+                  ? `${evalRow.project.project_number} — `
+                  : ""}
+                {evalRow.project.name}
+              </span>
+            ) : null}
           </div>
           {/* Approved extension summary — surfaced right under the
               header once SPV/PM has locked in a duration, so anyone
@@ -275,9 +296,33 @@ export default async function EvaluationDetailPage(props: {
                 “{evalRow.om_notes}”
               </li>
             ) : null}
+            {evalRow.project_reviewer ? (
+              <li>
+                <span className="font-medium">Project Reviewer</span> ·{" "}
+                {evalRow.project_reviewer.full_name}
+                {evalRow.project_reviewed_at
+                  ? ` · submitted ${formatDateOnly(evalRow.project_reviewed_at)}`
+                  : ""}
+              </li>
+            ) : null}
           </ol>
         </CardContent>
       </Card>
+
+      {/* Project reviewer channel — only when a project context was
+          attached at draft time. Read-only for everyone except the
+          assigned reviewer, who can edit until OM decides. */}
+      {evalRow.project ? (
+        <ProjectReviewerCard
+          evaluationId={evalRow.id}
+          status={evalRow.status}
+          viewerEmployeeId={employee.id}
+          project={evalRow.project}
+          reviewer={evalRow.project_reviewer}
+          reviewerNotes={evalRow.project_reviewer_notes}
+          reviewedAt={evalRow.project_reviewed_at}
+        />
+      ) : null}
 
       {/* Answers */}
       <Card className="glass">
