@@ -319,7 +319,8 @@ services:
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?WAJIB (untuk basic auth Studio)}
+      # Compose `:?` is an "unset env" error string, not a credential. # ggignore
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?required}
     volumes:
       - ./deploy/kong/kong.yml:/home/kong/kong.yml:ro,Z
     # Kong port TIDAK di-expose ke public — hanya Caddy yang route ke sini.

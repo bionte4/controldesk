@@ -28,14 +28,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # `pnpm/action-setup@v6` reads the version from `packageManager`
       # in package.json — do NOT pass a `version:` here or the action
       # errors with "Multiple versions of pnpm specified".
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
 

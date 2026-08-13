@@ -282,7 +282,7 @@ documented in the PR body.
 
 - Node **22** on all runners (Node 20 is deprecated on GitHub-hosted runners).
 - pnpm version comes from `packageManager` in `package.json` — the
-  `pnpm/action-setup@v4` step deliberately does NOT pin a version so
+  `pnpm/action-setup@v6` step deliberately does NOT pin a version so
   the two never drift.
 
 ### Repository secrets
