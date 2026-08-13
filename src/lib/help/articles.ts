@@ -110,6 +110,17 @@ export const HELP_MANIFEST: readonly HelpArticleManifestEntry[] = [
     category: "getting-started",
     source: "docs/product/preferences.md",
   },
+  {
+    // Sequential end-to-end walkthrough — one fictional tenant
+    // (PT Nusa Digital) journey from Super Admin provisioning
+    // through the first project's delivery cycle, with concrete
+    // sample data at every step. Complements the per-role
+    // playbooks in `docs/user-guides/*` and the module deep-dives
+    // in `docs/modules/*` — this one is the "start here" tour.
+    slug: "end-to-end-walkthrough",
+    category: "getting-started",
+    source: "docs/product/end-to-end-walkthrough.md",
+  },
 
   // User guides — role-based operational playbooks
   {
