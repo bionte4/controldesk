@@ -74,10 +74,10 @@ services:
       - db-data:/var/lib/postgresql/data:Z
       # Config tuning untuk 16 GB RAM VPS (shared_buffers 2GB, dsb).
       - ./deploy/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro,Z
-      # Migrations akan di-apply lewat `pnpm db:push` ATAU
-      # supabase-cli link + push, dari luar container. Volume ini
-      # menyediakan file untuk seed awal saja (kalau ada).
-      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro,Z
+      # Application migrations are applied after Supabase services initialize.
+      # Do not mount them into /docker-entrypoint-initdb.d/migrations because
+      # that replaces the image's own required bootstrap migrations.
+      - ./deploy/postgres/99-set-service-passwords.sh:/docker-entrypoint-initdb.d/99-set-service-passwords.sh:ro,Z
     ports:
       # Postgres port cukup expose ke localhost VPS saja (bukan public).
       # Buat backup script + admin akses via SSH tunnel.
@@ -100,13 +100,13 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:9001/health",
+          "http://127.0.0.1:9001/health",
         ]
       timeout: 5s
       interval: 5s
       retries: 3
     volumes:
-      - ./deploy/vector/vector.yml:/etc/vector/vector.yml:ro,Z
+      - ./deploy/vector/vector.yml:/etc/vector/vector.yaml:ro,Z
       - /var/run/docker.sock:/var/run/docker.sock:ro,Z
     networks:
       - controldesk
@@ -219,8 +219,9 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: postgres
       DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
-      DB_ENC_KEY: ${REALTIME_ENC_KEY:?WAJIB (16-32 char, generate via `openssl rand -base64 24`)}
+      DB_ENC_KEY: ${REALTIME_ENC_KEY:?WAJIB (exactly 16 char)}
       API_JWT_SECRET: ${JWT_SECRET}
+      METRICS_JWT_SECRET: ${JWT_SECRET}
       SECRET_KEY_BASE: ${REALTIME_SECRET_KEY_BASE:?WAJIB (min 64 char, generate via `openssl rand -base64 48`)}
       ERL_AFLAGS: "-proto_dist inet_tcp"
       DNS_NODES: "''"
@@ -253,7 +254,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:5000/status",
+          "http://127.0.0.1:5000/status",
         ]
       timeout: 5s
       interval: 5s
@@ -311,7 +312,7 @@ services:
         condition: service_started
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
@@ -322,6 +323,18 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?WAJIB (untuk basic auth Studio)}
     volumes:
       - ./deploy/kong/kong.yml:/home/kong/kong.yml:ro,Z
+    command:
+      - /bin/sh
+      - -c
+      - |
+        awk '{
+          gsub(/\$$SUPABASE_ANON_KEY/, ENVIRON["SUPABASE_ANON_KEY"]);
+          gsub(/\$$SUPABASE_SERVICE_KEY/, ENVIRON["SUPABASE_SERVICE_KEY"]);
+          gsub(/\$$DASHBOARD_USERNAME/, ENVIRON["DASHBOARD_USERNAME"]);
+          gsub(/\$$DASHBOARD_PASSWORD/, ENVIRON["DASHBOARD_PASSWORD"]);
+          print
+        }' /home/kong/kong.yml > /tmp/kong.yml
+        exec /docker-entrypoint.sh kong docker-start
     # Kong port TIDAK di-expose ke public — hanya Caddy yang route ke sini.
     networks:
       - controldesk

@@ -27,7 +27,7 @@ cat <<EOF
 
 POSTGRES_PASSWORD=$(gen 32)
 JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
-REALTIME_ENC_KEY=$(gen 24)
+REALTIME_ENC_KEY=$(gen 16)
 REALTIME_SECRET_KEY_BASE=$(openssl rand -base64 48 | tr -d '\n')
 APP_ENCRYPTION_KEY=$(gen 32)
 CRON_SECRET=$(gen 32)

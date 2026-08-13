@@ -11,7 +11,7 @@
 #   /storage/v1/*  -> Storage API (storage)
 #   /pg/*          -> pg-meta (opsional, hanya kalau Studio dipakai)
 
-_format_version: "3.0"
+_format_version: "2.1"
 _transform: true
 
 # ---------------------------------------------------------------------------
