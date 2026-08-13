@@ -62,17 +62,11 @@ test.describe("Clients — Edit flow", () => {
     });
   });
 
-  test("Non-privileged role does NOT see the Edit button", async ({ page }) => {
+  test("Non-privileged role is redirected away from client detail", async ({ page }) => {
     await loginAs(page, "employee");
     await page.goto(`/clients/${CLIENT_NUSA_ID}`);
 
-    // The page itself is readable (RLS allows SELECT for authenticated users
-    // in the tenant); only the write UI is gated.
-    await expect(
-      page.getByRole("heading", { level: 1, name: /nusa/i }),
-    ).toBeVisible({ timeout: 20_000 });
-
-    // Assert the Edit trigger button is *not* rendered anywhere in the header.
+    await expect(page).toHaveURL(/\/dashboard\?error=forbidden/);
     const editBtn = page.getByRole("button", { name: /^edit$/i });
     await expect(editBtn).toHaveCount(0);
   });

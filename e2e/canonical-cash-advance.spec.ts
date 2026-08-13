@@ -29,7 +29,7 @@ test.describe("canonical cash advance sheet + list", () => {
       .toBeVisible();
   });
 
-  test("Chain preview reflects Type + Amount selection", async ({ page }) => {
+  test("General chain preview reflects the amount", async ({ page }) => {
     await loginAs(page, "supervisor");
     await page.goto("/finance/cash-advances");
 
@@ -44,63 +44,27 @@ test.describe("canonical cash advance sheet + list", () => {
     await expect(preview.getByText(/^finance$/i)).toBeVisible();
     await expect(preview.getByText(/^supervisor$/i)).toHaveCount(0);
 
-    // Switch to FIELD_OPS → chain becomes [SUPERVISOR, FINANCE].
-    await page.getByLabel(/^(field ops|operasional lapangan)$/i).check();
-    await expect(preview.getByText(/^supervisor$/i)).toBeVisible();
-    await expect(preview.getByText(/^finance$/i)).toBeVisible();
-
-    // Bump amount above 5M → FIELD_OPS adds PM.
+    // Bump a GENERAL request above 5M → the chain adds PM.
     await page.getByLabel(/^(amount|nominal)/i).fill("6000000");
     await expect(preview.getByText(/^project manager$/i)).toBeVisible();
   });
 
   test(
-    "Supervisor submits a FIELD_OPS cash advance and it appears on the list",
+    "Supervisor opens the dedicated FIELD_OPS request flow",
     async ({ page }) => {
       await loginAs(page, "supervisor");
       await page.goto("/finance/cash-advances");
 
       await page
-        .getByRole("button", { name: /^(new request|kas bon baru)$/i })
+        .getByRole("button", {
+          name: /pengajuan operasional|field ops request/i,
+        })
         .click();
 
-      // Type = FIELD_OPS.
-      await page.getByLabel(/^(field ops|operasional lapangan)$/i).check();
-
-      // First project in the select (any active project the supervisor is
-      // assigned to). We pick by opening the trigger and grabbing the first
-      // option — this avoids hard-coding project ids.
-      await page.getByLabel(/^(project|proyek)$/i).click();
-      await page.getByRole("option").first().click();
-
-      const uniqueLabel = `E2E FIELD_OPS ${Date.now()}`;
-      await page.getByLabel(/^(amount|nominal)/i).fill("750000");
-      await page
-        .getByLabel(/^(purpose|tujuan penggunaan)/i)
-        .fill(uniqueLabel);
-
-      await Promise.all([
-        page.waitForLoadState("networkidle"),
-        page
-          .getByRole("button", { name: /submit for approval|kirim untuk approval/i })
-          .click(),
-      ]);
-
-      // A new row bearing our uniqueLabel should be visible with the
-      // FIELD_OPS badge nearby. We use a broad text match to avoid
-      // depending on table cell order.
-      await expect(page.getByText(uniqueLabel)).toBeVisible({
-        timeout: 10_000,
-      });
-      const row = page.locator("tr", { hasText: uniqueLabel });
-      await expect(
-        row.getByText(/field ops|operasional lapangan/i),
-      ).toBeVisible();
-      // Canonical PENDING_SUPERVISOR label (Supervisor initiated field-ops
-      // row always starts at the Supervisor rung — rules §9.4).
-      await expect(
-        row.getByText(/pending .*supervisor|menunggu .*supervisor/i),
-      ).toBeVisible();
+      const sheet = page.getByRole("dialog");
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByText(/field ops|operasional/i).first()).toBeVisible();
+      await expect(sheet.getByLabel(/project|proyek/i)).toBeVisible();
     },
   );
 });

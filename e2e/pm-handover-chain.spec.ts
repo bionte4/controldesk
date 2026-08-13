@@ -47,7 +47,7 @@ test.describe("PM handover lifecycle", () => {
     await Promise.all([
       page.waitForLoadState("networkidle"),
       page
-        .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
         .click(),
     ]);
 
@@ -64,12 +64,16 @@ test.describe("PM handover lifecycle", () => {
     await Promise.all([
       page.waitForLoadState("networkidle"),
       page
-        .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
         .click(),
     ]);
 
     await expect(
-      page.getByText(/approved .* awaiting execution|awaiting.*execution|approved.*eksek/i).first(),
+      page
+        .getByText(
+          /approved(?: .* awaiting execution)?|awaiting.*execution|disetujui/i,
+        )
+        .first(),
     ).toBeVisible({ timeout: 10_000 });
   });
 

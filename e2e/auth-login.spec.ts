@@ -8,9 +8,10 @@ test.describe("auth — login", () => {
     await expect(
       page.getByRole("heading", { level: 1 }).first(),
     ).toBeVisible();
-    // The topbar shows the signed-in user.
+    // The dashboard greets the user by first name; the compact topbar only
+    // renders initials at desktop widths.
     await expect(
-      page.getByText(DEMO_USERS.supervisor.name, { exact: false }),
+      page.getByRole("heading", { name: /sinta/i }),
     ).toBeVisible();
   });
 

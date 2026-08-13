@@ -37,7 +37,7 @@ test.describe("cash advance approval chain", () => {
     await page.getByRole("button", { name: /^(approve|setujui)$/i }).click();
 
     const confirmApprove = page.getByRole("button", {
-      name: /confirm approve|konfirmasi setujui/i,
+      name: /confirm approve|konfirmasi.*setujui/i,
     });
     await expect(confirmApprove).toBeVisible();
     await Promise.all([
@@ -62,7 +62,7 @@ test.describe("cash advance approval chain", () => {
     await Promise.all([
       page.waitForLoadState("networkidle"),
       page
-        .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
         .click(),
     ]);
 
@@ -79,7 +79,7 @@ test.describe("cash advance approval chain", () => {
     await Promise.all([
       page.waitForLoadState("networkidle"),
       page
-        .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
         .click(),
     ]);
 

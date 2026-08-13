@@ -1,21 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("public landing page", () => {
-  test("renders the marketing hero + primary CTAs", async ({ page }) => {
+test.describe("tenant entry page", () => {
+  test("renders the tenant login hero + account CTA", async ({ page }) => {
     await page.goto("/");
-    // Hero should mention Managed Services (default id-ID locale).
     await expect(
-      page.getByRole("heading", { name: /managed services/i }),
+      page.getByRole("heading", {
+        name: /kendalikan proyek|control projects/i,
+      }),
     ).toBeVisible();
-    // Primary CTA links to /register — tenant provisioning entry point.
+    await expect(
+      page.getByRole("button", { name: /^(masuk|sign in)$/i }),
+    ).toBeVisible();
     const registerLink = page
-      .getByRole("link", { name: /(buat ruang kerja|create workspace)/i })
+      .getByRole("link", { name: /(buat akun|create account)/i })
       .first();
     await expect(registerLink).toBeVisible();
-    // Secondary CTA takes you to /login.
-    const loginLink = page
-      .getByRole("link", { name: /(masuk|sign in)/i })
-      .first();
-    await expect(loginLink).toBeVisible();
+    await expect(registerLink).toHaveAttribute("href", "/register-org");
   });
 });

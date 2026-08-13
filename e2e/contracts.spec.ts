@@ -84,17 +84,13 @@ test.describe("Contracts — Navigation & permissions", () => {
     await expect(clientLink).toBeVisible();
   });
 
-  test("Non-privileged role sees the list read-only (no New Contract CTA)", async ({
+  test("Non-privileged role is redirected away from contracts", async ({
     page,
   }) => {
     await loginAs(page, "employee");
     await page.goto("/finance/contracts");
 
-    await expect(
-      page.getByRole("heading", { level: 1, name: /bpo contract|kontrak/i }),
-    ).toBeVisible({ timeout: 20_000 });
-
-    // Employee (non-writer) should NOT see the New Contract button.
+    await expect(page).toHaveURL(/\/dashboard\?error=forbidden/);
     await expect(
       page.getByRole("button", { name: /kontrak baru|new contract/i }),
     ).toHaveCount(0);

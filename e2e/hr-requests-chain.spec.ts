@@ -34,7 +34,7 @@ async function approveOnDetailPage(
   await Promise.all([
     page.waitForLoadState("networkidle"),
     page
-      .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+      .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
       .click(),
   ]);
 }

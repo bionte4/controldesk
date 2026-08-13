@@ -35,7 +35,7 @@ test.describe("petty cash replenishment chain", () => {
 
     // Open the RequestReplenishmentDialog trigger.
     await page
-      .getByRole("button", { name: /(request replenishment|ajukan replenish)/i })
+      .getByRole("button", { name: /(request replenishment|ajukan (replenish|top-up))/i })
       .first()
       .click();
 
@@ -77,7 +77,7 @@ test.describe("petty cash replenishment chain", () => {
     await Promise.all([
       page.waitForLoadState("networkidle"),
       page
-        .getByRole("button", { name: /confirm approve|konfirmasi setujui/i })
+        .getByRole("button", { name: /confirm approve|konfirmasi.*setujui/i })
         .click(),
     ]);
 
@@ -125,7 +125,7 @@ test.describe("petty cash access-control denials", () => {
       ).toHaveCount(0);
       await expect(
         page.getByRole("button", {
-          name: /request replenishment|ajukan replenish/i,
+          name: /request replenishment|ajukan (replenish|top-up)/i,
         }),
       ).toHaveCount(0);
     }

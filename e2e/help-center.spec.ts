@@ -44,9 +44,9 @@ test.describe("Help center — knowledge base", () => {
     // markdown loader render the body server-side.
     await overviewLink.click();
     await expect(page).toHaveURL(/\/help\/overview/);
-    await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      /Apa itu ControlDesk/i,
-    );
+    await expect(
+      page.getByRole("heading", { level: 1, name: /Apa itu ControlDesk/i }),
+    ).toBeVisible();
     // Body content — the article talks about "multi-tenant" somewhere
     // in the first few paragraphs.
     await expect(page.getByText(/multi-tenant/i).first()).toBeVisible();

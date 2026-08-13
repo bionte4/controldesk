@@ -110,7 +110,7 @@ test.describe("Weekly Timesheet — approve chain", () => {
       .click();
     await page
       .getByRole("button", {
-        name: /confirm approve|konfirmasi setujui/i,
+        name: /confirm approve|konfirmasi.*setujui/i,
       })
       .click();
 
