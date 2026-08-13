@@ -25,6 +25,60 @@ sepanjang doc:
 Silakan ganti dengan tenant Anda sendiri saat mempraktikkan — struktur
 langkah tetap sama.
 
+## Peran vs orang: kenapa Sinta merangkap 3 topi
+
+Rules §6 mendefinisikan **7 role internal + 1 role portal**:
+`EMPLOYEE`, `SUPERVISOR`, `PM`, `OM` (Operations Manager),
+`FINANCE`, `DIRECTOR`, `ADMIN` (TENANT_ADMIN), plus `CLIENT`. Tapi
+role adalah **atribut approval-authority**, bukan orang. Satu orang
+bisa punya lebih dari satu role — sistem tidak melarang.
+
+Di sample Nusa Digital (~15 orang), pemetaan role → orang:
+
+| Role                        | Orang                              | Kenapa dirangkap                                    |
+| --------------------------- | ---------------------------------- | --------------------------------------------------- |
+| `ADMIN` (TENANT_ADMIN)      | Sinta Rahayu (founder)             | Founder tenant selalu jadi admin awal               |
+| `DIRECTOR`                  | Sinta Rahayu                       | Executive tier — di startup founder = director      |
+| `OM` (Operations Manager)   | Sinta Rahayu (untuk sekarang)      | OM = "membawahi > 1 PM"; Nusa Digital baru 1 PM     |
+| `FINANCE` (Lead Finance)    | Dewi Anggraini                     | Full-time Finance                                   |
+| `PM` (Project Manager)      | Rangga Wibowo                      | Handle 1 project (E-commerce Rebuild MST)           |
+| `SUPERVISOR`                | Rangga (sekaligus, sbg SPV Bagas)  | Team lead operasional                               |
+| `EMPLOYEE`                  | Bagas Nugroho, Putri Amelia        | IC (individual contributor)                         |
+
+### Kenapa Sinta bisa "merangkap" walau hanya punya 1 role
+
+Kolom `employees.role` di database menerima **satu role per employee**.
+Sinta hanya punya role `TENANT_ADMIN`. Namun rules §9 memberi
+`TENANT_ADMIN` (canonical `ADMIN`) **override authority** ke semua
+approval step di seluruh chain — dia bisa approve Expense sebagai
+Finance, sebagai Director, ataupun sebagai OM. Fungsi
+`canApproveExpenseAtRole()` di [`src/lib/rbac/roles.ts`](../../src/lib/rbac/roles.ts)
+short-circuit `true` untuk `TENANT_ADMIN` di line 330. Setiap
+override tercatat di `security_audit_logs` dengan `actor_role =
+'TENANT_ADMIN'` sehingga jejak audit tetap jelas siapa yang
+menyetujui.
+
+Efeknya: **Sinta secara fungsional bertindak sebagai Director + OM
+tanpa perlu 3 row employee terpisah**.
+
+### Kalau tenant Anda lebih besar
+
+Untuk organisasi 50+ orang / ≥ 3 PM, disarankan **pisahkan orangnya**
+agar audit + accountability lebih jelas:
+
+| Role                     | Siapa yang biasanya memegang            | Deskripsi rules §6                          |
+| ------------------------ | --------------------------------------- | ------------------------------------------- |
+| `DIRECTOR`               | C-level / VP / GM / Head of Ops         | Executive tier — approver terminal untuk nominal tinggi + read-all + executive dashboard |
+| `OPERATIONS_MANAGER` (OM)| Lead PM / Delivery Manager              | Membawahi > 1 PM, sign-off Field Ops CA Rp 20-50jt, portfolio-level view |
+| `TENANT_ADMIN` (ADMIN)   | Staf IT / HR / Ops (bukan founder)      | Kelola user, master data, integrasi, override emergency |
+
+Cara set: **HR → Employees → New / Edit → Role** dropdown pilih role
+kanonis yang tepat. Kalau Anda mengikuti walkthrough ini di tenant
+besar, **swap nama Sinta** di bab-bab yang bertanda tebal
+(**Director** / **OM**) dengan nama orang yang tepat di organisasi
+Anda — mis. "Pak Hendra (OM)" untuk Field Ops CA Bab 9 step ke-3,
+"Bu Ratih (Director)" untuk Bab 7 budget approval final.
+
 ## Prasyarat
 
 Sebelum mulai:
@@ -40,23 +94,28 @@ Sebelum mulai:
 
 ## Peta ringkas (skim dulu sebelum kerjakan)
 
-| Bab | Aktor          | Yang dilakukan                                  | Estimasi waktu |
-| --- | -------------- | ----------------------------------------------- | -------------- |
-| 1   | Super Admin    | Provision tenant baru + kirim invite            | 5 menit        |
-| 2   | Tenant Admin   | Login + selesaikan onboarding checklist         | 30 menit       |
-| 3   | Tenant Admin   | Isi master data: karyawan, klien                | 1 jam          |
-| 4   | Tenant Admin   | Bikin project + assign tim                      | 15 menit       |
-| 5   | Tenant Admin   | Setting approval threshold + unit whitelist     | 15 menit       |
-| 6   | Employee       | Isi Timesheet & Roster                           | Harian         |
-| 7   | PM             | Bikin Budget + Budget Request perubahan          | 30 menit       |
-| 8   | Employee       | Ajukan Cash Advance General                     | 5 menit / kali |
-| 9   | Field engineer | Ajukan Cash Advance Field Ops                   | 5 menit / kali |
-| 10  | Custodian      | Setup Petty Cash Fund + voucher harian          | 5 menit / kali |
-| 11  | Employee       | Ajukan Project Expense                          | 5 menit / kali |
-| 12  | Approver       | Approve items lewat Unified Inbox               | Harian, 10 menit |
-| 13  | HR / SPV       | Performance Evaluation (menjelang perpanjangan) | 30 menit / evaluasi |
-| 14  | Klien          | Login ke Client Portal + lihat progress         | 5 menit        |
-| 15  | Semua          | Tutup bulan pertama — recap KPI                 | 1 jam          |
+| Bab | Aktor                                    | Yang dilakukan                                  | Estimasi waktu |
+| --- | ---------------------------------------- | ----------------------------------------------- | -------------- |
+| 1   | Super Admin                              | Provision tenant baru + kirim invite            | 5 menit        |
+| 2   | Tenant Admin                             | Login + selesaikan onboarding checklist         | 30 menit       |
+| 3   | Tenant Admin                             | Isi master data: karyawan, klien                | 1 jam          |
+| 4   | Tenant Admin                             | Bikin project + assign tim                      | 15 menit       |
+| 5   | Tenant Admin *(sekaligus Director)*      | Setting approval threshold + unit whitelist     | 15 menit       |
+| 6   | Employee + Supervisor                    | Isi Roster + Timesheet, PM approve weekly       | Harian         |
+| 7   | PM + Finance + **Director**              | Bikin Budget + Budget Request (chain by nominal) | 30 menit       |
+| 8   | Employee + PM + Finance                  | Ajukan Cash Advance General + settle            | 5 menit / kali |
+| 9   | Field engineer + **Supervisor + PM + OM + Finance** | Ajukan Cash Advance Field Ops (2 skenario: kecil vs ≥ 20jt) | 5 menit / kali |
+| 10  | Custodian + Finance                      | Setup Petty Cash Fund + voucher harian          | 5 menit / kali |
+| 11  | PM (submitter) + Finance + **Director**  | Ajukan Project Expense (kecil vs ≥ 100jt)       | 5 menit / kali |
+| 12  | Approver (PM / OM / Finance / Director)  | Approve items lewat Unified Inbox               | Harian, 10 menit |
+| 13  | HR / SPV + PM (project reviewer) + **OM/Director** | Performance Evaluation menjelang perpanjangan | 30 menit / evaluasi |
+| 14  | Klien                                    | Login ke Client Portal + lihat progress         | 5 menit        |
+| 15  | Semua (highlight **Director** untuk KPI + audit) | Tutup bulan pertama — recap KPI                | 1 jam          |
+
+**Legend**: bold role di kolom "Aktor" adalah peran approval-authority
+(OM = Operations Manager, Director = executive tier). Di tenant kecil
+seperti sample kita, satu orang bisa merangkap beberapa role — lihat
+callout berikutnya.
 
 ---
 
@@ -523,6 +582,95 @@ Setelah kunjungan:
 3. Chain settlement Field Ops: `PendingSettlementSupervisor →
    PendingSettlement (Finance) → Settled` (untuk nominal < 20jt tidak
    perlu OM step).
+
+### 9.2 Sample kedua — Field Ops besar Rp 28jt (memperkenalkan peran OM)
+
+Beberapa minggu kemudian, Bagas perlu on-site di kantor MST BSD
+selama **5 hari** untuk go-live support. Estimasi Rp 28.000.000
+(akomodasi hotel BSD 4 malam + Grab PP setiap hari + konsumsi
+lengkap + kunci parkir + reserve komunikasi).
+
+**Aktor tambahan** (baru muncul di sini):
+
+- **Pak Hendra Setiawan** — role `OPERATIONS_MANAGER`. Di Nusa Digital
+  fase awal, Sinta merangkap OM. Bila organisasi sudah punya OM
+  terpisah (>1 PM di-supervisi), swap ke Pak Hendra untuk step ini.
+- **Sinta Rahayu** — di sini pakai topi `DIRECTOR` (karena Rp 28jt <
+  50jt, sebenarnya Director step tidak wajib, tapi lihat catatan di
+  bawah).
+
+**Chain lengkap** (rules §9.4):
+
+```
+Supervisor (Rangga) → PM (Rangga, self karena dia PM project) → OM (Hendra) → Finance (Dewi)
+```
+
+Karena nominal Rp 28jt ≥ Rp 20jt, **slot OM ikut aktif** (rules §9.4
+row "≥ 5jt: +PM; ≥ 20jt: +OM"). Director step tidak wajib karena < 50jt.
+
+**Step-by-step**:
+
+1. Bagas ajukan Field Ops CA baru, header sama seperti 9.0 tapi:
+   - `Date range`: `2026-11-10` – `2026-11-14` (5 hari).
+   - `Justification`: `NewInstallation`.
+2. Line items RAB:
+
+   | Category      | Item                              | Amount     |
+   | ------------- | --------------------------------- | ---------: |
+   | AKOMODASI     | Hotel Aston BSD 4 malam           | 4.400.000  |
+   | TRANSPORTASI  | Grab PP Jakarta-BSD 5 hari        | 3.000.000  |
+   | TIKET-PESAWAT | (tidak dipakai, dihapus)          | —          |
+   | KONSUMSI      | Makan 3x sehari x 5 hari x 2 org  | 3.500.000  |
+   | TOLL-PARKIR   | Toll + parkir kendaraan operasional| 1.200.000  |
+   | SEWA-ALAT     | Sewa laptop cadangan + kabel jaringan | 12.000.000 |
+   | KOMUNIKASI    | Paket data 5G on-site             |  400.000   |
+   | LAIN-LAIN     | Reserve 10%                       | 3.500.000  |
+   |               | **Total**                         | **28.000.000** |
+
+3. Submit → sistem resolve chain:
+   - **Supervisor step**: Rangga (Bagas `reports_to = Rangga`).
+   - **PM step**: Rangga (dia PM primary project MST). Karena
+     Rangga = Supervisor **DAN** PM Bagas untuk project ini, sistem
+     tetap tampilkan 2 slot terpisah tapi bisa **satu klik approve
+     mengisi keduanya** (auto-fill kedua rung dengan single decision;
+     audit log tetap 2 rows).
+   - **OM step**: Pak Hendra Setiawan (auto-resolve dari Rangga
+     `reports_to`, chain naik). Kalau Rangga `reports_to = Sinta`
+     langsung, sistem set OM = Sinta.
+   - **Finance step**: Dewi Anggraini (parallel gate — bisa approve
+     tanpa menunggu OM).
+4. Rangga approve dua slot atas dalam 1 klik.
+5. Pak Hendra terima notif → review justifikasi + line items → dia
+   melihat SEWA-ALAT Rp 12jt agak tinggi → tambah komentar
+   "Konfirmasi butuh laptop cadangan? Pinjam dari kantor bisa?"
+   Bagas balas: "Kantor sedang dipakai tim lain, sudah dicek."
+   Hendra **approve dengan komentar**.
+6. Dewi (Finance) approve → status `APPROVED` → disburse Rp 28jt via
+   transfer bank atau dompet CA custodian.
+
+**Timeline yang muncul di detail page**:
+
+```
+● Submitted by Bagas          2026-10-28 08:15
+● Supervisor (Rangga)         2026-10-28 09:00 ✓
+● PM (Rangga)                 2026-10-28 09:00 ✓ (single-click)
+● OM (Hendra)                 2026-10-28 14:30 ✓ "Konfirmasi laptop..."
+● Finance (Dewi)              2026-10-28 15:10 ✓
+● Disbursed                   2026-10-29 10:00
+```
+
+**Kalau nominal ≥ 50jt** (mis. Rp 65jt untuk trip antar-pulau):
+tambahan **Director step** ikut aktif → chain `Supervisor → PM → OM →
+Finance → Director`. Sinta (Director) jadi rung terakhir sebelum
+disbursement. Untuk skenario ini biasanya butuh justification tebal
+(target site, deliverable, timeline).
+
+**Settlement chain juga bertingkat**:
+
+- `PendingSettlementSupervisor` → Rangga verify semua struk sesuai.
+- `PendingSettlementOM` → Hendra verify aktual vs RAB (untuk ≥ 20jt).
+- `PendingSettlement (Finance)` → Dewi finalize + refund/top-up.
+- `Settled`.
 
 ---
 
