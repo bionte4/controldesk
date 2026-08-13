@@ -110,12 +110,16 @@ describe("withPlatformAdminAction", () => {
 
     expect(res).toEqual({ ok: true, data: { id: "tenant-1" } });
     expect(handler).toHaveBeenCalledOnce();
-    const ctx = handler.mock.calls[0]?.[1];
-    expect(ctx?.admin).toEqual({
-      user_id: ADMIN.user_id,
-      email: ADMIN.email,
-      full_name: ADMIN.full_name,
-    });
+    expect(handler).toHaveBeenCalledWith(
+      { slug: "acme" },
+      expect.objectContaining({
+        admin: {
+          user_id: ADMIN.user_id,
+          email: ADMIN.email,
+          full_name: ADMIN.full_name,
+        },
+      }),
+    );
     expect(rpcMock).toHaveBeenCalledWith(
       "record_platform_admin_audit",
       expect.objectContaining({
