@@ -31,6 +31,8 @@ export function TasksView({
   employees,
   employeeById,
   today,
+  canManage,
+  canDelete,
 }: {
   projectId: string;
   roots: TaskTreeNode[];
@@ -40,6 +42,8 @@ export function TasksView({
   employees: EmployeeOption[];
   employeeById: Record<string, string>;
   today: string;
+  canManage: boolean;
+  canDelete: boolean;
 }) {
   const t = useTranslations("tasks");
   const [mode, setMode] = React.useState<Mode>("tree");
@@ -91,6 +95,8 @@ export function TasksView({
           milestones={milestones}
           employees={employees}
           employeeById={employeeById}
+          canManage={canManage}
+          canDelete={canDelete}
         />
       </div>
 

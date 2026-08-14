@@ -30,9 +30,15 @@ import { TasksView } from "./tasks-view";
 export async function ProjectTasksSection({
   projectId,
   tenantId,
+  canManage,
+  canDelete,
 }: {
   projectId: string;
   tenantId: string;
+  /** Whether the caller may CREATE + UPDATE tasks (see canonical PDP). */
+  canManage: boolean;
+  /** Whether the caller may DELETE tasks (stricter than `canManage`). */
+  canDelete: boolean;
 }) {
   const t = await getTranslations("tasks");
   const supabase = await createClient();
@@ -96,14 +102,16 @@ export async function ProjectTasksSection({
             })}
           </CardDescription>
         </div>
-        <TaskSheet
-          mode="create"
-          projectId={projectId}
-          parents={flatOptions}
-          milestones={milestones}
-          employees={employees}
-          predecessors={flatOptions}
-        />
+        {canManage ? (
+          <TaskSheet
+            mode="create"
+            projectId={projectId}
+            parents={flatOptions}
+            milestones={milestones}
+            employees={employees}
+            predecessors={flatOptions}
+          />
+        ) : null}
       </CardHeader>
 
       {stats.total > 0 ? (
@@ -146,6 +154,8 @@ export async function ProjectTasksSection({
           employees={employees}
           employeeById={employeeById}
           today={new Date().toISOString().slice(0, 10)}
+          canManage={canManage}
+          canDelete={canDelete}
         />
       </CardContent>
     </Card>

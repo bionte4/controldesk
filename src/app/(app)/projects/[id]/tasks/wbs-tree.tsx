@@ -37,6 +37,8 @@ export function WbsTree({
   milestones,
   employees,
   employeeById,
+  canManage,
+  canDelete,
 }: {
   projectId: string;
   roots: TaskTreeNode[];
@@ -44,6 +46,8 @@ export function WbsTree({
   milestones: MilestoneOption[];
   employees: EmployeeOption[];
   employeeById: Record<string, string>;
+  canManage: boolean;
+  canDelete: boolean;
 }) {
   const t = useTranslations("tasks");
   const [expanded, setExpanded] = React.useState<Set<string>>(() => {
@@ -241,6 +245,8 @@ export function WbsTree({
                     milestones={milestones}
                     employees={employees}
                     predecessors={flatOptions.filter((o) => o.id !== node.id)}
+                    canManage={canManage}
+                    canDelete={canDelete}
                   />
                 </td>
               </tr>

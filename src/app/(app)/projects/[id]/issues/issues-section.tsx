@@ -24,6 +24,7 @@ import {
   type IssueAssigneeOption,
   type IssueMilestoneOption,
 } from "./new-issue-sheet";
+import { EditIssueSheet } from "./edit-issue-sheet";
 
 const SEVERITY_TONE: Record<ProjectIssueSeverity, string> = {
   CRITICAL: "bg-rose-500/15 text-rose-500 border-rose-500/30",
@@ -325,11 +326,32 @@ export async function ProjectIssuesSection({
                         : formatInTz(issue.created_at, "dd MMM yyyy")}
                     </td>
                     <td className="px-4 py-3 align-top text-right">
-                      <IssueRowActions
-                        issueId={issue.id}
-                        currentStatus={issue.status}
-                        canAct={canAct}
-                      />
+                      <div className="flex items-center justify-end gap-1">
+                        {canAct ? (
+                          <EditIssueSheet
+                            issue={{
+                              id: issue.id,
+                              title: issue.title,
+                              description: issue.description ?? null,
+                              severity: issue.severity,
+                              category: issue.category,
+                              assignee_employee_id:
+                                issue.assignee_employee_id ?? null,
+                              milestone_id: issue.milestone_id ?? null,
+                              due_date: issue.due_date ?? null,
+                              tags: issue.tags ?? null,
+                              notes: issue.notes ?? null,
+                            }}
+                            employees={employees}
+                            milestones={milestones}
+                          />
+                        ) : null}
+                        <IssueRowActions
+                          issueId={issue.id}
+                          currentStatus={issue.status}
+                          canAct={canAct}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
