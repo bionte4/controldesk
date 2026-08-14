@@ -1,10 +1,16 @@
 "use client";
 
 import * as React from "react";
-import { Download, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { Download, CheckCircle2, HelpCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// Slug of the "Install ControlDesk di HP" help article — kept as a
+// constant so grepping for slug references stays easy if we ever
+// rename the article. Do NOT inline it in JSX literals.
+const INSTALL_HELP_SLUG = "install-mobile-app";
 
 /**
  * Chrome-flavoured `beforeinstallprompt` event. Not typed in the
@@ -128,25 +134,65 @@ export function PwaInstallButton({
 
   // Not installable — this browser either doesn't support PWA install
   // (iOS Safari, in-app webviews) or Chrome hasn't decided to allow it
-  // yet (engagement heuristic in progress). We render null in compact
-  // mode so the sidebar footer doesn't dangle an unusable button, but
-  // still expose a helper text in hero mode so onboarding pages can
-  // guide the user manually.
+  // yet (engagement heuristic in progress). Historically we rendered
+  // `null` here, which meant iOS users had NO cue that they can still
+  // install via Safari's Share → "Add to Home Screen". Now we render
+  // a subtle help link to the install-mobile-app article, which
+  // documents the per-platform paths (Chrome / Safari iOS / desktop /
+  // TWA APK). The link is styled understated so it doesn't nag Chrome
+  // users who'll get the native prompt within the same session.
   if (!deferredPrompt) {
-    return null;
+    if (variant === "hero") {
+      return (
+        <Link
+          href={`/help/${INSTALL_HELP_SLUG}`}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground",
+            className,
+          )}
+        >
+          <HelpCircle className="size-3.5" aria-hidden />
+          Cara install ControlDesk di HP
+        </Link>
+      );
+    }
+    // Compact (sidebar footer). Even smaller — icon-only anchor with
+    // aria-label so screen readers still announce it. Hidden on
+    // very small screens where the sidebar itself is drawer-only.
+    return (
+      <Link
+        href={`/help/${INSTALL_HELP_SLUG}`}
+        className={cn(
+          "inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground/80 hover:text-foreground",
+          className,
+        )}
+        aria-label="Cara install ControlDesk sebagai aplikasi"
+      >
+        <HelpCircle className="size-3" aria-hidden />
+        Cara install di HP?
+      </Link>
+    );
   }
 
   if (variant === "hero") {
     return (
-      <Button
-        onClick={handleInstall}
-        disabled={installing}
-        size="lg"
-        className={cn("gap-2", className)}
-      >
-        <Download className="size-4" aria-hidden />
-        {installing ? "Membuka prompt install…" : "Install aplikasi ke HP"}
-      </Button>
+      <div className={cn("flex flex-col items-start gap-2", className)}>
+        <Button
+          onClick={handleInstall}
+          disabled={installing}
+          size="lg"
+          className="gap-2"
+        >
+          <Download className="size-4" aria-hidden />
+          {installing ? "Membuka prompt install…" : "Install aplikasi ke HP"}
+        </Button>
+        <Link
+          href={`/help/${INSTALL_HELP_SLUG}`}
+          className="text-xs text-muted-foreground hover:text-foreground"
+        >
+          Butuh bantuan? Baca panduan install
+        </Link>
+      </div>
     );
   }
 
