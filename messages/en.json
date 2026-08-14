@@ -884,6 +884,20 @@
       "toastActivated": "Project activated.",
       "toastActivateFailed": "Failed to activate project."
     },
+    "businessCase": {
+      "editButton": "Edit Business Case",
+      "editTitle": "Project Business Case",
+      "editDescription": "Update the executive summary, target Gross Margin (%), or sponsor. Business Case is editable only while the project is Draft or Planning.",
+      "summaryLabel": "Executive summary",
+      "summaryPlaceholder": "Background, scope, expected business outcome…",
+      "targetGmLabel": "Target margin (%)",
+      "targetGmHint": "Enter 0–100. Example: 25 for 25%.",
+      "sponsorLabel": "Executive sponsor",
+      "sponsorPlaceholder": "Pick sponsor…",
+      "sponsorNone": "None",
+      "submitEdit": "Save changes",
+      "updatedToast": "Business Case updated."
+    },
     "priority": {
       "CRITICAL": "Critical",
       "HIGH": "High",
@@ -918,7 +932,11 @@
       "description": "Description",
       "descriptionPlaceholder": "Scope, service type, notable points…",
       "submit": "Create project",
-      "created": "Project \"{name}\" created."
+      "created": "Project \"{name}\" created.",
+      "editTitle": "Edit project",
+      "editDescription": "Update project details. Changes propagate to every module. Status transitions (Business Case → Planning → Active) live in the transition panel; client, PM, and Business Case have their own flows.",
+      "submitEdit": "Save changes",
+      "updated": "Project \"{name}\" updated."
     },
     "wizard": {
       "step1": "Info",
@@ -1097,7 +1115,11 @@
       "owner": "Owner (optional)",
       "ownerPlaceholder": "Assign an owner…",
       "submit": "Add milestone",
-      "created": "Milestone added."
+      "created": "Milestone added.",
+      "editTitle": "Edit milestone",
+      "editDescription": "Update milestone details. Remaining weight capacity: {remaining}%.",
+      "submitEdit": "Save changes",
+      "updated": "Milestone updated."
     },
     "actions": {
       "openMenu": "Open milestone actions",
@@ -1270,7 +1292,11 @@
         "partialUploadFailed": "Issue saved, but some attachments failed to upload."
       },
       "submit": "Save",
-      "createdToast": "Issue raised."
+      "createdToast": "Issue raised.",
+      "editTitle": "Edit issue",
+      "editDescription": "Update the issue metadata: title, description, category, priority, tags, or due date. Changing the priority re-stamps the SLA.",
+      "submitEdit": "Save changes",
+      "updatedToast": "Issue updated."
     },
     "actions": {
       "openMenu": "Open issue actions",
@@ -1465,6 +1491,20 @@
       "deletedToast": "Draft deleted.",
       "confirmDelete": "Delete this draft permanently?",
       "confirmDeleteBody": "This action cannot be undone. Uploaded receipts will also be removed.",
+      "editTitle": "Edit expense draft",
+      "editSubtitle": "Update the draft before submitting for approval — project: {project}.",
+      "editSubtitleNoProject": "Update the expense draft before submitting for approval.",
+      "updatedToast": "Draft changes saved.",
+      "coaLineLabel": "Chart of Accounts",
+      "coaLineHint": "Accounting classification (GL). Finance or an MA editor may assign / change it while the expense is non-terminal.",
+      "assignCoaTitle": "Assign CoA",
+      "changeCoa": "Change CoA",
+      "selectCoa": "Select CoA…",
+      "loadingCoa": "Loading CoA list…",
+      "noCoaOptions": "No active CoA for this project.",
+      "saveCoa": "Save CoA",
+      "cancelCoa": "Cancel",
+      "coaAssignedToast": "CoA updated.",
       "budgetLineLabel": "Budget line",
       "coaLabel": "Chart of Accounts",
       "paymentMethodLabel": "Payment method",
@@ -1554,7 +1594,11 @@
       "save": "Save",
       "added": "Line item added.",
       "deleted": "Line item removed.",
-      "delete": "Delete line item"
+      "delete": "Delete line item",
+      "editTitle": "Edit budget line",
+      "editDescription": "Update the category, planned amount, CoA, or description. Realized + outstanding roll up automatically from approved expenses and disbursed cash advances.",
+      "updated": "Budget line updated.",
+      "plannedInvalid": "Planned amount must be a positive integer."
     },
     "detail": {
       "back": "Back to budgets",
@@ -3320,11 +3364,14 @@
       "OFF": "Off"
     },
     "actions": {
-      "new": "Add entry"
+      "new": "Add entry",
+      "edit": "Edit entry"
     },
     "form": {
       "title": "Create / update roster entry",
       "description": "One entry per (employee, date). Conflicts are updated in place.",
+      "editTitle": "Edit roster entry",
+      "editDescription": "Update the shift, project, status, or notes. The (employee, date) pair is locked because it must stay unique.",
       "employee": "Employee",
       "shift": "Shift",
       "project": "Project",
@@ -3337,6 +3384,7 @@
       "save": "Save",
       "saving": "Saving…",
       "successToast": "Roster entry saved.",
+      "updatedToast": "Roster entry updated.",
       "errorToast": "Failed to save roster entry."
     }
   },
@@ -3883,7 +3931,13 @@
       "markPaid": "Mark paid",
       "paidReference": "Payment reference (optional)",
       "notesPlaceholder": "Add a note (required when rejecting)…",
-      "directorNeeded": "Amount ≥ IDR 50 M — Director approval required after Finance."
+      "directorNeeded": "Amount ≥ IDR 50 M — Director approval required after Finance.",
+      "contractEndDate": "Contract end date",
+      "serviceMonthsHint": "Enter 0–600 months.",
+      "editTitle": "Edit UPK draft",
+      "editDescription": "Update base salary, months of service, or the multiplier — the UPK amount is recomputed automatically. Only DRAFT notes can be edited before Finance review.",
+      "submitEdit": "Save changes",
+      "updatedToast": "UPK draft updated."
     }
   },
   "monthlyReport": {

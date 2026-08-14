@@ -198,10 +198,10 @@ own view.
 **In this PR / commit series (Aug 2026 — shipped):**
 
 - Data model migration (`0085_tenant_chat_history.sql`).
-- Tool registry with **8 tools** — the original 3
+- Tool registry with **11 tools** — the original 3
   (`list_pending_approvals`, `my_projects`,
   `expense_summary_this_month`) plus 5 daily-question tools shipped
-  in the follow-up:
+  in the follow-up, plus 3 tenant-wide roll-ups shipped in Aug-14:
     - `my_timesheet_this_week` — ISO-week hours + per-project split.
       No arguments; scoped to caller's employee_id.
     - `my_direct_reports` — employees whose `reports_to_employee_id`
@@ -220,6 +220,22 @@ own view.
       totals. Additionally gated by `canViewBudget(dbRole)` —
       Employee/Supervisor receive `{ error: "forbidden" }` without a
       DB read. Same project-membership check as `project_status`.
+    - `tenant_project_stats()` — tenant-wide project counts + by-
+      status breakdown + list of active projects. Role-gated to
+      ADMIN/DIRECTOR/FINANCE/OM via `canViewTenantStats()`; PM/
+      Supervisor/Employee get `forbidden` and are pointed at
+      `my_projects` for their own list.
+    - `tenant_employee_stats()` — tenant-wide headcount: total
+      active, by role, by department, by `employment_type`
+      (PERMANENT/CONTRACT/PROBATION/INTERN/OUTSOURCE/OUTTASK), plus
+      count of contracts expiring within 30 days. Same role gate as
+      project stats (HR view of the workspace).
+    - `tenant_finance_stats()` — tenant-wide finance rollup for the
+      current month: total approved budget planned, approved
+      expenses MTD, pending expense-approval count, pending CA-
+      approval count, outstanding cash advances (DISBURSED). Tighter
+      role gate — ADMIN/DIRECTOR/FINANCE only; OM does not see
+      finance rollups.
 - `/api/help/ask` upgraded to accept `conversationId`, load history,
   execute tools, persist assistant + tool rows. Auto-derives sidebar
   titles via `deriveTitle()` on first user message.

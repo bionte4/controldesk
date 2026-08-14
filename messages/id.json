@@ -884,6 +884,20 @@
       "toastActivated": "Proyek diaktifkan.",
       "toastActivateFailed": "Gagal mengaktifkan proyek."
     },
+    "businessCase": {
+      "editButton": "Edit Business Case",
+      "editTitle": "Business Case proyek",
+      "editDescription": "Perbarui ringkasan eksekutif, target Gross Margin (%), atau sponsor. Business Case hanya dapat diedit saat proyek masih Draft atau Perencanaan.",
+      "summaryLabel": "Ringkasan eksekutif",
+      "summaryPlaceholder": "Latar belakang, ruang lingkup, hasil bisnis yang diharapkan…",
+      "targetGmLabel": "Target margin (%)",
+      "targetGmHint": "Isi 0–100. Contoh: 25 untuk 25%.",
+      "sponsorLabel": "Sponsor eksekutif",
+      "sponsorPlaceholder": "Pilih sponsor…",
+      "sponsorNone": "Tidak ada",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Business Case berhasil diperbarui."
+    },
     "priority": {
       "CRITICAL": "Kritis",
       "HIGH": "Tinggi",
@@ -918,7 +932,11 @@
       "description": "Deskripsi",
       "descriptionPlaceholder": "Cakupan, jenis layanan, catatan penting…",
       "submit": "Buat proyek",
-      "created": "Proyek \"{name}\" berhasil dibuat."
+      "created": "Proyek \"{name}\" berhasil dibuat.",
+      "editTitle": "Edit proyek",
+      "editDescription": "Perbarui detail proyek. Perubahan langsung dipakai di semua modul. Status (Business Case → Planning → Active) dikelola lewat panel transisi; klien, PM, dan Business Case punya alur khusus.",
+      "submitEdit": "Simpan perubahan",
+      "updated": "Proyek \"{name}\" berhasil diperbarui."
     },
     "wizard": {
       "step1": "Info",
@@ -1097,7 +1115,11 @@
       "owner": "Owner (opsional)",
       "ownerPlaceholder": "Pilih owner…",
       "submit": "Tambah milestone",
-      "created": "Milestone ditambahkan."
+      "created": "Milestone ditambahkan.",
+      "editTitle": "Ubah milestone",
+      "editDescription": "Perbarui detail milestone. Sisa kapasitas bobot: {remaining}%.",
+      "submitEdit": "Simpan perubahan",
+      "updated": "Milestone berhasil diperbarui."
     },
     "actions": {
       "openMenu": "Buka menu milestone",
@@ -1270,7 +1292,11 @@
         "partialUploadFailed": "Issue tersimpan, tapi ada lampiran yang gagal diunggah."
       },
       "submit": "Simpan",
-      "createdToast": "Issue dibuat."
+      "createdToast": "Issue dibuat.",
+      "editTitle": "Edit issue",
+      "editDescription": "Perbarui metadata issue: judul, deskripsi, kategori, prioritas, tag, atau tenggat. Perubahan prioritas akan menyetel ulang SLA.",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Issue berhasil diperbarui."
     },
     "actions": {
       "openMenu": "Buka menu issue",
@@ -1465,6 +1491,20 @@
       "deletedToast": "Draft dihapus.",
       "confirmDelete": "Hapus draft ini secara permanen?",
       "confirmDeleteBody": "Aksi ini tidak dapat dibatalkan. Nota yang sudah diunggah akan ikut dihapus.",
+      "editTitle": "Edit draft biaya",
+      "editSubtitle": "Perbarui detail sebelum submit ke approval — proyek: {project}.",
+      "editSubtitleNoProject": "Perbarui detail draft biaya sebelum submit ke approval.",
+      "updatedToast": "Perubahan draft biaya berhasil disimpan.",
+      "coaLineLabel": "Chart of Accounts",
+      "coaLineHint": "Klasifikasi akuntansi (GL). Finance atau MA-editor dapat menetapkan/ubah selama biaya masih non-terminal.",
+      "assignCoaTitle": "Tetapkan CoA",
+      "changeCoa": "Ubah CoA",
+      "selectCoa": "Pilih CoA…",
+      "loadingCoa": "Memuat daftar CoA…",
+      "noCoaOptions": "Tidak ada CoA aktif untuk proyek ini.",
+      "saveCoa": "Simpan CoA",
+      "cancelCoa": "Batal",
+      "coaAssignedToast": "CoA berhasil diperbarui.",
       "budgetLineLabel": "MA / Budget line",
       "coaLabel": "Chart of Accounts",
       "paymentMethodLabel": "Metode pembayaran",
@@ -1554,7 +1594,11 @@
       "save": "Simpan",
       "added": "Baris ditambahkan.",
       "deleted": "Baris dihapus.",
-      "delete": "Hapus baris"
+      "delete": "Hapus baris",
+      "editTitle": "Ubah baris anggaran",
+      "editDescription": "Perbarui kategori, nominal, CoA, atau deskripsi baris ini. Nominal realisasi dan outstanding di-track otomatis dari approval biaya dan disburse CA.",
+      "updated": "Baris anggaran berhasil diperbarui.",
+      "plannedInvalid": "Nominal harus bilangan bulat positif."
     },
     "detail": {
       "back": "Kembali ke daftar",
@@ -3320,11 +3364,14 @@
       "OFF": "Libur"
     },
     "actions": {
-      "new": "Tambah entri"
+      "new": "Tambah entri",
+      "edit": "Edit entri"
     },
     "form": {
       "title": "Buat / perbarui entri roster",
       "description": "Satu entri per (karyawan, tanggal). Konflik akan diperbarui otomatis.",
+      "editTitle": "Edit entri roster",
+      "editDescription": "Perbarui shift, proyek, status, atau catatan. Tanggal & karyawan pair terkunci karena unik per (karyawan, tanggal).",
       "employee": "Karyawan",
       "shift": "Shift",
       "project": "Proyek",
@@ -3337,6 +3384,7 @@
       "save": "Simpan",
       "saving": "Menyimpan…",
       "successToast": "Entri roster tersimpan.",
+      "updatedToast": "Entri roster diperbarui.",
       "errorToast": "Gagal menyimpan entri roster."
     }
   },
@@ -3883,7 +3931,13 @@
       "markPaid": "Tandai dibayarkan",
       "paidReference": "Referensi pembayaran (opsional)",
       "notesPlaceholder": "Tambahkan catatan (wajib saat menolak)…",
-      "directorNeeded": "Nominal ≥ IDR 50 jt — perlu approval Direktur setelah Finance."
+      "directorNeeded": "Nominal ≥ IDR 50 jt — perlu approval Direktur setelah Finance.",
+      "contractEndDate": "Tanggal akhir kontrak",
+      "serviceMonthsHint": "Isi 0–600 bulan.",
+      "editTitle": "Edit draft UPK",
+      "editDescription": "Perbarui gaji pokok, masa kerja, atau faktor pengali — nilai UPK terhitung otomatis. Draft hanya dapat diedit sebelum dikirim ke Finance.",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Draft UPK berhasil diperbarui."
     }
   },
   "monthlyReport": {
