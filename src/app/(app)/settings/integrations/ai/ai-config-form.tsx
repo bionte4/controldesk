@@ -68,6 +68,7 @@ type Props = {
         baseUrl: string | null;
         dailyTokenCap: number | null;
         piiRedactionEnabled: boolean;
+        insightFreshnessMin: number;
         hasApiKey: boolean;
         isActive: boolean;
       }
@@ -107,6 +108,7 @@ export function AiConfigForm({ current }: Props) {
 
   const initialValues = React.useMemo<SaveAiConfigInput>(() => {
     const provider = initialProvider;
+    const freshness = current?.insightFreshnessMin ?? 15;
     if (provider === "OPENAI_COMPATIBLE") {
       return {
         provider: "OPENAI_COMPATIBLE",
@@ -115,6 +117,7 @@ export function AiConfigForm({ current }: Props) {
         base_url: current?.baseUrl ?? "",
         daily_token_cap: current?.dailyTokenCap ?? null,
         pii_redaction_enabled: current?.piiRedactionEnabled ?? true,
+        insight_freshness_min: freshness,
       } as SaveAiConfigInput;
     }
     if (provider === "DISABLED") {
@@ -125,6 +128,7 @@ export function AiConfigForm({ current }: Props) {
         base_url: null,
         daily_token_cap: current?.dailyTokenCap ?? null,
         pii_redaction_enabled: true,
+        insight_freshness_min: freshness,
       } as SaveAiConfigInput;
     }
     return {
@@ -134,6 +138,7 @@ export function AiConfigForm({ current }: Props) {
       base_url: null,
       daily_token_cap: current?.dailyTokenCap ?? null,
       pii_redaction_enabled: true,
+      insight_freshness_min: freshness,
     } as SaveAiConfigInput;
   }, [current, initialProvider]);
 
@@ -147,6 +152,10 @@ export function AiConfigForm({ current }: Props) {
   const provider = form.watch("provider") as AiProvider;
 
   function onProviderChange(next: AiProvider) {
+    // Preserve the freshness window across provider swaps — it's a
+    // "how AI insights behave" setting, not tied to any single vendor.
+    const currentFreshness =
+      (form.getValues("insight_freshness_min") as number | undefined) ?? 15;
     // Reset fields on provider swap so a stale base_url from
     // OPENAI_COMPATIBLE can't sneak into a GOOGLE payload.
     if (next === "OPENAI_COMPATIBLE") {
@@ -157,6 +166,7 @@ export function AiConfigForm({ current }: Props) {
         base_url: "",
         daily_token_cap: null,
         pii_redaction_enabled: true,
+        insight_freshness_min: currentFreshness,
       } as SaveAiConfigInput);
     } else if (next === "DISABLED") {
       form.reset({
@@ -166,6 +176,7 @@ export function AiConfigForm({ current }: Props) {
         base_url: null,
         daily_token_cap: null,
         pii_redaction_enabled: true,
+        insight_freshness_min: currentFreshness,
       } as SaveAiConfigInput);
     } else {
       form.reset({
@@ -175,6 +186,7 @@ export function AiConfigForm({ current }: Props) {
         base_url: null,
         daily_token_cap: null,
         pii_redaction_enabled: true,
+        insight_freshness_min: currentFreshness,
       } as SaveAiConfigInput);
     }
   }
@@ -367,6 +379,42 @@ export function AiConfigForm({ current }: Props) {
                     />
                   </FormControl>
                   <FormDescription>{t("fields.dailyCapHint")}</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="insight_freshness_min"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("fields.freshnessMin")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={5}
+                      max={1440}
+                      step={5}
+                      value={
+                        typeof field.value === "number" && Number.isFinite(field.value)
+                          ? field.value
+                          : ""
+                      }
+                      onChange={(e) => {
+                        // Empty input treated as "reset to default" (15).
+                        // The Zod schema has `.default(15)` so this is
+                        // safe on the wire too.
+                        const raw = e.target.value;
+                        field.onChange(
+                          raw === "" ? 15 : Number.parseInt(raw, 10),
+                        );
+                      }}
+                      disabled={busy}
+                    />
+                  </FormControl>
+                  <FormDescription>{t("fields.freshnessMinHint")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

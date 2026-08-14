@@ -2245,6 +2245,8 @@
         "apiKey": "API Key",
         "dailyCap": "Daily token cap (opsional)",
         "dailyCapHint": "Batas maksimum token output per hari per tenant. Kosongkan untuk pakai default global (10.000).",
+        "freshnessMin": "Insight freshness window (menit)",
+        "freshnessMinHint": "Berapa lama insight yang sudah di-generate dianggap masih segar sebelum AI cron generate ulang. Range 5–1440 (default 15). Lebih kecil = data lebih up-to-date tapi boros token; lebih besar = hemat tapi data lebih basi.",
         "piiRedaction": "PII Redaction",
         "piiRedactionHint": "Hash / mask data sensitif sebelum dikirim ke LLM. Direkomendasikan aktif; hanya matikan untuk LLM on-prem sepenuhnya di dalam network Anda."
       },

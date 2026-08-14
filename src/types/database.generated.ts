@@ -6551,6 +6551,7 @@ export type Database = {
           created_at: string
           daily_token_cap: number | null
           encrypted_api_key: string | null
+          insight_freshness_min: number
           is_active: boolean
           last_error: string | null
           model_id: string
@@ -6564,6 +6565,7 @@ export type Database = {
           created_at?: string
           daily_token_cap?: number | null
           encrypted_api_key?: string | null
+          insight_freshness_min?: number
           is_active?: boolean
           last_error?: string | null
           model_id: string
@@ -6577,6 +6579,7 @@ export type Database = {
           created_at?: string
           daily_token_cap?: number | null
           encrypted_api_key?: string | null
+          insight_freshness_min?: number
           is_active?: boolean
           last_error?: string | null
           model_id?: string
