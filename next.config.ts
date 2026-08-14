@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { withSerwist } from "@serwist/turbopack";
 
 const withNextIntl = createNextIntlPlugin("./src/lib/i18n/request.ts");
 
@@ -41,4 +42,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Wrapping order:
+//   withNextIntl handles the intl middleware plumbing (routing +
+//   request-scoped locale). withSerwist adds `esbuild` to
+//   `serverExternalPackages` so the Route Handler at
+//   `src/app/serwist/[[...path]]/route.ts` can compile `src/sw.ts` at
+//   build time. Their responsibilities don't overlap so order is
+//   irrelevant — we wrap intl innermost by habit (matches every other
+//   Next.js example in the intl docs).
+export default withSerwist(withNextIntl(nextConfig));

@@ -19,7 +19,16 @@ import { log } from "@/lib/observability/log";
  *   5. Passing the resolved tenant slug/id downstream via request headers.
  */
 
-const PUBLIC_PATHS = new Set(["/login", "/register", "/forgot-password"]);
+const PUBLIC_PATHS = new Set([
+  "/login",
+  "/register",
+  "/forgot-password",
+  // PWA offline fallback shell — served by the Service Worker when
+  // the user's device drops connectivity, so it MUST be reachable
+  // without a Supabase session or tenant JWT. Contents are branded
+  // marketing / instructional only; no PII.
+  "/~offline",
+]);
 const PUBLIC_PREFIXES = ["/auth", "/api/auth"];
 
 function isPublicPath(pathname: string): boolean {
@@ -45,8 +54,15 @@ const OPS_BYPASS_PATHS = new Set([
   "/api/ready",
   "/api/version",
   "/api/observability/report",
+  // PWA public assets — must be reachable pre-auth so the browser can
+  // register the SW + install the app before the user signs in.
+  "/manifest.webmanifest",
 ]);
-const OPS_BYPASS_PREFIXES = ["/api/cron/"];
+// PWA / SW paths. `/serwist/` is Serwist's Route Handler surface
+// (`sw.js`, precache manifest). Icons under `/icons/` are static assets
+// that need to be reachable pre-auth (splash / launcher tile). Both
+// bypass tenant + auth so the browser can pull them during PWA install.
+const OPS_BYPASS_PREFIXES = ["/api/cron/", "/serwist/", "/icons/"];
 
 function ensureRequestId(request: NextRequest): string {
   const existing = request.headers.get("x-request-id");
