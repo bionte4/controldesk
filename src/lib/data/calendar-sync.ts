@@ -181,7 +181,7 @@ export async function listCalendarSyncEvents(input: {
       `id, kind, status, attempts, google_event_id, last_error,
        scheduled_at, sent_at, created_at, updated_at,
        project:projects(id, name, project_number, start_date, end_date),
-       milestone:project_milestones(id, name, due_date)`,
+       milestone:project_milestones(id, name, planned_end_date)`,
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -214,7 +214,12 @@ export async function listCalendarSyncEvents(input: {
     milestone: {
       id: string;
       name: string;
-      due_date: string | null;
+      // Milestones use `planned_end_date` (GAS-aligned schema per migration
+      // 0022). We surface it to the UI as `dueDate` because from the
+      // calendar's perspective it IS the target due date for that
+      // milestone. If the schema ever adds a distinct `due_date` column
+      // we should update both sides.
+      planned_end_date: string | null;
     } | null;
   };
 
@@ -242,7 +247,7 @@ export async function listCalendarSyncEvents(input: {
       ? {
           id: r.milestone.id,
           name: r.milestone.name,
-          dueDate: r.milestone.due_date,
+          dueDate: r.milestone.planned_end_date,
         }
       : null,
   }));
