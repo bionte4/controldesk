@@ -255,7 +255,8 @@
         "IN_APP": "In-app",
         "EMAIL": "Email",
         "TELEGRAM": "Telegram",
-        "WHATSAPP": "WhatsApp"
+        "WHATSAPP": "WhatsApp",
+        "PUSH": "Push (mobile)"
       },
       "telegram": {
         "title": "Telegram",

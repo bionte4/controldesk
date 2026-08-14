@@ -6364,6 +6364,56 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          disabled_at: string | null
+          disabled_reason: string | null
+          endpoint: string
+          id: string
+          keys_auth: string
+          keys_p256dh: string
+          last_used_at: string | null
+          tenant_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          endpoint: string
+          id?: string
+          keys_auth: string
+          keys_p256dh: string
+          last_used_at?: string | null
+          tenant_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          endpoint?: string
+          id?: string
+          keys_auth?: string
+          keys_p256dh?: string
+          last_used_at?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       secret_rotations: {
         Row: {
           created_at: string
@@ -8413,7 +8463,12 @@ export type Database = {
         | "TIMESHEETS"
         | "EMPLOYEES"
         | "SYSTEM"
-      notification_channel: "IN_APP" | "EMAIL" | "TELEGRAM" | "WHATSAPP"
+      notification_channel:
+        | "IN_APP"
+        | "EMAIL"
+        | "TELEGRAM"
+        | "WHATSAPP"
+        | "PUSH"
       notification_kind:
         | "APPROVAL_REQUESTED"
         | "APPROVAL_APPROVED"
@@ -8933,7 +8988,7 @@ export const Constants = {
         "EMPLOYEES",
         "SYSTEM",
       ],
-      notification_channel: ["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP"],
+      notification_channel: ["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP", "PUSH"],
       notification_kind: [
         "APPROVAL_REQUESTED",
         "APPROVAL_APPROVED",

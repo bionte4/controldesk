@@ -42,6 +42,7 @@ import {
   type NotificationChannel,
 } from "@/lib/notifications/categories";
 import type { PreferencesGrid } from "@/lib/notifications/preferences";
+import { PushSubscribeCard } from "@/components/pwa/push-subscribe-card";
 
 import {
   generateTelegramLinkAction,
@@ -107,6 +108,7 @@ export function PreferencesSection({
         </div>
       </div>
       <NotificationsCard initialGrid={initialGrid} />
+      <PushSubscribeCard />
       <TelegramCard telegram={telegram} />
       <WhatsAppCard whatsapp={whatsapp} />
       <AppearanceCard />

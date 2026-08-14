@@ -31,6 +31,7 @@ export const NOTIFICATION_CHANNELS: readonly NotificationChannel[] = [
   "EMAIL",
   "TELEGRAM",
   "WHATSAPP",
+  "PUSH",
 ] as const;
 
 // Explicit map. `satisfies Record<...>` lets TS catch new kinds at
@@ -183,4 +184,5 @@ export const CHANNEL_LABEL_EN: Record<NotificationChannel, string> = {
   EMAIL: "Email",
   TELEGRAM: "Telegram",
   WHATSAPP: "WhatsApp",
+  PUSH: "Push (mobile)",
 };
