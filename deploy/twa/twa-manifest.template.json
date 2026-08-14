@@ -1,0 +1,68 @@
+{
+  "packageId": "{{PACKAGE_ID}}",
+  "host": "{{HOST}}",
+  "name": "ControlDesk {{TENANT_LABEL}}",
+  "launcherName": "ControlDesk {{TENANT_LABEL}}",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#4f46e5",
+  "themeColorDark": "#0b0f19",
+  "navigationColor": "#0b0f19",
+  "navigationColorDark": "#0b0f19",
+  "navigationDividerColor": "#111827",
+  "navigationDividerColorDark": "#111827",
+  "backgroundColor": "#0b0f19",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://{{HOST}}/icons/icon-512.png",
+  "maskableIconUrl": "https://{{HOST}}/icons/icon-maskable-512.png",
+  "monochromeIconUrl": "https://{{HOST}}/icons/icon-512.png",
+  "shortcuts": [
+    {
+      "name": "Approvals",
+      "shortName": "Approvals",
+      "url": "/approvals?utm_source=twa_shortcut",
+      "chosenIconUrl": "https://{{HOST}}/icons/icon-192.png"
+    },
+    {
+      "name": "Insights",
+      "shortName": "Insights",
+      "url": "/insights?utm_source=twa_shortcut",
+      "chosenIconUrl": "https://{{HOST}}/icons/icon-192.png"
+    },
+    {
+      "name": "Timesheet",
+      "shortName": "Timesheet",
+      "url": "/hr/timesheets?utm_source=twa_shortcut",
+      "chosenIconUrl": "https://{{HOST}}/icons/icon-192.png"
+    }
+  ],
+  "signingKey": {
+    "path": "../keystore.jks",
+    "alias": "controldesk"
+  },
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "shareTarget": null,
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "appVersion": "1.0.0",
+  "minSdkVersion": 21,
+  "webManifestUrl": "https://{{HOST}}/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    },
+    "playBilling": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "generatorApp": "bubblewrap-cli",
+  "orientation": "portrait",
+  "isMetaQuest": false
+}

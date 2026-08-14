@@ -62,7 +62,18 @@ const OPS_BYPASS_PATHS = new Set([
 // (`sw.js`, precache manifest). Icons under `/icons/` are static assets
 // that need to be reachable pre-auth (splash / launcher tile). Both
 // bypass tenant + auth so the browser can pull them during PWA install.
-const OPS_BYPASS_PREFIXES = ["/api/cron/", "/serwist/", "/icons/"];
+//
+// `/.well-known/` is a reserved namespace (RFC 8615). Google Play
+// Services fetches `/.well-known/assetlinks.json` during TWA install
+// to verify the app ↔ site pairing — it MUST return 200 without auth,
+// or the TWA falls back to Custom Tabs (browser chrome visible). Same
+// bypass covers future ACME challenge tokens if we ever move off Caddy.
+const OPS_BYPASS_PREFIXES = [
+  "/api/cron/",
+  "/serwist/",
+  "/icons/",
+  "/.well-known/",
+];
 
 function ensureRequestId(request: NextRequest): string {
   const existing = request.headers.get("x-request-id");
