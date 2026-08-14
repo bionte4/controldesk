@@ -52,8 +52,11 @@ export const createEmployeeAction = withSecureAction({
         full_name: fullName,
         email: input.email,
         phone: input.phone ?? null,
+        nik: input.nik ?? null,
+        division: input.division ?? null,
         department: input.department ?? null,
         position_title: input.position_title ?? null,
+        client_display_name: input.client_display_name ?? null,
         role: input.role,
         date_of_birth: input.date_of_birth ?? null,
         join_date: input.join_date,
@@ -90,8 +93,14 @@ export const createEmployeeAction = withSecureAction({
         employment_type: data.employment_type,
         join_date: input.join_date,
         contract_end_date: data.contract_end_date,
+        // `nik` intentionally omitted — SENSITIVE_KEYS in audit.ts would
+        // redact it to "[REDACTED]" anyway; passing it here just wastes
+        // bytes. If HR ever needs a "was NIK set / cleared" bool in
+        // the audit trail, add `nik_present: Boolean(input.nik)`.
+        division: input.division ?? null,
         department: input.department ?? null,
         position_title: input.position_title ?? null,
+        client_display_name: input.client_display_name ?? null,
       },
     };
   },
@@ -134,8 +143,11 @@ export const updateEmployeeAction = withSecureAction({
       full_name: fullName,
       email: input.email,
       phone: input.phone ?? null,
+      nik: input.nik ?? null,
+      division: input.division ?? null,
       department: input.department ?? null,
       position_title: input.position_title ?? null,
+      client_display_name: input.client_display_name ?? null,
       role: input.role,
       date_of_birth: input.date_of_birth ?? null,
       join_date: input.join_date,
@@ -177,6 +189,12 @@ export const updateEmployeeAction = withSecureAction({
         employment_type: existing.employment_type,
         contract_end_date: existing.contract_end_date,
         availability: existing.availability,
+        // `nik` NOT captured — SENSITIVE_KEYS redacts it, and diffing
+        // "[REDACTED]" against "[REDACTED]" wastes storage. Any HR
+        // reviewer investigating an incident can query the row directly.
+        division: existing.division,
+        department: existing.department,
+        client_display_name: existing.client_display_name,
       },
       auditNewValues: {
         full_name: data.full_name,
@@ -185,6 +203,9 @@ export const updateEmployeeAction = withSecureAction({
         employment_type: data.employment_type,
         contract_end_date: data.contract_end_date,
         availability: data.availability,
+        division: input.division ?? null,
+        department: input.department ?? null,
+        client_display_name: input.client_display_name ?? null,
       },
     };
   },

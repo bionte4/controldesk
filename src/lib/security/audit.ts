@@ -33,6 +33,7 @@ const SENSITIVE_KEYS = new Set([
   "bank_account_number",
   "bank_account",
   "ktp_number",
+  "nik",
   "npwp",
   "id_card_number",
   "otp",

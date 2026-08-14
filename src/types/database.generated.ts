@@ -2354,10 +2354,12 @@ export type Database = {
         Row: {
           availability: Database["public"]["Enums"]["employee_availability"]
           bank_account_number: string | null
+          client_display_name: string | null
           contract_end_date: string | null
           created_at: string
           date_of_birth: string | null
           department: string | null
+          division: string | null
           email: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -2370,6 +2372,7 @@ export type Database = {
           join_date: string
           last_name: string | null
           monthly_salary: number
+          nik: string | null
           notes: string | null
           phone: string | null
           pii_anonymized_at: string | null
@@ -2385,10 +2388,12 @@ export type Database = {
         Insert: {
           availability?: Database["public"]["Enums"]["employee_availability"]
           bank_account_number?: string | null
+          client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
+          division?: string | null
           email: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2401,6 +2406,7 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
+          nik?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null
@@ -2416,10 +2422,12 @@ export type Database = {
         Update: {
           availability?: Database["public"]["Enums"]["employee_availability"]
           bank_account_number?: string | null
+          client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
+          division?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2432,6 +2440,7 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
+          nik?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null

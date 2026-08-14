@@ -86,6 +86,24 @@ const phoneSchema = z
   .optional()
   .transform((v) => (v && v.length > 0 ? v : undefined));
 
+/**
+ * Indonesian KTP (NIK): exactly 16 digits, no spaces or dashes.
+ * Zod default `.min(1)` on an optional string collides with `.length(16)`
+ * during empty-string coercion, so we normalise up front: an empty
+ * string turns into `undefined`, meaning "not provided". Anything else
+ * must be exactly 16 numeric characters — the DB-level check
+ * `employees_nik_format_ck` (migration 0093) enforces the same rule as
+ * a last line of defence.
+ */
+const nikSchema = z
+  .string()
+  .trim()
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : undefined))
+  .refine((v) => v === undefined || /^\d{16}$/.test(v), {
+    message: "NIK must be exactly 16 digits.",
+  });
+
 // ---------------------------------------------------------------------------
 // Create schema
 // ---------------------------------------------------------------------------
@@ -95,8 +113,11 @@ export const createEmployeeSchema = z
     last_name: optionalTrimmedText(80),
     email: emailSchema,
     phone: phoneSchema,
+    nik: nikSchema,
+    division: optionalTrimmedText(120),
     department: optionalTrimmedText(120),
     position_title: optionalTrimmedText(120),
+    client_display_name: optionalTrimmedText(120),
     role: z.enum(EMPLOYEE_ROLES).default("EMPLOYEE"),
     date_of_birth: isoDateSchema.optional(),
     join_date: isoDateSchema,

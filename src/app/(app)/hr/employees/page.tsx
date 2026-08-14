@@ -50,8 +50,11 @@ type EmployeeRow = {
   last_name: string | null;
   email: string;
   phone: string | null;
+  nik: string | null;
+  division: string | null;
   department: string | null;
   position_title: string | null;
+  client_display_name: string | null;
   role: EmployeeRoleEnum;
   date_of_birth: string | null;
   join_date: string;
@@ -81,8 +84,11 @@ function toExistingEmployee(row: EmployeeRow): ExistingEmployee {
     last_name: row.last_name,
     email: row.email,
     phone: row.phone,
+    nik: row.nik,
+    division: row.division,
     department: row.department,
     position_title: row.position_title,
+    client_display_name: row.client_display_name,
     role: row.role as string,
     date_of_birth: row.date_of_birth,
     join_date: row.join_date,
@@ -124,7 +130,7 @@ async function loadEmployees(
   let query = supabase
     .from("employees")
     .select(
-      "id, full_name, first_name, last_name, email, phone, department, position_title, role, date_of_birth, join_date, employment_type, contract_end_date, availability, reports_to_employee_id",
+      "id, full_name, first_name, last_name, email, phone, nik, division, department, position_title, client_display_name, role, date_of_birth, join_date, employment_type, contract_end_date, availability, reports_to_employee_id",
     )
     .order("full_name", { ascending: true })
     .limit(500);
@@ -149,8 +155,11 @@ async function loadEmployees(
     last_name: row.last_name,
     email: row.email,
     phone: row.phone,
+    nik: row.nik,
+    division: row.division,
     department: row.department,
     position_title: row.position_title,
+    client_display_name: row.client_display_name,
     role: row.role as EmployeeRoleEnum,
     date_of_birth: row.date_of_birth,
     join_date: row.join_date,
