@@ -311,7 +311,9 @@ services:
         condition: service_started
     environment:
       KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /home/kong/kong.yml
+      # Kita generate config dengan envsubst di entrypoint (lihat entrypoint
+      # override di bawah), lalu point KONG_DECLARATIVE_CONFIG ke hasilnya.
+      KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
@@ -323,6 +325,22 @@ services:
       DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?required}
     volumes:
       - ./deploy/kong/kong.yml:/home/kong/kong.yml:ro,Z
+    # Kong 2.8 DB-less TIDAK melakukan env substitution otomatis di YAML.
+    # Kita install `gettext` (menyediakan `envsubst`) lalu render kong.yml
+    # dengan value dari env sebelum panggil entrypoint asli. Tanpa step ini,
+    # literal string "$SUPABASE_ANON_KEY" akan jadi API key → 401 forever.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -eu
+        apk add --no-cache gettext >/dev/null 2>&1 || true
+        # Whitelist var yang di-substitute supaya variable lain di YAML tidak
+        # accidentally di-expand.
+        envsubst '$$SUPABASE_ANON_KEY $$SUPABASE_SERVICE_KEY $$DASHBOARD_USERNAME $$DASHBOARD_PASSWORD' \
+          < /home/kong/kong.yml > /tmp/kong.yml
+        echo "kong: config rendered ke /tmp/kong.yml"
+        exec /docker-entrypoint.sh kong docker-start
     # Kong port TIDAK di-expose ke public — hanya Caddy yang route ke sini.
     networks:
       - controldesk

@@ -160,6 +160,11 @@
 		header Access-Control-Allow-Credentials "true"
 
 		reverse_proxy kong:8000 {
+			# WebSocket upgrade — WAJIB pass-through supaya Supabase Realtime
+			# subscription (/realtime/v1/websocket) bekerja. Caddy 2.6+
+			# auto-detect, tapi kita explicit untuk safety.
+			header_up Connection {>Connection}
+			header_up Upgrade {>Upgrade}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
 			header_up X-Real-IP {remote_host}
