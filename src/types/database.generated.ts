@@ -2353,7 +2353,7 @@ export type Database = {
       employees: {
         Row: {
           availability: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number: string | null
+          bank_account_number_enc: string | null
           client_display_name: string | null
           contract_end_date: string | null
           created_at: string
@@ -2372,7 +2372,8 @@ export type Database = {
           join_date: string
           last_name: string | null
           monthly_salary: number
-          nik: string | null
+          nik_enc: string | null
+          nik_hash: string | null
           notes: string | null
           phone: string | null
           pii_anonymized_at: string | null
@@ -2387,7 +2388,7 @@ export type Database = {
         }
         Insert: {
           availability?: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number?: string | null
+          bank_account_number_enc?: string | null
           client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
@@ -2406,7 +2407,8 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
-          nik?: string | null
+          nik_enc?: string | null
+          nik_hash?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null
@@ -2421,7 +2423,7 @@ export type Database = {
         }
         Update: {
           availability?: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number?: string | null
+          bank_account_number_enc?: string | null
           client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
@@ -2440,7 +2442,8 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
-          nik?: string | null
+          nik_enc?: string | null
+          nik_hash?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null

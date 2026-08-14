@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { withSecureAction } from "@/lib/security/action-wrapper";
+import {
+  encryptEmployeePii,
+  hashEmployeeNik,
+  toBytea,
+} from "@/lib/security/employee-pii";
 import { createClient } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/types/database";
 import {
@@ -43,6 +48,31 @@ export const createEmployeeAction = withSecureAction({
       throw new Error("First name is required.");
     }
 
+    // Encrypt PII fields at the Node boundary (rules §3). NIK also
+    // gets a blind-index hash for the `(tenant_id, nik_hash)` unique
+    // constraint — if a duplicate slips through the pre-check below,
+    // the DB rejects it with 23505 as a last line of defence.
+    const nikEnc = encryptEmployeePii(input.nik);
+    const nikHash = hashEmployeeNik({
+      nik: input.nik ?? null,
+      tenantId: ctx.actor.tenantId,
+    });
+
+    // Pre-check for duplicate NIK — better UX than catching the raw
+    // 23505 unique_violation error. Uses supabase-js equality on the
+    // bytea column via `\\x<hex>` wire format.
+    if (nikHash) {
+      const { data: duplicate } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("tenant_id", ctx.actor.tenantId)
+        .eq("nik_hash", toBytea(nikHash) as string)
+        .maybeSingle();
+      if (duplicate) {
+        throw new Error("Karyawan dengan NIK ini sudah terdaftar di tenant.");
+      }
+    }
+
     const { data, error } = await supabase
       .from("employees")
       .insert({
@@ -52,11 +82,16 @@ export const createEmployeeAction = withSecureAction({
         full_name: fullName,
         email: input.email,
         phone: input.phone ?? null,
-        nik: input.nik ?? null,
+        nik_enc: nikEnc,
+        nik_hash: toBytea(nikHash),
         division: input.division ?? null,
         department: input.department ?? null,
         position_title: input.position_title ?? null,
         client_display_name: input.client_display_name ?? null,
+        // `bank_account_number_enc` intentionally omitted — column
+        // defaults to NULL. There's no UI wire-up for bank account
+        // yet; the column exists so a future HR-facing form can
+        // encrypt inline via the same `encryptEmployeePii()` helper.
         role: input.role,
         date_of_birth: input.date_of_birth ?? null,
         join_date: input.join_date,
@@ -93,10 +128,11 @@ export const createEmployeeAction = withSecureAction({
         employment_type: data.employment_type,
         join_date: input.join_date,
         contract_end_date: data.contract_end_date,
-        // `nik` intentionally omitted — SENSITIVE_KEYS in audit.ts would
-        // redact it to "[REDACTED]" anyway; passing it here just wastes
-        // bytes. If HR ever needs a "was NIK set / cleared" bool in
-        // the audit trail, add `nik_present: Boolean(input.nik)`.
+        // NIK plaintext intentionally NOT logged — even though
+        // `SENSITIVE_KEYS` would redact it, passing the value at
+        // all creates a needless surface (memory dumps, log
+        // aggregators). Record just whether it was set/cleared:
+        nik_present: Boolean(input.nik),
         division: input.division ?? null,
         department: input.department ?? null,
         position_title: input.position_title ?? null,
@@ -137,13 +173,36 @@ export const updateEmployeeAction = withSecureAction({
       throw new Error("First name is required.");
     }
 
+    // Same PII wire-up as create — encrypt at boundary, hash for the
+    // uniqueness constraint. Duplicate pre-check excludes the current
+    // row so re-submitting the edit sheet without changing NIK
+    // doesn't self-conflict.
+    const nikEnc = encryptEmployeePii(input.nik);
+    const nikHash = hashEmployeeNik({
+      nik: input.nik ?? null,
+      tenantId: ctx.actor.tenantId,
+    });
+    if (nikHash) {
+      const { data: duplicate } = await supabase
+        .from("employees")
+        .select("id")
+        .eq("tenant_id", ctx.actor.tenantId)
+        .eq("nik_hash", toBytea(nikHash) as string)
+        .neq("id", input.id)
+        .maybeSingle();
+      if (duplicate) {
+        throw new Error("Karyawan lain dengan NIK ini sudah terdaftar.");
+      }
+    }
+
     const patch: TablesUpdate<"employees"> = {
       first_name: input.first_name,
       last_name: input.last_name ?? null,
       full_name: fullName,
       email: input.email,
       phone: input.phone ?? null,
-      nik: input.nik ?? null,
+      nik_enc: nikEnc,
+      nik_hash: toBytea(nikHash),
       division: input.division ?? null,
       department: input.department ?? null,
       position_title: input.position_title ?? null,
@@ -189,9 +248,10 @@ export const updateEmployeeAction = withSecureAction({
         employment_type: existing.employment_type,
         contract_end_date: existing.contract_end_date,
         availability: existing.availability,
-        // `nik` NOT captured — SENSITIVE_KEYS redacts it, and diffing
-        // "[REDACTED]" against "[REDACTED]" wastes storage. Any HR
-        // reviewer investigating an incident can query the row directly.
+        // NIK values NEVER captured plaintext or ciphertext. Log
+        // just whether it was set so we can trace "someone cleared
+        // the NIK" events without leaking the value.
+        nik_present: Boolean(existing.nik_enc),
         division: existing.division,
         department: existing.department,
         client_display_name: existing.client_display_name,
@@ -203,6 +263,7 @@ export const updateEmployeeAction = withSecureAction({
         employment_type: data.employment_type,
         contract_end_date: data.contract_end_date,
         availability: data.availability,
+        nik_present: Boolean(input.nik),
         division: input.division ?? null,
         department: input.department ?? null,
         client_display_name: input.client_display_name ?? null,
