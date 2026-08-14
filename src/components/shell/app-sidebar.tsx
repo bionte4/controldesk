@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { PwaInstallButton } from "@/components/pwa/pwa-install-button";
 
 import {
   Sidebar,
@@ -140,9 +141,12 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/40 px-2 py-2 text-xs text-sidebar-accent-foreground group-data-[collapsible=icon]:hidden">
-          <Sparkles className="size-4 text-primary" />
-          <span className="leading-tight">{tNav("sidebarFooter")}</span>
+        <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
+          <PwaInstallButton variant="compact" />
+          <div className="flex items-center gap-2 rounded-lg bg-sidebar-accent/40 px-2 py-2 text-xs text-sidebar-accent-foreground">
+            <Sparkles className="size-4 text-primary" />
+            <span className="leading-tight">{tNav("sidebarFooter")}</span>
+          </div>
         </div>
       </SidebarFooter>
 

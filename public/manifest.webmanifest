@@ -4,7 +4,7 @@
   "short_name": "ControlDesk",
   "description": "Multi-tenant BPO / ERP untuk project, finance, dan HR. Approver dapat notifikasi push langsung di HP.",
   "id": "/",
-  "start_url": "/login",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
