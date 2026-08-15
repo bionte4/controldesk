@@ -50,14 +50,14 @@ ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
     NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME} \
     NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
 
-# Skip the redundant in-Next `tsc --noEmit` and ESLint passes during
-# the Docker image build — Next.js 16 Turbopack regularly hangs those
-# steps in the 4 GB Docker Desktop VM. Both checks are still enforced
-# in CI (`.github/workflows/ci.yml`) and locally before commit, so
-# this only affects the image bake path. See `next.config.ts` for
-# the conditional wiring.
-ENV NEXT_SKIP_TYPECHECK=1 \
-    NEXT_SKIP_LINT=1
+# Skip the redundant in-Next `tsc --noEmit` pass during the Docker image
+# build — Next.js 16 Turbopack regularly hangs that step in the 4 GB
+# Docker Desktop VM. Full typecheck is still enforced in CI
+# (`.github/workflows/ci.yml`) and locally before commit, so this only
+# affects the image bake path. See `next.config.ts` for the conditional
+# wiring. (Next.js 16 dropped built-in ESLint from `next build`, so
+# there is no separate lint bypass needed here.)
+ENV NEXT_SKIP_TYPECHECK=1
 
 RUN pnpm run build
 

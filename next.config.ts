@@ -31,8 +31,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   // Escape hatch for the Docker prod build.
   //
-  // Next.js 16 Turbopack runs a separate `tsc --noEmit` pass at the end of
-  // `next build` for a belt-and-suspenders check. Inside our Docker VM
+  // Next.js 16 Turbopack runs a separate `tsc --noEmit` pass at the end
+  // of `next build` for a belt-and-suspenders check. Inside our Docker VM
   // (4 GB memory, sharing headroom with the Supabase stack) that pass
   // regularly hangs in the "Running TypeScript ..." step and never
   // returns. `pnpm typecheck` is already wired into the CI pipeline
@@ -42,13 +42,14 @@ const nextConfig: NextConfig = {
   // Setting `NEXT_SKIP_TYPECHECK=1` in the Dockerfile short-circuits it.
   // Leaving the env var unset (i.e. every non-Docker build) still runs
   // the in-Next TS pass, so this doesn't relax our baseline safety net.
+  //
+  // NOTE: `eslint` used to sit next to this block, but Next.js 16
+  // removed ESLint integration from `next build` entirely ("`eslint`
+  // configuration in next.config.ts is no longer supported.") — the
+  // key is now REJECTED by `NextConfig` type, breaking `tsc --noEmit`.
+  // Lint enforcement moved to the `pnpm lint` CI gate.
   typescript: {
     ignoreBuildErrors: process.env.NEXT_SKIP_TYPECHECK === "1",
-  },
-  eslint: {
-    // `pnpm lint` is the CI gate; the redundant in-build lint pass
-    // suffers from the same VM-memory pressure as the TS pass above.
-    ignoreDuringBuilds: process.env.NEXT_SKIP_LINT === "1",
   },
   experimental: {
     serverActions: {
