@@ -36,7 +36,9 @@
     "gen:pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "gen:transparent-logo": "node scripts/generate-transparent-logo.mjs",
     "twa:build": "bash deploy/twa/build.sh",
-    "help:reindex:dry": "node --env-file=.env.local scripts/help-reindex.mjs --dry"
+    "help:reindex:dry": "node --env-file=.env.local scripts/help-reindex.mjs --dry",
+    "ai:check": "node --env-file=.env.local scripts/bootstrap-ai-endpoints.mjs",
+    "ai:apply": "node --env-file=.env.local scripts/bootstrap-ai-endpoints.mjs --apply"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
