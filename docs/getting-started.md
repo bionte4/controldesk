@@ -49,6 +49,30 @@ pnpm dev
 
 Open **http://demo.localhost:3000** and log in with the seeded users.
 
+## `pnpm dev` vs Docker rebuild — pick the right lane
+
+Two ways to run the app locally; they have very different feedback loops.
+Pick based on what you're changing. **Rebuilding Docker for every code
+edit wastes ~10 min per iteration.**
+
+| Task you're doing | Use | Iteration time |
+| ----------------- | --- | -------------- |
+| Edit UI, server action, page, style, migration | `pnpm dev` (host) → `http://localhost:3000` | HMR ~1 sec |
+| Change `package.json` deps | `pnpm install` + restart `pnpm dev` | ~30 sec |
+| Test service worker / PWA install / production headers | Docker rebuild → `http://localhost:3001` | ~4 min (cached), ~11 min (cold) |
+| Validate before `git push` | Docker rebuild (matches CI) | Same |
+| Change `Dockerfile` / infra | Docker rebuild | Same |
+
+**Both can run in parallel** — `pnpm dev` on port `3000`, Docker prod on
+`3001` — they share the same local Supabase (`127.0.0.1:54321`) and
+Redis (`127.0.0.1:6379`) containers, so state stays consistent. Just
+pick the port you want to hit.
+
+The Dockerfile uses a BuildKit cache mount for `.next/cache` so
+second-and-later rebuilds are ~⅓ of a cold build. The pnpm store is
+also cache-mounted, so `pnpm install` inside the container is warm
+after the first run.
+
 ## Seeded demo users
 
 Password for all seeded accounts: `ControlDesk#2026`.

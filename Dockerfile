@@ -59,7 +59,18 @@ ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
 # there is no separate lint bypass needed here.)
 ENV NEXT_SKIP_TYPECHECK=1
 
-RUN pnpm run build
+# BuildKit cache mount for `.next/cache` — Turbopack's persistence layer.
+# Without this, every rebuild recompiles ~500 modules from scratch
+# (~10 min in a 4 GB Docker Desktop VM). With the mount, only files
+# touched since the previous build get re-transformed, cutting incremental
+# rebuilds to 2-4 min. The cache is BuildKit-managed and never lands in
+# the final image, so image size is unchanged. Docs:
+# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+# The `id=` scope keeps this cache separate from other projects on the
+# same BuildKit builder. Combined with the pnpm-store mount in `deps`
+# stage, first-time builds warm the cache; subsequent builds reuse both.
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
+    pnpm run build
 
 # -----------------------------------------------------------------------------
 # Stage 4: runner — minimal runtime image, non-root user, healthcheck.
