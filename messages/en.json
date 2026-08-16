@@ -174,6 +174,105 @@
       "network": "Couldn't reach the AI service. Please try again."
     }
   },
+  "knowledge": {
+    "eyebrow": "Knowledge Hub",
+    "title": "Knowledge Base",
+    "subtitle": "Write, share, and search SOPs, meeting notes, and internal guides authored by your team.",
+    "newArticle": "Write article",
+    "editDraft": "Continue draft",
+    "read": "Read article",
+    "backToIndex": "Back to Knowledge Base",
+    "updated": "Updated",
+    "publishedAt": "Published",
+    "manageBanner": "You authored this article",
+    "stat": {
+      "published": "Published",
+      "yourDrafts": "Your drafts",
+      "categories": "Active categories"
+    },
+    "section": {
+      "yourDrafts": "Your drafts",
+      "yourDraftsHint": "Only you and workspace admins can see drafts.",
+      "published": "Published articles"
+    },
+    "empty": {
+      "published": "No published articles yet. Click 'Write article' to start your team's knowledge base."
+    },
+    "category": {
+      "getting-started": "Getting started",
+      "user-guides": "User guides",
+      "approvals": "Approvals & governance",
+      "finance": "Finance",
+      "hr": "HR & operations",
+      "integrations": "Integrations",
+      "reference": "Reference",
+      "internal-sop": "Internal SOPs",
+      "meeting-notes": "Meeting notes",
+      "decisions": "Decisions"
+    },
+    "actions": {
+      "edit": "Edit",
+      "publish": "Publish",
+      "archive": "Archive",
+      "restore": "Restore to draft",
+      "archivedToast": "Article archived.",
+      "restoredToast": "Article restored to draft."
+    },
+    "publish": {
+      "title": "Publish article",
+      "description": "Provide a short summary before the article becomes visible to the workspace.",
+      "summaryLabel": "Summary (required to publish)",
+      "summaryPlaceholder": "e.g. Step-by-step guide for requesting finance system access.",
+      "summaryHint": "Minimum 10 characters.",
+      "cancel": "Cancel",
+      "confirm": "Publish now",
+      "publishedToast": "Article published."
+    },
+    "new": {
+      "title": "New article",
+      "subtitle": "Content is saved as a draft — publish after previewing the rendered output.",
+      "back": "Back"
+    },
+    "edit": {
+      "title": "Edit article",
+      "subtitle": "Changes are stored as a new revision on the article's audit trail.",
+      "back": "Back",
+      "archivedTitle": "Article is archived",
+      "archivedHint": "Restore the article to draft before editing it."
+    },
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. How to submit an expense in ControlDesk",
+      "slugLabel": "URL slug",
+      "slugHint": "Auto-generated from the title; adjust if needed.",
+      "summaryLabel": "Summary",
+      "summaryPlaceholder": "One or two sentences shown on the article list.",
+      "summaryHint": "Optional for drafts, required to publish.",
+      "categoryLabel": "Category",
+      "bodyLabel": "Article body (Markdown)",
+      "bodyPlaceholder": "# Section title\n\nWrite content in Markdown — headings, lists, code blocks, and tables are all supported.",
+      "emptyPreview": "*Nothing to preview yet.*",
+      "preview": "Preview",
+      "edit": "Edit",
+      "save": "Save changes",
+      "saveDraft": "Save as draft",
+      "cancel": "Cancel",
+      "createdToast": "Draft created.",
+      "savedToast": "Changes saved.",
+      "category": {
+        "getting-started": "Getting started",
+        "user-guides": "User guides",
+        "approvals": "Approvals & governance",
+        "finance": "Finance",
+        "hr": "HR & operations",
+        "integrations": "Integrations",
+        "reference": "Reference",
+        "internal-sop": "Internal SOPs",
+        "meeting-notes": "Meeting notes",
+        "decisions": "Decisions"
+      }
+    }
+  },
   "profile": {
     "kicker": "My account",
     "form": {
@@ -464,7 +563,8 @@
       "approvalThresholds": "Approval thresholds",
       "capabilities": "Capabilities",
       "features": "Active features",
-      "help": "Help"
+      "help": "Help",
+      "knowledge": "Knowledge Base"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",

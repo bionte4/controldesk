@@ -174,6 +174,105 @@
       "network": "Tidak dapat mencapai layanan AI. Coba lagi."
     }
   },
+  "knowledge": {
+    "eyebrow": "Basis Pengetahuan",
+    "title": "Knowledge Base",
+    "subtitle": "Tulis, bagikan, dan cari SOP, catatan rapat, serta panduan internal yang dikelola oleh tim Anda sendiri.",
+    "newArticle": "Tulis artikel",
+    "editDraft": "Lanjutkan draft",
+    "read": "Baca artikel",
+    "backToIndex": "Kembali ke Knowledge Base",
+    "updated": "Diperbarui",
+    "publishedAt": "Diterbitkan",
+    "manageBanner": "Anda adalah penulis artikel ini",
+    "stat": {
+      "published": "Terpublikasi",
+      "yourDrafts": "Draft Anda",
+      "categories": "Kategori aktif"
+    },
+    "section": {
+      "yourDrafts": "Draft Anda",
+      "yourDraftsHint": "Hanya Anda dan admin yang dapat melihat draft.",
+      "published": "Artikel terpublikasi"
+    },
+    "empty": {
+      "published": "Belum ada artikel yang dipublikasikan di workspace ini. Klik 'Tulis artikel' untuk memulai."
+    },
+    "category": {
+      "getting-started": "Memulai",
+      "user-guides": "Panduan pengguna",
+      "approvals": "Approval & tata kelola",
+      "finance": "Keuangan",
+      "hr": "HR & operasional",
+      "integrations": "Integrasi",
+      "reference": "Referensi",
+      "internal-sop": "SOP internal",
+      "meeting-notes": "Catatan rapat",
+      "decisions": "Keputusan"
+    },
+    "actions": {
+      "edit": "Edit",
+      "publish": "Terbitkan",
+      "archive": "Arsip",
+      "restore": "Kembalikan ke draft",
+      "archivedToast": "Artikel diarsipkan.",
+      "restoredToast": "Artikel dikembalikan ke draft."
+    },
+    "publish": {
+      "title": "Terbitkan artikel",
+      "description": "Berikan ringkasan singkat sebelum artikel bisa dibaca oleh seluruh workspace.",
+      "summaryLabel": "Ringkasan (wajib untuk publikasi)",
+      "summaryPlaceholder": "Contoh: Panduan cara meminta akses baru ke sistem finance.",
+      "summaryHint": "Minimum 10 karakter.",
+      "cancel": "Batal",
+      "confirm": "Terbitkan sekarang",
+      "publishedToast": "Artikel berhasil dipublikasikan."
+    },
+    "new": {
+      "title": "Artikel baru",
+      "subtitle": "Konten disimpan sebagai draft — Anda dapat mempublikasikannya setelah preview.",
+      "back": "Kembali"
+    },
+    "edit": {
+      "title": "Sunting artikel",
+      "subtitle": "Perubahan disimpan sebagai revisi baru di jejak audit artikel.",
+      "back": "Kembali",
+      "archivedTitle": "Artikel sudah diarsipkan",
+      "archivedHint": "Kembalikan artikel ke draft terlebih dahulu untuk menyuntingnya."
+    },
+    "form": {
+      "titleLabel": "Judul",
+      "titlePlaceholder": "Contoh: Cara submit expense di ControlDesk",
+      "slugLabel": "URL slug",
+      "slugHint": "Otomatis dihasilkan dari judul; sesuaikan bila perlu.",
+      "summaryLabel": "Ringkasan",
+      "summaryPlaceholder": "Deskripsi singkat 1-2 kalimat yang tampil di daftar artikel.",
+      "summaryHint": "Opsional untuk draft, wajib saat publikasi.",
+      "categoryLabel": "Kategori",
+      "bodyLabel": "Isi artikel (Markdown)",
+      "bodyPlaceholder": "# Judul bagian\n\nTulis konten dalam Markdown — heading, list, code block, tabel semua didukung.",
+      "emptyPreview": "*Belum ada konten untuk dipreview.*",
+      "preview": "Preview",
+      "edit": "Edit",
+      "save": "Simpan perubahan",
+      "saveDraft": "Simpan sebagai draft",
+      "cancel": "Batal",
+      "createdToast": "Draft artikel dibuat.",
+      "savedToast": "Perubahan disimpan.",
+      "category": {
+        "getting-started": "Memulai",
+        "user-guides": "Panduan pengguna",
+        "approvals": "Approval & tata kelola",
+        "finance": "Keuangan",
+        "hr": "HR & operasional",
+        "integrations": "Integrasi",
+        "reference": "Referensi",
+        "internal-sop": "SOP internal",
+        "meeting-notes": "Catatan rapat",
+        "decisions": "Keputusan"
+      }
+    }
+  },
   "profile": {
     "kicker": "Akun saya",
     "form": {
@@ -464,7 +563,8 @@
       "approvalThresholds": "Ambang Approval",
       "capabilities": "Kapabilitas",
       "features": "Fitur Aktif",
-      "help": "Bantuan"
+      "help": "Bantuan",
+      "knowledge": "Knowledge Base"
     },
     "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
     "commandPlaceholder": "Cari perintah, lompat ke halaman…",

@@ -326,6 +326,17 @@ export const NAV_SECTIONS: NavSection[] = [
         pinned: true,
       },
       {
+        // Tenant-authored knowledge base — the writable counterpart
+        // to `/help`. Rows live in `knowledge_articles` (migration
+        // 0095); RLS filters DRAFTs to author + admin. Universal
+        // read; every employee can also write drafts. Pinned so it
+        // sits next to /help in the sidebar for discoverability.
+        titleKey: "knowledge",
+        href: "/knowledge",
+        icon: BookText,
+        pinned: true,
+      },
+      {
         titleKey: "users",
         href: "/settings/users",
         icon: UserCog,

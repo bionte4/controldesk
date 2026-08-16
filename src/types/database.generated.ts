@@ -3061,6 +3061,240 @@ export type Database = {
           },
         ]
       }
+      knowledge_article_embeddings: {
+        Row: {
+          article_id: string
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: Json
+          id: string
+          model_id: string
+          tenant_id: string
+        }
+        Insert: {
+          article_id: string
+          chunk_index: number
+          content: string
+          created_at?: string
+          embedding: Json
+          id?: string
+          model_id: string
+          tenant_id: string
+        }
+        Update: {
+          article_id?: string
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: Json
+          id?: string
+          model_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_article_embeddings_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_article_revisions: {
+        Row: {
+          article_id: string
+          body_md: string
+          category: string
+          edit_note: string | null
+          edited_at: string
+          edited_by_employee_id: string
+          id: string
+          revision_no: number
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id: string | null
+          visibility_roles: string[] | null
+        }
+        Insert: {
+          article_id: string
+          body_md: string
+          category: string
+          edit_note?: string | null
+          edited_at?: string
+          edited_by_employee_id: string
+          id?: string
+          revision_no: number
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Update: {
+          article_id?: string
+          body_md?: string
+          category?: string
+          edit_note?: string | null
+          edited_at?: string
+          edited_by_employee_id?: string
+          id?: string
+          revision_no?: number
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_article_revisions_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_articles: {
+        Row: {
+          archived_at: string | null
+          author_employee_id: string
+          body_md: string
+          category: string
+          created_at: string
+          id: string
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          view_count: number
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id: string | null
+          visibility_roles: string[] | null
+        }
+        Insert: {
+          archived_at?: string | null
+          author_employee_id: string
+          body_md: string
+          category: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          view_count?: number
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Update: {
+          archived_at?: string | null
+          author_employee_id?: string
+          body_md?: string
+          category?: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          view_count?: number
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_visibility_project_id_fkey"
+            columns: ["visibility_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lookup_options: {
         Row: {
           code: string
@@ -8443,6 +8677,11 @@ export type Database = {
         | "EXPENSE"
         | "PETTY_CASH"
       import_job_status: "DRY_RUN" | "COMMITTED" | "FAILED"
+      knowledge_article_status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
+      knowledge_article_visibility:
+        | "TENANT_WIDE"
+        | "ROLE_GATED"
+        | "PROJECT_SCOPED"
       milestone_status:
         | "PLANNED"
         | "IN_PROGRESS"
@@ -8964,6 +9203,12 @@ export const Constants = {
         "PETTY_CASH",
       ],
       import_job_status: ["DRY_RUN", "COMMITTED", "FAILED"],
+      knowledge_article_status: ["DRAFT", "PUBLISHED", "ARCHIVED"],
+      knowledge_article_visibility: [
+        "TENANT_WIDE",
+        "ROLE_GATED",
+        "PROJECT_SCOPED",
+      ],
       milestone_status: [
         "PLANNED",
         "IN_PROGRESS",
