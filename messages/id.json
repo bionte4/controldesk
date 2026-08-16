@@ -99,6 +99,7 @@
       "suggestion1": "Bagaimana cara submit expense dan alur approval-nya?",
       "suggestion2": "Apa perbedaan kas bon General dan Field Ops?",
       "suggestion3": "Siapa yang bisa approve budget request di atas Rp 50 juta?",
+      "suggestionsLabel": "Coba tanyakan",
       "inputPlaceholder": "Ketik pertanyaan Anda… (Enter untuk kirim, Shift+Enter untuk baris baru)",
       "footerHint": "Jawaban berbasis dokumentasi. Verifikasi via link kutipan di jawaban.",
       "send": "Kirim",
@@ -127,9 +128,34 @@
         "not_configuredTitle": "AI belum dikonfigurasi",
         "not_configuredBody": "Admin belum mengaktifkan AI di Settings → Integrations → AI. Minta admin untuk mengaturnya terlebih dahulu.",
         "networkTitle": "Koneksi bermasalah",
-        "networkBody": "Tidak dapat mencapai layanan AI. Cek koneksi internet Anda dan coba lagi."
+        "networkBody": "Tidak dapat mencapai layanan AI. Cek koneksi internet Anda dan coba lagi.",
+        "empty_responseTitle": "AI tidak menjawab",
+        "empty_responseBody": "Layanan AI menerima permintaan tapi tidak mengembalikan jawaban. Biasanya karena penyedia model sedang membatasi workspace ini, atau kuota token harian sudah habis. Coba lagi beberapa menit ke depan, atau minta admin memeriksa Settings → Integrations → AI."
+      },
+      "fallback": {
+        "showRelatedDocs": "Tampilkan artikel terkait",
+        "badge": "Docs",
+        "title": "Artikel relevan dari knowledge base",
+        "hint": "Sintesis AI sedang tidak tersedia, tapi mesin pencari yang sama dengan chat menemukan artikel-artikel ini untuk Anda.",
+        "loading": "Mencari artikel terkait…",
+        "emptyBody": "Tidak ada artikel knowledge base yang cocok dengan pertanyaan Anda. Coba dengan kata lain, atau jelajahi daftar lengkap panduan di /help."
       }
     }
+  },
+  "askAi": {
+    "triggerLabel": "Tanya AI",
+    "title": "Tanya ControlDesk",
+    "subtitle": "Didukung dokumentasi + data workspace Anda",
+    "greeting": "Halo {name} 👋",
+    "greetingFallback": "di sana",
+    "greetingSubtitle": "Tanya apa saja tentang ControlDesk — saya juga bisa mencari data workspace Anda.",
+    "suggestionsLabel": "Coba tanyakan",
+    "inputPlaceholder": "Ketik pertanyaan Anda…",
+    "footerHint": "Enter untuk kirim · Shift+Enter untuk baris baru",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "reset": "Chat baru",
+    "openFullHelp": "Buka Bantuan lengkap"
   },
   "aiCopilot": {
     "triggerLabel": "Draft dengan AI",
@@ -387,7 +413,7 @@
       "hris": "HRIS + payroll multi-cabang",
       "ai": "Prediksi risiko SLA & anggaran dengan AI"
     },
-    "trust": "Dipercaya tim operasional BPO & Managed Services"
+    "trust": "Isolasi multi-tenant · Audit trail permanen · RBAC/ABAC by design"
   },
   "nav": {
     "openUserMenu": "Buka menu pengguna",

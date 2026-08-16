@@ -112,6 +112,45 @@ development tanpa cost.
 req/hari, structured output kelas satu, biaya nol untuk skala kecil-menengah.
 Setup lengkap + troubleshooting → [`../integrations/ai-insights-gemini.md`](../integrations/ai-insights-gemini.md).
 
+#### Platform-wide fallback provider (Fase 4 — `AI_FALLBACK_*`)
+
+Selain provider utama per-tenant, platform admin bisa set **satu**
+fallback provider di level env. Dipakai untuk help chatbot
+(`/api/help/ask`) ketika provider utama gagal secara SYNC — SDK
+tidak bisa construct (missing key, invalid model handle), atau
+tenant belum konfigurasi AI sama sekali (memberi trial akses tanpa
+menyebarkan credential per-tenant).
+
+```
+AI_FALLBACK_PROVIDER=ollama                       # 'openai' | 'anthropic' | 'google' | 'ollama' | 'openai_compatible'
+AI_FALLBACK_MODEL_ID=llama3.1                     # atau 'gpt-4o-mini', 'claude-3-5-haiku', 'gemini-2.5-flash', ...
+AI_FALLBACK_API_KEY=optional                      # kosongkan untuk Ollama / on-prem tanpa auth
+AI_FALLBACK_BASE_URL=http://localhost:11434/v1    # hanya untuk 'ollama' / 'openai_compatible'; default sudah localhost:11434/v1
+```
+
+**Alur pemilihan**:
+
+1. `resolveAiModel(tenantId)` — coba row `tenant_ai_configs`. Kalau
+   ada + `is_active + provider != DISABLED` → pakai itu.
+2. Kalau tenant row tidak ada / DISABLED / inactive → coba env-global
+   `AI_*` (bukan fallback, cuma default kompatibilitas lama).
+3. Kalau primary null juga → coba `resolveAiFallbackModel()` dari
+   env `AI_FALLBACK_*`.
+4. Kalau primary sukses construct TAPI throw SYNC waktu streamText
+   (bad handle) → catch → retry dengan fallback.
+5. Kalau primary streaming DIMULAI tapi upstream error ASYNC (Groq
+   TPD cap balikkan 429 setelah 200 OK) → client-side empty-stream
+   guard trigger + RAG-only fallback via `/api/help/rag`.
+
+Fallback env **hanya** untuk help chatbot; AI Insights runner (cron
+sweep) tetap gagal-diam ke mock kalau primary tidak ada. Fallback
+per-tenant (via UI form) planned di Fase 2 — perlu migration +
+Settings > Integrations > AI form update.
+
+Recommended stack production kecil-menengah:
+- `AI_PROVIDER=google` + `gemini-2.5-flash` (primary, ~1500 req/hari gratis)
+- `AI_FALLBACK_PROVIDER=ollama` + `llama3.1` (fallback on-prem, unlimited)
+
 ### Locale-aware output
 
 Bahasa output mengikuti cookie `NEXT_LOCALE` yang di-set via toggle

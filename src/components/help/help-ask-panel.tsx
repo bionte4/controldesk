@@ -18,6 +18,7 @@ import {
   Plus,
   RotateCcw,
   Send,
+  Sparkles,
   Trash2,
   User,
 } from "lucide-react";
@@ -27,6 +28,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
+import {
+  fetchRagFallback,
+  RagFallbackCard,
+  type RagArticle,
+} from "./rag-fallback-card";
 
 /**
  * "Ask ControlDesk" chat panel — the client half of the Fase-2
@@ -66,6 +73,15 @@ type ErrorKind =
   | "quota_exceeded"
   | "not_configured"
   | "network"
+  /**
+   * Upstream LLM returned HTTP 200 but zero tokens — commonly a
+   * provider-side rate-limit (Groq TPD cap, OpenAI RPM cap) whose
+   * error body arrives AFTER the SDK has already committed to a 200
+   * status. Also fires on truly empty completions and transient
+   * provider outages that close the stream cleanly. Users see this
+   * as a spinner that never terminates unless we surface the failure.
+   */
+  | "empty_response"
   | null;
 
 type Props = {
@@ -116,6 +132,20 @@ export function HelpAskPanel({ articleSlugs }: Props) {
   // Toggle the sidebar on narrow viewports where 100% chat width is
   // more valuable than a permanently visible list.
   const [historyOpenMobile, setHistoryOpenMobile] = useState(false);
+  // RAG-only fallback state — mirror of the same pattern in
+  // `AskAiSheet`. `lastQueryRef` captures the most recent user
+  // submission so the fallback fetch has a query to run against
+  // without us having to walk the message log. `fallbackArticles` is
+  // `null` until the user opts in via the "Show related docs" button;
+  // an empty array (after fetch) renders the friendly "no results"
+  // card instead of hiding it. Reset on `reset()` and on
+  // `resumeConversation()` — a resumed thread belongs to a different
+  // question.
+  const [fallbackArticles, setFallbackArticles] = useState<
+    RagArticle[] | null
+  >(null);
+  const [fallbackLoading, setFallbackLoading] = useState(false);
+  const lastQueryRef = useRef<string>("");
 
   const refreshHistory = useCallback(async () => {
     try {
@@ -185,6 +215,12 @@ export function HelpAskPanel({ articleSlugs }: Props) {
       const trimmed = text.trim();
       if (!trimmed || streaming) return;
       setError(null);
+      // Reset RAG fallback state on every new turn. Any prior "show
+      // related docs" cards belonged to a different question; leaving
+      // them mounted would be confusing.
+      setFallbackArticles(null);
+      setFallbackLoading(false);
+      lastQueryRef.current = trimmed;
       const now = Date.now();
       const userMsg: Msg = {
         id: `u-${now}`,
@@ -255,6 +291,20 @@ export function HelpAskPanel({ articleSlugs }: Props) {
             ),
           );
         }
+
+        // Empty-stream guard: HTTP 200 + zero tokens usually means the
+        // upstream provider (Groq / OpenAI) hit ITS OWN rate limit
+        // AFTER the AI SDK opened the response — the error body lands
+        // in the AI SDK's internal logs but never reaches this reader.
+        // Without this check the assistant placeholder stays visible
+        // with a spinner forever ("muter-muter terus" — reported bug,
+        // same fix mirrored in AskAiSheet).
+        if (acc.trim().length === 0) {
+          setError("empty_response");
+          setMessages((prev) => prev.filter((m) => m.id !== assistantId));
+          return;
+        }
+
         // Refresh sidebar so the new conversation (or updated timestamp
         // on a resumed one) shows up. Fire-and-forget — the chat
         // itself is already visible; a slow history call shouldn't
@@ -290,11 +340,31 @@ export function HelpAskPanel({ articleSlugs }: Props) {
     abortRef.current?.abort();
     setMessages([]);
     setError(null);
+    setFallbackArticles(null);
+    setFallbackLoading(false);
+    lastQueryRef.current = "";
     // Fresh conversation id → server creates a new parent row and
     // history for the next turn stops carrying the prior context.
     setConversationId(randomUuid());
     setHistoryOpenMobile(false);
   }, []);
+
+  const showFallback = useCallback(async () => {
+    const query = lastQueryRef.current;
+    if (!query || fallbackLoading) return;
+    setFallbackLoading(true);
+    try {
+      const articles = await fetchRagFallback(query, { limit: 3 });
+      setFallbackArticles(articles);
+    } catch {
+      // Retrieval failure is very rare (static index, no DB needed).
+      // Fall through to empty array so the card renders its "no
+      // results" state — better UX than a silent no-op.
+      setFallbackArticles([]);
+    } finally {
+      setFallbackLoading(false);
+    }
+  }, [fallbackLoading]);
 
   const resumeConversation = useCallback(
     async (id: string) => {
@@ -338,6 +408,12 @@ export function HelpAskPanel({ articleSlugs }: Props) {
         );
         setConversationId(payload.id);
         setError(null);
+        // Resumed thread belongs to a different question — drop any
+        // fallback state so we don't leave stale "here are related
+        // docs" cards attached to a different topic.
+        setFallbackArticles(null);
+        setFallbackLoading(false);
+        lastQueryRef.current = "";
         setHistoryOpenMobile(false);
       } catch {
         setHistoryError(tHistory("resumeFailed"));
@@ -428,21 +504,57 @@ export function HelpAskPanel({ articleSlugs }: Props) {
           </Button>
         )}
         {messages.length === 0 && (
-          <div className="rounded-lg border bg-muted/30 p-6 text-sm">
-            <div className="flex items-start gap-3">
-              <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary">
-                <Bot className="size-4" aria-hidden />
+          // Empty-state polish (Aug 2026) — matches the topbar drawer
+          // aesthetic so the two Ask AI surfaces read as one product,
+          // not two. Gradient sparkles emblem, centered greeting,
+          // clickable suggestion chips (vs the old bullet list which
+          // required the user to copy-paste). Suggestions still pull
+          // from the shared `help.ask.suggestion*` translation namespace
+          // — edit them in one place, update both surfaces.
+          <div className="rounded-xl border bg-gradient-to-br from-indigo-500/5 via-violet-500/5 to-sky-500/5 p-6 sm:p-8">
+            <div className="text-center">
+              <div
+                aria-hidden
+                className="mx-auto mb-4 grid size-14 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-sky-500 text-white shadow-lg shadow-indigo-500/25"
+              >
+                <Sparkles className="size-6" />
               </div>
-              <div className="flex-1">
-                <p className="font-medium">{t("welcomeTitle")}</p>
-                <p className="mt-1 text-muted-foreground">
-                  {t("welcomeBody")}
-                </p>
-                <ul className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
-                  <li>• {t("suggestion1")}</li>
-                  <li>• {t("suggestion2")}</li>
-                  <li>• {t("suggestion3")}</li>
-                </ul>
+              <h3 className="text-base font-semibold sm:text-lg">
+                {t("welcomeTitle")}
+              </h3>
+              <p className="mx-auto mt-1.5 max-w-md text-sm text-muted-foreground">
+                {t("welcomeBody")}
+              </p>
+            </div>
+
+            <div className="mx-auto mt-6 max-w-md">
+              <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                {t("suggestionsLabel")}
+              </p>
+              <div className="flex flex-col gap-2">
+                {[
+                  t("suggestion1"),
+                  t("suggestion2"),
+                  t("suggestion3"),
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => void send(suggestion)}
+                    disabled={streaming || hydratingId !== null}
+                    className={cn(
+                      "group flex items-start gap-2 rounded-lg border bg-card px-3 py-2 text-left text-xs leading-relaxed transition-colors",
+                      "hover:border-primary/50 hover:bg-primary/5",
+                      "disabled:cursor-not-allowed disabled:opacity-60",
+                    )}
+                  >
+                    <ArrowUpRight
+                      className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+                      aria-hidden
+                    />
+                    <span className="line-clamp-2">{suggestion}</span>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -473,7 +585,22 @@ export function HelpAskPanel({ articleSlugs }: Props) {
           </div>
         )}
 
-        {error && <ChatError kind={error} t={t} />}
+        {error && (
+          <ChatError
+            kind={error}
+            t={t}
+            onShowFallback={showFallback}
+            fallbackRequested={
+              fallbackArticles !== null || fallbackLoading
+            }
+          />
+        )}
+        {(fallbackLoading || fallbackArticles !== null) && (
+          <RagFallbackCard
+            articles={fallbackArticles ?? []}
+            loading={fallbackLoading}
+          />
+        )}
 
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <Textarea
@@ -816,16 +943,45 @@ function renderWithCitations(
 function ChatError({
   kind,
   t,
+  onShowFallback,
+  fallbackRequested,
 }: {
   kind: Exclude<ErrorKind, null>;
   t: ReturnType<typeof useTranslations>;
+  onShowFallback: () => void;
+  fallbackRequested: boolean;
 }) {
+  const tFallback = useTranslations("help.ask.fallback");
   const titleKey = `error.${kind}Title` as const;
   const bodyKey = `error.${kind}Body` as const;
+  // Only surface the RAG fallback for failure modes where the LLM
+  // itself couldn't answer, not for OUR rate-limit / quota controls.
+  // Same allowlist as the drawer — keeps the two surfaces
+  // behaviourally identical so support runbooks don't fork.
+  const supportsFallback =
+    kind === "empty_response" ||
+    kind === "network" ||
+    kind === "not_configured";
   return (
     <Alert variant="destructive" role="alert">
       <AlertTitle>{t(titleKey)}</AlertTitle>
-      <AlertDescription>{t(bodyKey)}</AlertDescription>
+      <AlertDescription>
+        <p>{t(bodyKey)}</p>
+        {supportsFallback && !fallbackRequested && (
+          <div className="mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onShowFallback}
+              className="h-7 gap-1.5 text-xs"
+            >
+              <Sparkles className="size-3" aria-hidden />
+              {tFallback("showRelatedDocs")}
+            </Button>
+          </div>
+        )}
+      </AlertDescription>
     </Alert>
   );
 }

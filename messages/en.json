@@ -99,6 +99,7 @@
       "suggestion1": "How do I submit an expense and what's the approval flow?",
       "suggestion2": "What's the difference between General and Field Ops cash advances?",
       "suggestion3": "Who can approve a budget request over IDR 50 million?",
+      "suggestionsLabel": "Try asking",
       "inputPlaceholder": "Type your question… (Enter to send, Shift+Enter for a new line)",
       "footerHint": "Answers come from the docs. Verify via the citation links in each reply.",
       "send": "Send",
@@ -127,9 +128,34 @@
         "not_configuredTitle": "AI is not configured",
         "not_configuredBody": "An admin has not enabled AI in Settings → Integrations → AI. Ask them to configure it first.",
         "networkTitle": "Connection problem",
-        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again."
+        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again.",
+        "empty_responseTitle": "AI didn't reply",
+        "empty_responseBody": "The AI service accepted the request but returned no answer. This usually means the model provider is rate-limiting the workspace right now, or the daily token budget is exhausted. Try again in a few minutes, or ask an admin to check Settings → Integrations → AI."
+      },
+      "fallback": {
+        "showRelatedDocs": "Show related docs",
+        "badge": "Docs",
+        "title": "Relevant articles from the knowledge base",
+        "hint": "AI synthesis is unavailable right now, but the same retrieval that powers chat found these for you.",
+        "loading": "Looking up related docs…",
+        "emptyBody": "No knowledge-base articles matched your question. Try rephrasing, or browse the full guide list at /help."
       }
     }
+  },
+  "askAi": {
+    "triggerLabel": "Ask AI",
+    "title": "Ask ControlDesk",
+    "subtitle": "Powered by docs + your workspace data",
+    "greeting": "Hi {name} 👋",
+    "greetingFallback": "there",
+    "greetingSubtitle": "Ask me anything about ControlDesk — I can look up your workspace data too.",
+    "suggestionsLabel": "Try asking",
+    "inputPlaceholder": "Type your question…",
+    "footerHint": "Enter to send · Shift+Enter for new line",
+    "send": "Send",
+    "sending": "Sending…",
+    "reset": "New chat",
+    "openFullHelp": "Open full Help & guides"
   },
   "aiCopilot": {
     "triggerLabel": "Draft with AI",
@@ -387,7 +413,7 @@
       "hris": "Multi-branch HRIS + payroll",
       "ai": "AI-forecasted SLA & budget risk"
     },
-    "trust": "Trusted by BPO & Managed Services operations teams"
+    "trust": "Multi-tenant isolation · Immutable audit trail · RBAC/ABAC by design"
   },
   "nav": {
     "openUserMenu": "Open user menu",

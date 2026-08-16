@@ -34,6 +34,7 @@
     "tenant:create": "node --env-file=.env.local ./node_modules/tsx/dist/cli.mjs --tsconfig scripts/tsconfig.json scripts/tenant/create.ts",
     "help:reindex": "node --env-file=.env.local scripts/help-reindex.mjs",
     "gen:pwa-icons": "node scripts/generate-pwa-icons.mjs",
+    "gen:transparent-logo": "node scripts/generate-transparent-logo.mjs",
     "twa:build": "bash deploy/twa/build.sh",
     "help:reindex:dry": "node --env-file=.env.local scripts/help-reindex.mjs --dry"
   },

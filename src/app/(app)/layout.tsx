@@ -14,6 +14,7 @@ import { requireCurrentEmployee } from "@/lib/auth/session";
 import { CAPABILITY_IDS } from "@/lib/rbac/capabilities";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import { createClient } from "@/lib/supabase/server";
+import { HELP_MANIFEST } from "@/lib/help/articles";
 import type {
   AiInsightKind,
   AiInsightSeverity,
@@ -102,6 +103,12 @@ export default async function AppLayout({
   const rawLocale = await getLocale();
   const locale = isLocale(rawLocale) ? rawLocale : "id";
 
+  // Slug allowlist for the global Ask AI drawer's citation rewrite.
+  // The manifest is a compile-time const, so this array is free —
+  // no file I/O, no DB roundtrip. `HELP_MANIFEST` is the single
+  // source of truth for valid `/help/{slug}` targets.
+  const helpArticleSlugs = HELP_MANIFEST.map((entry) => entry.slug);
+
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <CommandPalette>
@@ -122,6 +129,7 @@ export default async function AppLayout({
             notifications={notificationItems}
             aiInsights={aiInsightItems}
             locale={locale}
+            helpArticleSlugs={helpArticleSlugs}
           />
           <TrialBanner tenantId={employee.tenant_id} />
           <main className="flex-1 flex flex-col p-6 md:p-8">
