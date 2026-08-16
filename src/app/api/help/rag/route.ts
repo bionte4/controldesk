@@ -90,7 +90,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const t0 = Date.now();
   try {
-    const results = await retrieveContext(parsed.query, parsed.limit ?? 3);
+    // Same includeTenant policy as `/api/help/ask` — the fallback
+    // panel benefits equally from tenant KB hits, and skipping the
+    // merge here would surface "no results" for tenants who put all
+    // their content in the KB and none in the repo docs.
+    const results = await retrieveContext(parsed.query, parsed.limit ?? 3, {
+      includeTenant: true,
+    });
     log.info("help_rag_fallback_hit", {
       tenant_id: tenantId,
       user_id: userId,

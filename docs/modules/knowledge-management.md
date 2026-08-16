@@ -252,26 +252,92 @@ mid-run failure leaves an artifact in the DB that a follow-up
 `DELETE FROM knowledge_articles WHERE slug LIKE 'kb-smoke-%'`
 will cascade-clean via the tenant-scoped `ON DELETE CASCADE`.
 
-## Fase 2 roadmap
+## Fase 2 — RAG integration (delivered)
 
-Documented as pending todos on this feature. Concretely:
+Published Knowledge Base articles now feed the AI chatbot's
+retrieval context alongside the repo-authored `/help` corpus.
 
-1. **RAG integration** — extend `retrieveContext()`
-   (`src/lib/help/retrieval.ts`) to also query
-   `knowledge_article_embeddings`. Auto-embed on publish via a
-   new `enqueueKnowledgeReindex()` job. Chatbot citations link
-   into `/knowledge/{slug}` alongside the existing
-   `HELP_MANIFEST` slots.
-2. **Global search** — teach `HelpSearch`
+### Retrieval flow
+
+`retrieveContext()` in `src/lib/help/retrieval.ts` accepts an
+`includeTenant: true` option (set by `/api/help/ask` and
+`/api/help/rag`, both authenticated endpoints) that runs a
+second query against `knowledge_articles` under the caller's
+RLS session:
+
+1. Repo AND tenant pools each try the semantic pass first —
+   Gemini embeds the user's query once, both pools rank against
+   it. Repo uses the on-disk `src/lib/help/embeddings.json`;
+   tenant uses `knowledge_article_embeddings` (Fase 2 table).
+2. Whichever side has hits at `EMBEDDING_MODEL_ID = "gemini-
+   embedding-001"` contributes. Missing embeddings on either
+   side degrade gracefully to keyword search (Fuse on repo,
+   PostgREST `ilike` on tenant).
+3. Results are interleaved (`repo, tenant, repo, …`) so a
+   tenant KB explosion can't crowd out canonical product docs,
+   and vice versa.
+
+Retrieved tenant articles arrive with a `kb-` prefixed slug
+(`toKnowledgeCitationSlug()` in `knowledge-retrieval.ts`) so the
+chat prompt teaches the LLM to emit `[kb-onboarding-checklist]`
+inline citations. The client renderer
+(`ask-ai-sheet.tsx::renderWithCitations` +
+`help-ask-panel.tsx::renderWithCitations`) strips the prefix and
+routes the link to `/knowledge/{slug}` — the `/knowledge` route
+is RLS-guarded so a hallucinated citation either 404s or
+resolves to an article the caller can already see.
+
+### Auto-embed on publish
+
+`publishKnowledgeArticleAction` and `updateKnowledgeArticleAction`
+schedule a `reindexKnowledgeArticle(articleId)` call via
+`next/server` `after()` — the mutation returns immediately and
+the embedding write happens after the response flushes. Failures
+are logged as `knowledge_publish_reindex_failed` /
+`knowledge_update_reindex_failed` and never surface to the
+client; the article is still published, just not indexed until
+the backfill script runs.
+
+`archiveKnowledgeArticleAction` drops embeddings so archived
+content stops surfacing in RAG answers.
+
+The writer uses a service-role Supabase client because migration
+0095's RLS policies intentionally have no user-role INSERT grant
+on `knowledge_article_embeddings` — index writes are a
+background-job concern, not a user surface. Safe because the
+module is `server-only` (import fails from a client component)
+and the tenant_id is loaded from the article row before insert.
+
+### Backfill
+
+```
+pnpm knowledge:reindex:dry   # preview: missing / stale / ok counts
+pnpm knowledge:reindex       # embed missing + stale rows
+pnpm knowledge:reindex --force  # re-embed every published article
+```
+
+Env: `SUPABASE_SERVICE_ROLE_KEY`, `HELP_EMBEDDING_API_KEY` (or
+`GOOGLE_GENERATIVE_AI_API_KEY`). Uses the same model + geometry
+as the runtime path — no drift.
+
+## Remaining Fase 2 / future roadmap
+
+Still pending, tracked as todos on the feature branch:
+
+1. **Global search** — teach `HelpSearch`
    (`src/components/help/help-search.tsx`) to accept an
-   optional `tenantArticles` prop, so `Ctrl+K` finds tenant
-   articles too.
-3. **Visibility ACL** — implement `resolveVisibilityFilter()`
+   optional `tenantArticles` prop so `Ctrl+K` finds tenant
+   articles too. Fase 2b.
+2. **Visibility ACL** — implement `resolveVisibilityFilter()`
    at the data-layer, enabling `ROLE_GATED` and
-   `PROJECT_SCOPED` writes.
-4. **Redirect map** — reuse
+   `PROJECT_SCOPED` writes. Fase 2c.
+3. **Redirect map** — reuse
    `knowledge_article_revisions.title/slug` snapshots to build
    a slug-alias table so renamed articles keep their old URLs.
-5. **Moderation queue** — optional per-tenant setting to
+4. **Moderation queue** — optional per-tenant setting to
    require admin approval before `DRAFT → PUBLISHED`. Adds a
    `PUBLISH_REQUEST` status between draft and published.
+5. **Chunked embeddings** — currently one row per article. When
+   articles routinely exceed ~4k chars, split by heading blocks
+   with ~200 char overlap. Retriever already dedupes per
+   article, so this drop-in swap requires no read-side change.

@@ -218,7 +218,15 @@ export async function POST(request: Request): Promise<Response> {
     cookies: await cookies(),
     acceptLanguage: request.headers.get("accept-language"),
   });
-  const retrieved = await retrieveContext(lastUser.content, 3);
+  // `includeTenant: true` merges hits from the tenant Knowledge
+  // Base (migration 0095) into the same result set. Tenant articles
+  // arrive with a `kb-` prefixed slug so the client renderer can
+  // route citations to `/knowledge/{slug}` — the LLM is instructed
+  // in the system prompt (§chat-prompt.ts rule 5) to preserve the
+  // prefix verbatim.
+  const retrieved = await retrieveContext(lastUser.content, 3, {
+    includeTenant: true,
+  });
 
   // ------------------------------------------------------------------
   // Persistence: load or create conversation row + persist user turn.

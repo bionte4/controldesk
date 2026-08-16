@@ -603,13 +603,17 @@ function MessageBubble({
 }
 
 // Same citation rewrite pattern as `HelpAskPanel` — keep them in sync
-// if you ever change the model's inline citation format.
+// if you ever change the model's inline citation format. Tenant KB
+// slugs arrive with a `kb-` prefix (Fase 2 RAG merge) and route to
+// `/knowledge/{slug}` regardless of the allowlist — `/knowledge` is
+// RLS-guarded so a hallucinated citation either 404s or resolves to
+// something the caller can already see. Safe by construction.
 function renderWithCitations(
   content: string,
   slugAllowlist: readonly string[],
 ): React.ReactNode[] {
   const allow = new Set(slugAllowlist);
-  const pattern = /\[([a-z0-9][a-z0-9-]{1,60})\]/g;
+  const pattern = /\[([a-z0-9][a-z0-9-]{1,80})\]/g;
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -620,7 +624,20 @@ function renderWithCitations(
     if (start > lastIndex) {
       nodes.push(content.slice(lastIndex, start));
     }
-    if (slug && allow.has(slug)) {
+    const kbSlug =
+      slug && slug.startsWith("kb-") ? slug.slice(3) : null;
+    if (kbSlug && kbSlug.length > 0) {
+      nodes.push(
+        <Link
+          key={`cite-${key++}`}
+          href={`/knowledge/${kbSlug}`}
+          className="inline-flex items-center gap-0.5 rounded-sm bg-emerald-500/10 px-1 py-0 text-xs font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300"
+        >
+          {kbSlug}
+          <ArrowUpRight className="size-3" aria-hidden />
+        </Link>,
+      );
+    } else if (slug && allow.has(slug)) {
       nodes.push(
         <Link
           key={`cite-${key++}`}

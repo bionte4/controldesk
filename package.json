@@ -39,7 +39,9 @@
     "help:reindex:dry": "node --env-file=.env.local scripts/help-reindex.mjs --dry",
     "ai:check": "node --env-file=.env.local scripts/bootstrap-ai-endpoints.mjs",
     "ai:apply": "node --env-file=.env.local scripts/bootstrap-ai-endpoints.mjs --apply",
-    "knowledge:smoke": "node scripts/knowledge-smoke.mjs"
+    "knowledge:smoke": "node scripts/knowledge-smoke.mjs",
+    "knowledge:reindex": "node --env-file=.env.local scripts/knowledge-reindex.mjs",
+    "knowledge:reindex:dry": "node --env-file=.env.local scripts/knowledge-reindex.mjs --dry-run --verbose"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",

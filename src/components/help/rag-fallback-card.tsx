@@ -12,12 +12,24 @@ import { cn } from "@/lib/utils";
  * bundle doesn't drag in server-only retrieval code.
  */
 export type RagArticle = {
+  /**
+   * For repo articles this is the raw help slug. For tenant KB hits
+   * it's the `kb-`-prefixed citation slug so the client can
+   * distinguish the two without a second lookup.
+   */
   slug: string;
   title: string;
   category: string;
   excerpt: string;
+  /**
+   * Router-ready path — `/help/{slug}` OR `/knowledge/{slug}`. We
+   * link to this verbatim instead of reconstructing from `slug` so
+   * the fallback card doesn't have to know the routing rules.
+   */
   source: string;
   retrievalMode: "embedding" | "keyword" | "manifest";
+  /** Where this hit came from — surfaces a distinct badge in the UI. */
+  origin?: "repo" | "tenant";
 };
 
 /**
@@ -125,37 +137,56 @@ export function RagFallbackCard({
       </header>
 
       <ol className="flex flex-col gap-2">
-        {articles.map((article) => (
-          <li key={article.slug}>
-            <Link
-              href={`/help/${article.slug}`}
-              className={cn(
-                "group flex items-start gap-2.5 rounded-md border bg-card px-2.5 py-2 text-left transition-colors",
-                "hover:border-primary/50 hover:bg-primary/5",
-                "focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-              )}
-            >
-              <BookOpen
-                className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
-                aria-hidden
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-2">
-                  <h5 className="line-clamp-1 text-xs font-semibold">
-                    {article.title}
-                  </h5>
-                  <ArrowUpRight
-                    className="size-3 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
-                    aria-hidden
-                  />
+        {articles.map((article) => {
+          // Trust `article.source` — it's authored by `retrieveContext`
+          // and already routes to `/help/{slug}` or `/knowledge/{slug}`
+          // depending on origin. Anything else would be a server bug.
+          const href = article.source.startsWith("/")
+            ? article.source
+            : `/help/${article.slug}`;
+          const isTenant = article.origin === "tenant";
+          return (
+            <li key={article.slug}>
+              <Link
+                href={href}
+                className={cn(
+                  "group flex items-start gap-2.5 rounded-md border bg-card px-2.5 py-2 text-left transition-colors",
+                  "hover:border-primary/50 hover:bg-primary/5",
+                  "focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                )}
+              >
+                <BookOpen
+                  className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+                  aria-hidden
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <h5 className="line-clamp-1 text-xs font-semibold">
+                        {article.title}
+                      </h5>
+                      {isTenant ? (
+                        <span
+                          className="inline-flex shrink-0 items-center rounded-sm bg-emerald-500/10 px-1 py-0 text-[9px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300"
+                          aria-hidden
+                        >
+                          KB
+                        </span>
+                      ) : null}
+                    </div>
+                    <ArrowUpRight
+                      className="size-3 shrink-0 text-muted-foreground transition-colors group-hover:text-primary"
+                      aria-hidden
+                    />
+                  </div>
+                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+                    {article.excerpt}
+                  </p>
                 </div>
-                <p className="mt-0.5 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
-                  {article.excerpt}
-                </p>
-              </div>
-            </Link>
-          </li>
-        ))}
+              </Link>
+            </li>
+          );
+        })}
       </ol>
     </section>
   );

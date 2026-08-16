@@ -906,7 +906,7 @@ function renderWithCitations(
   content: string,
   slugAllowlist: Set<string>,
 ): React.ReactNode[] {
-  const pattern = /\[([a-z0-9][a-z0-9-]{1,60})\]/g;
+  const pattern = /\[([a-z0-9][a-z0-9-]{1,80})\]/g;
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -917,7 +917,26 @@ function renderWithCitations(
     if (start > lastIndex) {
       nodes.push(content.slice(lastIndex, start));
     }
-    if (slug && slugAllowlist.has(slug)) {
+    // Tenant Knowledge Base citations arrive with a `kb-` prefix
+    // (see `knowledge-retrieval.ts::toKnowledgeCitationSlug`). We
+    // never gate them by the allowlist because the tenant slug set
+    // is dynamic per request; the `/knowledge/{slug}` route is
+    // RLS-guarded so a hallucinated slug either 404s or resolves to
+    // an article the caller can already see. Safe by construction.
+    const kbSlug =
+      slug && slug.startsWith("kb-") ? slug.slice(3) : null;
+    if (kbSlug && kbSlug.length > 0) {
+      nodes.push(
+        <Link
+          key={`cite-${key++}`}
+          href={`/knowledge/${kbSlug}`}
+          className="inline-flex items-center gap-0.5 rounded-sm bg-emerald-500/10 px-1 py-0 text-xs font-medium text-emerald-700 underline-offset-2 hover:underline dark:text-emerald-300"
+        >
+          {kbSlug}
+          <ArrowUpRight className="size-3" aria-hidden />
+        </Link>,
+      );
+    } else if (slug && slugAllowlist.has(slug)) {
       nodes.push(
         <Link
           key={`cite-${key++}`}

@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import {
   appendKnowledgeArticleRevision,
   loadKnowledgeArticleById,
 } from "@/lib/data/knowledge-articles";
+import {
+  dropKnowledgeArticleEmbeddings,
+  reindexKnowledgeArticle,
+} from "@/lib/help/knowledge-embeddings";
 import { log } from "@/lib/observability/log";
 import { withSecureAction } from "@/lib/security/action-wrapper";
 import { createClient } from "@/lib/supabase/server";
@@ -252,6 +257,24 @@ export const updateKnowledgeArticleAction = withSecureAction({
       revalidatePath(`/knowledge/${current.slug}`);
     }
 
+    // Only PUBLISHED articles carry embeddings; skip the reindex
+    // otherwise. `reindexKnowledgeArticle` itself will short-circuit
+    // for non-published rows, but skipping the call here saves a
+    // service-role round-trip on every draft save.
+    if (data.status === "PUBLISHED") {
+      after(async () => {
+        try {
+          await reindexKnowledgeArticle(data.id);
+        } catch (err) {
+          log.warn("knowledge_update_reindex_failed", {
+            tenant_id: ctx.actor.tenantId,
+            article_id: data.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      });
+    }
+
     return {
       result: { id: data.id, slug: data.slug },
       auditResourceId: data.id,
@@ -334,6 +357,22 @@ export const publishKnowledgeArticleAction = withSecureAction({
     revalidatePath("/knowledge");
     revalidatePath(`/knowledge/${data.slug}`);
 
+    // Fire-and-forget reindex — runs after the response has flushed
+    // to the client so the publish button feels instantaneous. If
+    // the embedding call fails, the article is still published; the
+    // backfill script (`pnpm knowledge:reindex`) can pick it up later.
+    after(async () => {
+      try {
+        await reindexKnowledgeArticle(data.id);
+      } catch (err) {
+        log.warn("knowledge_publish_reindex_failed", {
+          tenant_id: ctx.actor.tenantId,
+          article_id: data.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
+
     return {
       result: { id: data.id, slug: data.slug, published_at: data.published_at },
       auditResourceId: data.id,
@@ -410,6 +449,22 @@ export const archiveKnowledgeArticleAction = withSecureAction({
 
     revalidatePath("/knowledge");
     revalidatePath(`/knowledge/${data.slug}`);
+
+    // Clear the RAG index so archived content stops surfacing in
+    // chatbot answers. Best-effort — a failed drop leaves stale
+    // embeddings, which the reindex script will overwrite next
+    // time the article is republished (or the next full pass).
+    after(async () => {
+      try {
+        await dropKnowledgeArticleEmbeddings(data.id);
+      } catch (err) {
+        log.warn("knowledge_archive_drop_embeddings_failed", {
+          tenant_id: ctx.actor.tenantId,
+          article_id: data.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
 
     return {
       result: { id: data.id, slug: data.slug, archived_at: data.archived_at },
