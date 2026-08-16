@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion, useReducedMotion } from "framer-motion";
@@ -47,6 +47,14 @@ function hydratedServerSnapshot() {
 
 export function LoginForm({ initialError }: { initialError?: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // `?next=<path>` — the URL the user was trying to reach when the proxy
+  // bounced them here. The server action re-sanitises this (never trust
+  // client-supplied redirects), but we forward it verbatim so the auth
+  // decision (platform admin? tenant admin?) can be made server-side
+  // with the exact intent the user came in with. Empty when the user
+  // hit `/login` directly.
+  const nextParam = searchParams?.get("next") ?? undefined;
   const [error, setError] = React.useState<string | undefined>(initialError);
   const [isPending, startTransition] = React.useTransition();
   const t = useTranslations("auth");
@@ -84,7 +92,7 @@ export function LoginForm({ initialError }: { initialError?: string }) {
   function onPasswordSubmit(values: LoginInput) {
     setError(undefined);
     startTransition(async () => {
-      const result = await signInWithPassword(values);
+      const result = await signInWithPassword(values, { next: nextParam });
       if (result?.status === "error") {
         setError(result.message);
         return;
