@@ -154,6 +154,80 @@ export const loadRecentPublishedKnowledgeArticles = cache(
 );
 
 /**
+ * Compact search-index shape — the minimum a fuzzy matcher needs.
+ * Used by `HelpSearch` (`/help` browse tab) and the global command
+ * palette (`Ctrl+K`) to surface tenant KB alongside repo docs.
+ *
+ * Deliberately does NOT include `body_md`. The preview is server-
+ * rendered ONCE (stripped markdown, first 800 chars) so the client
+ * bundle doesn't have to ship every article's full body just to
+ * find one match. For a 100-article tenant this keeps the palette
+ * payload well under 100 KB.
+ */
+export type KnowledgeSearchArticle = {
+  slug: string;
+  title: string;
+  summary: string;
+  category: KnowledgeArticleCategory;
+  preview: string;
+  updated_at: string;
+};
+
+/**
+ * Load every published article the caller can see, projected down
+ * to the search-friendly shape. RLS filters by tenant + visibility
+ * (drafts stay out even for their own authors — the search box is
+ * meant to surface reference material, not WIP).
+ *
+ * Memoised via `cache()` so RSC pages and the app-shell layout
+ * (both server-rendered per request) share a single query.
+ */
+export const loadTenantSearchIndex = cache(
+  async (): Promise<KnowledgeSearchArticle[]> => {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("knowledge_articles")
+      .select("slug, title, summary, category, body_md, updated_at")
+      .eq("status", "PUBLISHED")
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    if (error || !data) return [];
+    return data.map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      summary: row.summary ?? "",
+      // `category` comes back as `string` because the generated
+      // types treat the DB CHECK constraint as freeform. The value
+      // is one of `KnowledgeArticleCategory` by construction — the
+      // check on `knowledge_articles.category` rejects anything
+      // else at INSERT time.
+      category: row.category as KnowledgeArticleCategory,
+      preview: stripAndClip(row.body_md, 800),
+      updated_at: row.updated_at,
+    }));
+  },
+);
+
+/**
+ * Same markdown-stripping recipe as `retrieval.ts::stripMarkdown` +
+ * a length cap. Duplicated intentionally — the retrieval module is
+ * `server-only` and lives inside `src/lib/help/`, and re-exporting
+ * from there would forward the "no client bundle" restriction here.
+ */
+function stripAndClip(md: string, maxChars: number): string {
+  const stripped = md
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_`>|~]/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+  return stripped.length > maxChars
+    ? `${stripped.slice(0, maxChars - 1)}…`
+    : stripped;
+}
+
+/**
  * Group published articles by category for the browse view — mirrors
  * the shape used by `renderHelpBrowse()` in the static /help route
  * so the two lists can share the same card component.

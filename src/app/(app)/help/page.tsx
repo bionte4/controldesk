@@ -3,9 +3,10 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { HelpSearch } from "@/components/help/help-search";
+import { HelpSearch, type SearchArticle } from "@/components/help/help-search";
 import { HelpTabs } from "@/components/help/help-tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { loadTenantSearchIndex } from "@/lib/data/knowledge-articles";
 import {
   HELP_CATEGORY_META,
   HELP_CATEGORY_ORDER,
@@ -41,7 +42,7 @@ export default async function HelpIndexPage({
 }) {
   const localeRaw = await getLocale();
   const locale = isLocale(localeRaw) ? localeRaw : undefined;
-  const [t, articles, resolvedParams] = await Promise.all([
+  const [t, articles, tenantArticles, resolvedParams] = await Promise.all([
     getTranslations("help"),
     // Feed the index the same locale as the article page so titles /
     // summaries come from the translated file when it exists. Fuse
@@ -49,6 +50,11 @@ export default async function HelpIndexPage({
     // index — because keyword-relevance on the reader's own language
     // beats forcing them onto a canonical index.
     loadAllHelpArticles(locale),
+    // Tenant KB (Fase 2b): merged into the same searchbox so users
+    // don't have to switch mental models between "official docs" and
+    // "our workspace's docs". RLS filters to PUBLISHED, tenant-scoped
+    // rows only — drafts stay hidden even from their own author.
+    loadTenantSearchIndex(),
     (searchParams ?? Promise.resolve({})) as Promise<
       Record<string, string | string[] | undefined>
     >,
@@ -59,13 +65,32 @@ export default async function HelpIndexPage({
   const defaultTab: "browse" | "ask" = tabParam === "ask" ? "ask" : "browse";
 
   const grouped = groupByCategory(articles);
-  const searchIndex = articles.map((a) => ({
+  const repoIndex: SearchArticle[] = articles.map((a) => ({
     slug: a.slug,
     title: a.title,
     summary: a.summary,
     category: a.category,
     preview: previewFor(a),
+    origin: "repo",
+    href: `/help/${a.slug}`,
   }));
+  const tenantIndex: SearchArticle[] = tenantArticles.map((a) => ({
+    slug: a.slug,
+    title: a.title,
+    summary: a.summary,
+    // Tenant category strings don't map to `HELP_CATEGORY_META` —
+    // pass through the raw category and let the search UI render a
+    // KB-badge instead. The origin flag handles the branching.
+    category: a.category,
+    preview: a.preview,
+    origin: "tenant",
+    href: `/knowledge/${a.slug}`,
+    updatedAt: a.updated_at,
+  }));
+  // Repo first so the built-in docs stay canonical when both pools
+  // return equally-strong matches. Fuse's own scoring still floats
+  // more-relevant tenant hits to the top when they earn it.
+  const searchIndex: SearchArticle[] = [...repoIndex, ...tenantIndex];
 
   const browseSlot = (
     <div className="flex flex-col gap-6">

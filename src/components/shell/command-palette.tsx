@@ -16,6 +16,7 @@ import {
   Banknote,
   LineChart,
   BrainCircuit,
+  BookText,
   Moon,
   Sun,
   LogOut,
@@ -76,7 +77,34 @@ const NAV_COMMANDS: NavCommand[] = [
   { titleKey: "insights", href: "/insights", icon: BrainCircuit },
 ];
 
-export function CommandPalette({ children }: { children: React.ReactNode }) {
+/**
+ * A single tenant Knowledge Base entry surfaced in the Cmd+K palette
+ * (Fase 2b). Kept structural — the layout RSC fills this array from
+ * `loadTenantSearchIndex()` and passes it here through the RSC ↔
+ * Client boundary. `cmdk`'s built-in fuzzy filter runs against the
+ * `value` we set on each `CommandItem` (title + summary), so no
+ * separate fuse.js instance is needed inside the palette.
+ */
+export type KnowledgePaletteEntry = {
+  slug: string;
+  title: string;
+  summary: string;
+};
+
+export function CommandPalette({
+  children,
+  knowledgeArticles = [],
+}: {
+  children: React.ReactNode;
+  /**
+   * Recent published tenant articles to surface as jumpable entries.
+   * Passed from the app layout RSC. Empty array = feature disabled
+   * (also true when the tenant has no published KB yet); the "Knowledge
+   * Base" group is omitted entirely in that case so power users don't
+   * see a dead heading.
+   */
+  knowledgeArticles?: readonly KnowledgePaletteEntry[];
+}) {
   const [open, setOpen] = React.useState(false);
   const router = useRouter();
   const { setTheme } = useTheme();
@@ -132,6 +160,36 @@ export function CommandPalette({ children }: { children: React.ReactNode }) {
               );
             })}
           </CommandGroup>
+
+          {knowledgeArticles.length > 0 ? (
+            <>
+              <CommandSeparator />
+              <CommandGroup heading={tNav("sections.knowledge")}>
+                {knowledgeArticles.map((entry) => (
+                  <CommandItem
+                    key={entry.slug}
+                    // `cmdk` filters by `value`; include the summary so
+                    // typing a phrase from the article body still
+                    // surfaces the entry. Prefixing with `kb ` gives
+                    // power users a way to scope the palette to KB by
+                    // typing "kb <query>".
+                    value={`kb ${entry.title} ${entry.summary}`}
+                    onSelect={() => navigate(`/knowledge/${entry.slug}`)}
+                  >
+                    <BookText />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate">{entry.title}</span>
+                      {entry.summary ? (
+                        <span className="truncate text-xs text-muted-foreground">
+                          {entry.summary}
+                        </span>
+                      ) : null}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </>
+          ) : null}
 
           <CommandSeparator />
 

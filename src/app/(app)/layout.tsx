@@ -6,13 +6,17 @@ import { AppSidebar } from "@/components/shell/app-sidebar";
 import { AppTopbar } from "@/components/shell/app-topbar";
 import type { NotificationItem } from "@/components/shell/notifications-bell";
 import type { InsightPreview } from "@/components/shell/ai-insights-badge";
-import { CommandPalette } from "@/components/shell/command-palette";
+import {
+  CommandPalette,
+  type KnowledgePaletteEntry,
+} from "@/components/shell/command-palette";
 import { PageTransition } from "@/components/shell/page-transition";
 import { TrialBanner } from "@/components/shell/trial-banner";
 import { isLocale } from "@/lib/i18n/config";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { CAPABILITY_IDS } from "@/lib/rbac/capabilities";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import { loadTenantSearchIndex } from "@/lib/data/knowledge-articles";
 import { createClient } from "@/lib/supabase/server";
 import { HELP_MANIFEST } from "@/lib/help/articles";
 import type {
@@ -109,9 +113,23 @@ export default async function AppLayout({
   // source of truth for valid `/help/{slug}` targets.
   const helpArticleSlugs = HELP_MANIFEST.map((entry) => entry.slug);
 
+  // Fase 2b: feed the Cmd+K palette with recent tenant KB articles
+  // so power users can jump to internal SOPs without leaving the
+  // keyboard. Capped at 20 to keep the palette payload lean — a
+  // fuzzy match against titles + summaries is enough for the common
+  // "which SOP was that?" flow; deep search remains on `/help`.
+  const tenantSearchIndex = await loadTenantSearchIndex();
+  const knowledgePaletteEntries: KnowledgePaletteEntry[] = tenantSearchIndex
+    .slice(0, 20)
+    .map((row) => ({
+      slug: row.slug,
+      title: row.title,
+      summary: row.summary,
+    }));
+
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <CommandPalette>
+      <CommandPalette knowledgeArticles={knowledgePaletteEntries}>
         <AppSidebar
           role={employee.role}
           allowedCapabilities={allowedCapabilities}

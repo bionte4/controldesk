@@ -17,13 +17,29 @@ import {
   type HelpCategoryId,
 } from "@/lib/help/categories";
 
-type SearchArticle = {
+/**
+ * Union shape covering both the repo-authored `HELP_MANIFEST`
+ * articles and tenant-authored Knowledge Base entries (Fase 2b).
+ * Discriminated by `origin` so the badge renderer picks the right
+ * label without a second lookup — `HELP_CATEGORY_META` doesn't
+ * cover tenant categories, and we don't want to bundle the tenant
+ * category map into the client just for a search dropdown.
+ */
+export type SearchArticle = {
   slug: string;
   title: string;
   summary: string;
-  category: HelpCategoryId;
   preview: string;
-};
+  /**
+   * Router-ready path: `/help/{slug}` OR `/knowledge/{slug}`.
+   * Precomputed on the server so the client doesn't have to know
+   * the routing rules.
+   */
+  href: string;
+} & (
+  | { origin: "repo"; category: HelpCategoryId }
+  | { origin: "tenant"; category: string; updatedAt?: string }
+);
 
 /**
  * Client-side fuzzy search over the help article index.
@@ -125,18 +141,27 @@ export function HelpSearch({
           ) : (
             <ul className="flex flex-col divide-y">
               {results.map(({ item }) => (
-                <li key={item.slug}>
+                <li key={`${item.origin}-${item.slug}`}>
                   <Link
-                    href={`/help/${item.slug}`}
+                    href={item.href}
                     className="flex flex-col gap-1 p-4 hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   >
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{item.title}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {locale === "en"
-                          ? HELP_CATEGORY_META[item.category].titleEn
-                          : HELP_CATEGORY_META[item.category].titleId}
-                      </Badge>
+                      {item.origin === "repo" ? (
+                        <Badge variant="outline" className="text-xs">
+                          {locale === "en"
+                            ? HELP_CATEGORY_META[item.category].titleEn
+                            : HELP_CATEGORY_META[item.category].titleId}
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/40 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-300"
+                        >
+                          {t("kbBadge")}
+                        </Badge>
+                      )}
                     </div>
                     {item.summary && (
                       <p className="line-clamp-2 text-sm text-muted-foreground">

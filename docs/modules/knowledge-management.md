@@ -320,24 +320,51 @@ Env: `SUPABASE_SERVICE_ROLE_KEY`, `HELP_EMBEDDING_API_KEY` (or
 `GOOGLE_GENERATIVE_AI_API_KEY`). Uses the same model + geometry
 as the runtime path — no drift.
 
+## Fase 2b — Global search (delivered)
+
+Two search surfaces now include tenant KB:
+
+- **`/help` browse tab** (`HelpSearch`) — repo articles + tenant
+  KB are merged into a single Fuse.js index at RSC time. Tenant
+  hits render with an emerald "KB" badge instead of the repo
+  category chip, and link to `/knowledge/{slug}`. See
+  `src/app/(app)/help/page.tsx` for the merge and
+  `src/components/help/help-search.tsx` for the discriminated
+  `SearchArticle` union (`origin: "repo" | "tenant"`).
+- **Cmd/Ctrl+K palette** — a new "Knowledge Base" group shows up
+  to 20 most-recently-published tenant articles as jumpable
+  entries. `cmdk`'s built-in fuzzy filter matches against
+  `"kb {title} {summary}"`, so typing `kb onboarding` scopes to
+  KB entries; typing just `onboarding` still surfaces any nav
+  destination matching that word. Empty tenant → group is
+  omitted entirely, no dead heading.
+
+Data source: `loadTenantSearchIndex()` in
+`src/lib/data/knowledge-articles.ts`. RLS-scoped to PUBLISHED
+articles the caller can see, capped at 500 rows for the merge
+and 20 rows for the palette. Memoised via `React.cache()` so
+the layout + `/help` page share one query per request.
+
+i18n: `nav.sections.knowledge` (palette heading) and
+`help.kbBadge` (list badge label) — `messages/{id,en}.json`.
+
 ## Remaining Fase 2 / future roadmap
 
-Still pending, tracked as todos on the feature branch:
+Still pending:
 
-1. **Global search** — teach `HelpSearch`
-   (`src/components/help/help-search.tsx`) to accept an
-   optional `tenantArticles` prop so `Ctrl+K` finds tenant
-   articles too. Fase 2b.
-2. **Visibility ACL** — implement `resolveVisibilityFilter()`
+1. **Visibility ACL** — implement `resolveVisibilityFilter()`
    at the data-layer, enabling `ROLE_GATED` and
    `PROJECT_SCOPED` writes. Fase 2c.
-3. **Redirect map** — reuse
+2. **Redirect map** — reuse
    `knowledge_article_revisions.title/slug` snapshots to build
    a slug-alias table so renamed articles keep their old URLs.
-4. **Moderation queue** — optional per-tenant setting to
+3. **Moderation queue** — optional per-tenant setting to
    require admin approval before `DRAFT → PUBLISHED`. Adds a
    `PUBLISH_REQUEST` status between draft and published.
-5. **Chunked embeddings** — currently one row per article. When
+4. **Chunked embeddings** — currently one row per article. When
    articles routinely exceed ~4k chars, split by heading blocks
    with ~200 char overlap. Retriever already dedupes per
    article, so this drop-in swap requires no read-side change.
+5. **Palette lazy-load** — 20-item cap keeps the current
+   payload lean; when tenants regularly hold 500+ published
+   articles, swap the seed for an on-open async fetch.

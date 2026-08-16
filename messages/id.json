@@ -89,6 +89,7 @@
     "readArticle": "Baca artikel",
     "backToIndex": "Kembali ke Pusat Bantuan",
     "openFullGuide": "Buka panduan lengkap",
+    "kbBadge": "KB",
     "hintTrigger": "Tampilkan bantuan: {title}",
     "tabBrowse": "Telusuri artikel",
     "tabAsk": "Tanya AI",
@@ -524,6 +525,7 @@
       "analytics": "Analitik",
       "settings": "Setelan",
       "navigation": "Navigasi",
+      "knowledge": "Basis Pengetahuan",
       "appearance": "Tampilan",
       "session": "Sesi",
       "language": "Bahasa"
