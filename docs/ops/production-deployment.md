@@ -409,6 +409,15 @@ order di `src/lib/notify/mailer.ts` docblock.
 Skenario paling sering — ada commit baru di remote yang mau kamu bawa ke
 production tanpa restart penuh Supabase stack.
 
+> **Gotcha #2 — `docker compose up -d app` TIDAK recreate container kalau
+> image tag tetap sama.** Compose mem-hash konfigurasi (image name, env,
+> volume, network) dan skip recreation kalau hash-nya sama. Rebuild image
+> dengan tag identik tidak mengubah hash → container LAMA tetap jalan
+> walaupun ada image baru. Selalu pakai `--force-recreate --no-deps` untuk
+> update code. Bandingkan `docker inspect <container> --format '{{.Image}}'`
+> vs `docker inspect <image>:<tag> --format '{{.Id}}'` untuk konfirmasi
+> drift.
+
 ```bash
 cd ~/controldesk
 
@@ -423,23 +432,97 @@ git pull --ff-only origin feat/initial-controldesk-platform
 # tidak perlu di-rebuild karena mereka pakai upstream image.
 docker compose -f docker-compose.prod.yml --env-file .env.production build app
 
-# Recreate container app dengan image baru. Service lain tetap running.
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d app
+# --force-recreate WAJIB — tanpa flag ini Compose skip container lama
+# yang masih pakai image basi (lihat Gotcha #2 di atas).
+# --no-deps supaya HANYA app di-recreate, DB/Kong/Auth/Realtime/Storage
+# tetap running (zero-downtime dari sisi user).
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  up -d --no-deps --force-recreate app
 
-# Verify sehat
-docker compose -f docker-compose.prod.yml --env-file .env.production ps app
-docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail 50 app
+# Konfirmasi container SUDAH pakai image baru (uptime harus hitungan detik).
+docker ps --filter name=controldesk-app --format "table {{.Names}}\t{{.Status}}"
+docker inspect controldesk-app --format 'Container using: {{.Image}}'
+docker inspect controldesk/app:prod --format 'Latest image:   {{.Id}}'
+# Kedua sha256 di atas HARUS sama sekarang.
+
+# Health check — tunggu ~30 detik supaya health-starting grace period lewat.
+sleep 30
+curl -sf http://localhost:3000/api/health && echo " ← OK" || echo "FAIL"
+docker logs controldesk-app --tail 40 2>&1 | grep -E "Ready|Error"
 ```
 
 **Kalau ada migration baru** (`supabase/migrations/00XX_*.sql` yang belum
-applied), tambahkan step sebelum `up -d app`:
+applied), tambahkan step sebelum `up -d --force-recreate app`:
 
 ```bash
 ./deploy/scripts/apply-migrations.sh
 ```
 
 Skrip ini idempotent — sudah punya `_migration_history` guard, tidak
-double-apply.
+double-apply. Kalau ada migrasi yang touch RLS policies dan gagal dengan
+`must be owner of relation ...` → lihat "Migration owner permission error"
+di bawah.
+
+### Migration owner permission error (`must be owner of relation ...`)
+
+Skenario: `./deploy/scripts/apply-migrations.sh` gagal dengan error seperti:
+
+```
+ERROR:  must be owner of relation knowledge_articles
+ERROR:  must be owner of function provision_tenant
+ROLLBACK
+```
+
+**Root cause** — script default connect sebagai user `postgres`, tapi
+sebagian object (tabel, function) di-own oleh `supabase_admin` (bawaan
+image `supabase/postgres`). Postgres di image ini **bukan superuser**, jadi
+tidak bisa `ALTER`/`DROP` object milik `supabase_admin` — termasuk
+`DROP POLICY`, `CREATE OR REPLACE FUNCTION`, dsb.
+
+Migrasi yang paling sering kena issue ini:
+- Migrasi RLS policy replace (`drop policy … create policy …`)
+- Migrasi function replace (`create or replace function …`) untuk function
+  yang originally dibuat oleh `supabase_admin`
+
+**Fix — apply migrasi tsb sebagai `supabase_admin`, lalu record ke history:**
+
+```bash
+cd ~/controldesk
+
+# Contoh: 3 migrasi Fase 2c gagal karena touch policy knowledge_articles
+for f in \
+  supabase/migrations/0097_knowledge_articles_admin_gate_unify.sql \
+  supabase/migrations/0098_knowledge_articles_visibility_constraints.sql \
+  supabase/migrations/0099_knowledge_articles_visibility_rls.sql
+do
+  fname=$(basename "$f")
+  hash=$(sha256sum "$f" | cut -d' ' -f1)
+  echo "=== APPLY $fname (sha256: ${hash:0:12}...) ==="
+
+  # supabase_admin sebagai owner → bisa DROP/CREATE POLICY dan REPLACE FUNCTION.
+  # WAJIB -d postgres, karena default psql -U supabase_admin coba connect ke
+  # database yang namanya "supabase_admin" (tidak ada) → FATAL.
+  docker exec -i controldesk-db psql -U supabase_admin -d postgres \
+    -v ON_ERROR_STOP=1 -X -q < "$f" || { echo "FAILED $fname"; break; }
+
+  # Record ke _migration_history supaya apply-migrations.sh skip next run.
+  docker exec -i controldesk-db psql -U postgres -d postgres -c \
+    "INSERT INTO public._migration_history (filename, sha256)
+     VALUES ('$fname', '$hash')
+     ON CONFLICT (filename) DO UPDATE SET sha256 = EXCLUDED.sha256;"
+done
+
+# Re-run apply-migrations.sh — sekarang harus skip semua 3 file di atas.
+./deploy/scripts/apply-migrations.sh 2>&1 | tail -10
+```
+
+**Kenapa transaction rollback aman** — script pakai `BEGIN … COMMIT` per
+migrasi + `ON_ERROR_STOP=1`, jadi migrasi yang gagal otomatis di-ROLLBACK.
+DB state tetap konsisten, tidak ada partial apply.
+
+**Long-term fix** — kalau ini sering terjadi, patch `apply-migrations.sh`
+untuk detect ownership error dan auto-fallback ke `supabase_admin`. Sudah
+ada di roadmap.
 
 ### Server branch diverged (git pull --ff-only gagal)
 
@@ -528,6 +611,61 @@ cp .env.production.bak-<timestamp> .env.production
 docker compose -f docker-compose.prod.yml --env-file .env.production \
   up -d --force-recreate app auth rest realtime storage kong
 ```
+
+### Known issues (non-blocking)
+
+Backlog issues yang sudah muncul di prod tapi tidak mem-block operasi
+harian. Track di TODO list dan address saat prioritas naik.
+
+**PWA service worker crash — `Cannot find package 'esbuild'`**
+
+Gejala di `docker logs controldesk-app`:
+```
+Error: Cannot find package 'esbuild' imported from
+  /app/.next/server/chunks/[root-of-the-server]__xxxxxx._.js
+```
+Dan di browser console:
+```
+Failed to register a ServiceWorker for scope ('https://<domain>/')
+with script ('https://<domain>/serwist/sw.js'):
+A bad HTTP response code (500) was received when fetching the script.
+```
+
+**Root cause** — `src/app/serwist/[[...path]]/route.ts` pakai
+`@serwist/turbopack` yang butuh `esbuild` di runtime untuk compile
+`src/sw.ts`. `esbuild` di-declare sebagai **devDependency** di
+`package.json`, jadi tidak masuk standalone bundle → runtime crash saat
+`/serwist/sw.js` di-request.
+
+**Impact** — HANYA PWA offline capabilities (add-to-home-screen, offline
+fallback). Main app + login + semua module regular functionality tetap
+jalan normal karena SW registration failure ditangkap client-side dan
+tidak block navigation.
+
+**Fix options** (belum di-apply):
+- Move `esbuild` dari `devDependencies` → `dependencies` di
+  `package.json` (~10 MB penambahan bundle, quick fix).
+- Pre-compile `src/sw.ts` ke static asset di build stage, skip Route
+  Handler entirely (lebih clean, butuh refactor).
+- Set `useNativeEsbuild: false` di `createSerwistRoute()` supaya pakai
+  WASM esbuild yang self-contained.
+
+**Workaround saat ini** — tidak perlu. Error di log bisa filter dengan
+`docker logs controldesk-app 2>&1 | grep -v -E "esbuild|serwist"` untuk
+troubleshoot lain.
+
+**Network compose warning — `network X exists but was not created by compose`**
+
+Gejala saat `docker compose up`:
+```
+WARN[0000] a network with name controldesk-prod exists but was not
+created by compose. Set `external: true` to use an existing network
+```
+
+**Impact** — cosmetic. Container tetap join network dengan benar.
+
+**Fix** — tambahkan `external: true` di block network `controldesk-prod`
+di `docker-compose.prod.yml`. Belum urgent.
 
 ### Scale beyond 10 tenants
 Signal untuk pindah ke Tier C (32 GB / 8 vCPU) atau split ke multi-node:
