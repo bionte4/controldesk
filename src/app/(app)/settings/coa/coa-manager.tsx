@@ -448,9 +448,9 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="@container flex flex-1 flex-col gap-4 overflow-y-auto px-4"
+              className="@container flex flex-1 flex-col gap-5 overflow-y-auto px-5"
             >
-              <div className="grid gap-3 @md:grid-cols-2">
+              <div className="grid gap-4 @md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="code"
@@ -491,8 +491,14 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                         }}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
+                          <SelectTrigger className="w-full">
+                            <SelectValue>
+                              {(value) =>
+                                value
+                                  ? tTypes(value as CoaAccountType)
+                                  : t("fields.type")
+                              }
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -527,7 +533,7 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                 )}
               />
 
-              <div className="grid gap-3 @md:grid-cols-2">
+              <div className="grid gap-4 @md:grid-cols-2">
                 <FormField
                   control={form.control}
                   name="normal_side"
@@ -539,8 +545,14 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                         onValueChange={(v) => field.onChange(v as CoaNormalSide)}
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
+                          <SelectTrigger className="w-full">
+                            <SelectValue>
+                              {(value) =>
+                                value
+                                  ? tSides(value as CoaNormalSide)
+                                  : t("fields.normalSide")
+                              }
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -568,8 +580,20 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                         }
                       >
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
+                          <SelectTrigger className="w-full">
+                            <SelectValue>
+                              {(value) => {
+                                if (!value || value === "__none__") {
+                                  return t("parentNone");
+                                }
+                                const hit = parentOptions.find(
+                                  (r) => r.id === value,
+                                );
+                                return hit
+                                  ? `${"— ".repeat(hit.depth)}${hit.code} · ${hit.name}`
+                                  : String(value);
+                              }}
+                            </SelectValue>
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -600,7 +624,7 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                       <Textarea
                         {...field}
                         placeholder={t("descriptionPlaceholder")}
-                        rows={2}
+                        rows={3}
                       />
                     </FormControl>
                     <FormMessage />
@@ -612,10 +636,10 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                 control={form.control}
                 name="is_postable"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3">
-                    <div className="space-y-0.5">
+                  <FormItem className="flex flex-row items-center justify-between gap-4 rounded-lg border border-border/60 bg-muted/30 p-4">
+                    <div className="space-y-1">
                       <FormLabel>{t("fields.postable")}</FormLabel>
-                      <FormDescription>
+                      <FormDescription className="text-xs leading-relaxed">
                         {t("postableHint")}
                       </FormDescription>
                     </div>
@@ -629,7 +653,7 @@ export function CoaManager({ tree }: { tree: CoaAccountWithChildren[] }) {
                 )}
               />
 
-              <SheetFooter className="sticky bottom-0 mt-auto flex-row flex-wrap items-center justify-end gap-2 border-t border-border/50 bg-popover px-0 py-3">
+              <SheetFooter className="sticky bottom-0 mt-auto -mx-5 flex-row flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-popover px-5 py-3">
                 <SheetClose
                   render={
                     <Button type="button" variant="ghost" disabled={isPending}>
