@@ -1,0 +1,19 @@
+# Host-specific production override for sharing the existing WorkPulse Caddy.
+#
+# Usage:
+#   docker compose \
+#     -f docker-compose.prod.yml \
+#     -f docker-compose.shared-ingress.yml \
+#     --env-file .env.production up -d
+#
+# The active ingress container is attached to `controldesk-prod` and routes
+# ControlDesk hostnames to `controldesk-app` and `controldesk-kong`.
+services:
+  caddy:
+    profiles:
+      - standalone-ingress
+
+networks:
+  controldesk:
+    name: controldesk-prod
+    external: true
