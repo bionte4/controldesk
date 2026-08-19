@@ -1,5 +1,9 @@
 import "server-only";
 
+import {
+  loadVisibilityContext,
+  resolveVisibilityFilter,
+} from "@/lib/data/knowledge-articles";
 import { log } from "@/lib/observability/log";
 import { createClient } from "@/lib/supabase/server";
 
@@ -36,16 +40,30 @@ import {
  *      `to_tsvector('simple', title || body_md)` + a GIN index in
  *      a follow-up migration when volumes justify.
  *
- * ## RLS
+ * ## RLS + visibility ACL
  *
  * Every read here runs under the caller's Supabase session (the one
- * built by `createClient()` from cookies). RLS policies from
- * migration 0095 filter:
- *   - Article visibility: PUBLISHED articles are tenant-wide;
- *     DRAFT/ARCHIVED are hidden unless the caller is the author or
- *     an admin. Draft leakage to the chatbot would surface WIP
- *     content — deliberate to keep publish-as-gate meaningful.
- *   - Embedding visibility: mirrors the parent article.
+ * built by `createClient()` from cookies). Two guard layers apply:
+ *
+ *   1. RLS policies from migration 0095 filter tenant + draft/
+ *      archived scope. Only PUBLISHED articles are tenant-wide;
+ *      drafts stay hidden unless the caller is the author or an
+ *      admin. Draft leakage to the chatbot would surface WIP
+ *      content — deliberate to keep publish-as-gate meaningful.
+ *
+ *   2. Visibility ACL from Fase 2c: ROLE_GATED / PROJECT_SCOPED
+ *      articles are further narrowed via `resolveVisibilityFilter`.
+ *      Both retrieval paths (embedding + keyword) first resolve the
+ *      caller's visible article-id set, then constrain the actual
+ *      retrieval query to that set. Non-visible articles never
+ *      surface as chatbot citations even if they matched the
+ *      semantic query.
+ *
+ * Embedding rows inherit visibility indirectly — the reindex writer
+ * runs under service role and re-populates on publish, so a
+ * newly-restricted article's embeddings survive until archive drops
+ * them. The `.in("article_id", visibleIds)` constraint below closes
+ * the gap without waiting for a reindex.
  *
  * ## Citation slug convention
  *
@@ -81,6 +99,42 @@ export type TenantHit = TenantKnowledgeArticle & {
 };
 
 const KB_CITATION_PREFIX = "kb-";
+
+/**
+ * Resolve the set of PUBLISHED article ids visible to the current
+ * caller under the Fase 2c visibility ACL. Returns `null` for admins
+ * (unrestricted — skip the `.in()` constraint) and a possibly-empty
+ * array otherwise.
+ *
+ * Cheap: single ID-only query with the same `.or()` clause the data
+ * layer builds on every list. For a tenant with 500 published
+ * articles the payload is ~20 KB and the query hits the
+ * `(tenant_id, published_at)` index directly.
+ */
+async function resolveVisibleArticleIds(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+): Promise<string[] | null> {
+  const ctx = await loadVisibilityContext();
+  if (ctx.isAdmin) return null;
+  const filter = resolveVisibilityFilter(ctx);
+  let q = supabase
+    .from("knowledge_articles")
+    .select("id")
+    .eq("status", "PUBLISHED");
+  if (filter) q = q.or(filter);
+  const { data, error } = await q;
+  if (error || !data) {
+    // Failing closed: an error resolving visibility should NEVER
+    // widen the set. Returning an empty allowlist means the caller
+    // sees no chatbot citations from tenant KB — worse UX than a
+    // partial answer, better than a leak.
+    log.info("knowledge_retrieval_visibility_resolution_failed", {
+      error: error?.message ?? "empty",
+    });
+    return [];
+  }
+  return data.map((r) => r.id);
+}
 
 /**
  * Build a citation slug from a raw KB slug. The `kb-` namespace is
@@ -138,12 +192,23 @@ export async function retrieveTenantKnowledge({
 
   const supabase = await createClient();
 
+  // Resolve the visible-article ID set once. Both retrieval paths
+  // consume it: embedding restricts the chunk scan, keyword
+  // restricts the substring scan. Admins bypass — the helper
+  // returns `null` and `resolveVisibleArticleIds` short-circuits.
+  const visibleIds = await resolveVisibleArticleIds(supabase);
+  // Empty non-null set means the caller can see no PUBLISHED
+  // articles at all — retrieving anything is pointless. Non-null
+  // covers the "regular employee with a tenant that only has
+  // ROLE_GATED HR articles the employee isn't scoped to" edge.
+  if (visibleIds !== null && visibleIds.length === 0) return [];
+
   // Fast path: no embeddings capability. Skip straight to keyword.
   if (
     !queryVector ||
     queryVector.length !== EMBEDDING_DIM
   ) {
-    return retrieveByKeyword(supabase, trimmedQuery, limit);
+    return retrieveByKeyword(supabase, trimmedQuery, limit, visibleIds);
   }
 
   // Embedding path. We over-fetch (`limit * 4`) so a subsequent
@@ -151,7 +216,7 @@ export async function retrieveTenantKnowledge({
   // without missing the winner because two of its chunks pushed a
   // valid runner-up out of the initial slice.
   const perArticleOverfetch = Math.max(limit * 4, 12);
-  const { data: embeddingRows, error } = await supabase
+  let embedQ = supabase
     .from("knowledge_article_embeddings")
     .select(
       `
@@ -170,18 +235,22 @@ export async function retrieveTenantKnowledge({
     )
     .eq("model_id", EMBEDDING_MODEL_ID)
     .limit(perArticleOverfetch * 6);
+  if (visibleIds !== null) {
+    embedQ = embedQ.in("article_id", visibleIds);
+  }
+  const { data: embeddingRows, error } = await embedQ;
 
   if (error) {
     log.info("knowledge_retrieval_embedding_query_failed", {
       error: error.message,
     });
-    return retrieveByKeyword(supabase, trimmedQuery, limit);
+    return retrieveByKeyword(supabase, trimmedQuery, limit, visibleIds);
   }
   if (!embeddingRows || embeddingRows.length === 0) {
     // Tenant hasn't been indexed yet — fall through to keyword so
     // brand-new drafts published in the last 30 seconds are still
     // reachable while the reindex catches up.
-    return retrieveByKeyword(supabase, trimmedQuery, limit);
+    return retrieveByKeyword(supabase, trimmedQuery, limit, visibleIds);
   }
 
   type Scored = {
@@ -263,6 +332,7 @@ async function retrieveByKeyword(
   supabase: Awaited<ReturnType<typeof createClient>>,
   query: string,
   limit: number,
+  visibleIds: readonly string[] | null,
 ): Promise<TenantHit[]> {
   const words = query
     .toLowerCase()
@@ -283,12 +353,16 @@ async function retrieveByKeyword(
     ];
   });
 
-  const { data, error } = await supabase
+  let q = supabase
     .from("knowledge_articles")
     .select("slug, title, summary, body_md, status")
     .eq("status", "PUBLISHED")
     .or(clauses.join(","))
     .limit(limit * 3);
+  if (visibleIds !== null) {
+    q = q.in("id", visibleIds);
+  }
+  const { data, error } = await q;
 
   if (error || !data) {
     log.info("knowledge_retrieval_keyword_query_failed", {

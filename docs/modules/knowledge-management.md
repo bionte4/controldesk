@@ -348,23 +348,138 @@ the layout + `/help` page share one query per request.
 i18n: `nav.sections.knowledge` (palette heading) and
 `help.kbBadge` (list badge label) — `messages/{id,en}.json`.
 
-## Remaining Fase 2 / future roadmap
+## Fase 2c — Visibility ACL (delivered)
 
-Still pending:
+Three commits landed the `ROLE_GATED` and `PROJECT_SCOPED`
+enforcement scaffolded in migration 0095 as "reserved for Fase
+2". Migrations 0097 / 0098 / 0099 finish the DB side, the app
+layer got a full picker + reader + list surface, and the RAG
+retriever filters citations to visible articles only.
 
-1. **Visibility ACL** — implement `resolveVisibilityFilter()`
-   at the data-layer, enabling `ROLE_GATED` and
-   `PROJECT_SCOPED` writes. Fase 2c.
-2. **Redirect map** — reuse
+### What ships
+
+**Data model (migrations 0097-0099).** The three visibility
+enum values were already in the DB from 0095; Fase 2c wires
+enforcement across every layer:
+
+- `0097_knowledge_articles_admin_gate_unify.sql` — reconciles
+  three drifted "who is a KM admin" lists. `KNOWLEDGE_ADMIN_ROLES`
+  in `src/lib/rbac/roles.ts` is the source of truth; PDP,
+  reader, edit page, and both RLS policies delegate to
+  `canManageKnowledgeArticles(role)`. Includes `TENANT_ADMIN`,
+  `HEAD_MANAGER`, `HR_ADMIN`, `ADMIN`, `DIRECTOR` — the union of
+  what the three prior lists admitted.
+- `0098_knowledge_articles_visibility_constraints.sql` — CHECK
+  constraint refuses `ROLE_GATED` rows with empty `visibility_roles`
+  and `PROJECT_SCOPED` rows with null `visibility_project_id`.
+  Mirrored on the immutable revision snapshot. Partial B-tree
+  index on `(tenant_id, visibility_project_id) WHERE
+  visibility = 'PROJECT_SCOPED'` sizes the PROJECT_SCOPED branch
+  of the read filter.
+- `0099_knowledge_articles_visibility_rls.sql` — folds the
+  visibility ACL into the SELECT policy so direct REST snoops
+  (`GET /rest/v1/knowledge_articles?…`) are equally protected.
+  Two SECURITY DEFINER helpers land alongside the policy:
+  - `public.current_employee_id()` — sibling to
+    `current_tenant_id()` / `current_employee_role()`, reads the
+    `employee_id` claim injected by the 0003 hook.
+  - `public.is_project_member(project_id uuid)` — bypasses RLS
+    on `project_employee_assignments` for the PROJECT_SCOPED
+    check. STABLE so the planner memoises within a query.
+
+**Validation (`src/lib/validation/knowledge-article.ts`).**
+The `visibility` primitive widens from `z.enum(["TENANT_WIDE"])`
+to the full three-way enum. New `visibility_roles` and
+`visibility_project_id` primitives, plus a shared
+`refineVisibilitySideFields` `superRefine` that binds errors to
+the specific field name (form UI highlights the right control).
+Roles accept both legacy DB names AND canonical GAS names so
+tenants sitting on either dialect keep working.
+
+**Data layer (`src/lib/data/knowledge-articles.ts`).** New
+`loadVisibilityContext()` + `resolveVisibilityFilter(ctx)` pair.
+The filter returns a PostgREST `.or()` clause covering four
+branches:
+
+```
+visibility.eq.TENANT_WIDE,
+author_employee_id.eq.<uuid>,                                    // author bypass
+and(visibility.eq.ROLE_GATED,visibility_roles.ov.{ROLE,CANONICAL}),
+and(visibility.eq.PROJECT_SCOPED,visibility_project_id.in.(uuid,uuid))
+```
+
+Returns `null` for admins so the caller can skip `.or()` and
+avoid a wire byte. Applied to six read paths:
+
+- `loadKnowledgeArticles`
+- `loadKnowledgeArticleBySlug` / `loadKnowledgeArticleById`
+- `loadRecentPublishedKnowledgeArticles`
+- `loadTenantSearchIndex`
+- `loadPublishedKnowledgeGrouped` (inherits from the above)
+
+**RAG retrieval (`src/lib/help/knowledge-retrieval.ts`).**
+`retrieveTenantKnowledge` first resolves the visible-article ID
+set once, then constrains both the embedding path and the
+keyword fallback via `.in("article_id", visibleIds)`. Failing
+closed on visibility resolution error — the chatbot returns
+no tenant citations rather than potentially leaking a
+restricted article.
+
+**Server actions (`src/app/(app)/knowledge/actions.ts`).**
+Create + update normalise `visibility_roles` / `visibility_project_id`
+against the effective mode so a mode toggle can't leave stale
+side fields behind. Audit trail (`auditNewValues`) now includes
+visibility fields on create + update so post-hoc analysis can
+trace when an article was scoped down.
+
+**UI.**
+
+- **Form** (`src/components/knowledge/knowledge-article-form.tsx`) —
+  three-card radio picker + conditional 7-role checkbox grid +
+  conditional project Select. Client-side canSubmit gate mirrors
+  the Zod refine so publish stays disabled until the mode's side
+  field is populated.
+- **Reader** (`src/app/(app)/knowledge/[slug]/page.tsx`) — new
+  `KnowledgeVisibilityBadge` next to the category badge.
+  Emerald for PROJECT_SCOPED with resolved project name,
+  indigo for ROLE_GATED with role labels, muted for
+  TENANT_WIDE.
+- **List** (`src/app/(app)/knowledge/page.tsx`) — same badge
+  with `hideTenantWide` on cards (default doesn't need to
+  shout). Draft cards stack DRAFT + visibility badges;
+  category cards inline the visibility badge with the title.
+
+**i18n.** New `knowledge.visibility.*` group in both `id.json`
+and `en.json` covering the picker labels, the radio-card
+hints, and the reader/list badge variants.
+
+### Tests
+
+- `src/lib/data/knowledge-articles.test.ts` — exact `.or()`
+  clause shape across 8 role / project-set combinations.
+  Documents the canonical fold asymmetry (canonical FINANCE
+  matches only canonical-stored arrays; legacy LEAD_FINANCE
+  matches both dialects).
+- `src/lib/validation/knowledge-article.test.ts` — 13 cases
+  covering create + update `superRefine` errors, mode
+  switching, and partial-patch semantics.
+
+### Remaining roadmap
+
+1. **Redirect map** — reuse
    `knowledge_article_revisions.title/slug` snapshots to build
    a slug-alias table so renamed articles keep their old URLs.
-3. **Moderation queue** — optional per-tenant setting to
+2. **Moderation queue** — optional per-tenant setting to
    require admin approval before `DRAFT → PUBLISHED`. Adds a
    `PUBLISH_REQUEST` status between draft and published.
-4. **Chunked embeddings** — currently one row per article. When
+3. **Chunked embeddings** — currently one row per article. When
    articles routinely exceed ~4k chars, split by heading blocks
    with ~200 char overlap. Retriever already dedupes per
    article, so this drop-in swap requires no read-side change.
-5. **Palette lazy-load** — 20-item cap keeps the current
+4. **Palette lazy-load** — 20-item cap keeps the current
    payload lean; when tenants regularly hold 500+ published
    articles, swap the seed for an on-open async fetch.
+5. **Playwright coverage** — E2E flow for a ROLE_GATED author
+   publishing an HR-only article and verifying an EMPLOYEE
+   viewer gets `notFound()` on both `/knowledge/{slug}` and
+   the search palette.
