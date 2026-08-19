@@ -154,6 +154,14 @@ export const loadVisibilityContext = cache(
  *   and(visibility.eq.ROLE_GATED,visibility_roles.ov.{R1,R2}),
  *   and(visibility.eq.PROJECT_SCOPED,visibility_project_id.in.(uuid1,uuid2))
  *
+ * The ROLE_GATED branch emits BOTH the caller's raw DB role AND its
+ * canonical fold, so an article stored with either dialect
+ * (`LEAD_FINANCE` vs `FINANCE`, `PROJECT_MANAGER` vs `PM`) matches a
+ * caller sitting on either dialect too. Authors picking from the UI
+ * always store canonical (Fase 2c-II), but the picker eventually
+ * evolves — and legacy fixtures live in `supabase/seed/` and E2E
+ * factories — so the filter admits both to keep test data working.
+ *
  * The PROJECT_SCOPED branch is emitted only when the caller has ≥1
  * active project — otherwise the `.in.()` list would be empty and
  * PostgREST rejects the request.
@@ -163,11 +171,9 @@ export function resolveVisibilityFilter(
 ): string | null {
   if (ctx.isAdmin) return null;
 
-  // Role set: caller's DB role + its canonical fold. Handles both
-  // dialects — authors can store `PROJECT_MANAGER` (legacy) and a
-  // caller with `role='PM'` (canonical) still matches, or vice
-  // versa. `toCanonicalRole()` deduplicates automatically when the
-  // role IS canonical (returns the same value).
+  // Role set: caller's DB role + its canonical fold. `toCanonicalRole`
+  // is idempotent for canonical values (returns the same value)
+  // which the dedupe below handles cleanly.
   const canonical = toCanonicalRole(ctx.role);
   const roleSet =
     canonical === ctx.role ? [ctx.role] : [ctx.role, canonical];

@@ -8,8 +8,12 @@ import { KnowledgeArticleForm } from "@/components/knowledge/knowledge-article-f
 import { Button } from "@/components/ui/button";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadKnowledgeArticleBySlug } from "@/lib/data/knowledge-articles";
+import { loadProjectsForPicker } from "@/lib/data/projects";
 import { canManageKnowledgeArticles } from "@/lib/rbac/roles";
-import type { KnowledgeArticleCategory } from "@/lib/validation/knowledge-article";
+import type {
+  KnowledgeArticleCategory,
+  KnowledgeArticleVisibility,
+} from "@/lib/validation/knowledge-article";
 
 export const metadata: Metadata = { title: "Edit knowledge article" };
 
@@ -32,10 +36,11 @@ export default async function EditKnowledgeArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [t, article, employee] = await Promise.all([
+  const [t, article, employee, projects] = await Promise.all([
     getTranslations("knowledge.edit"),
     loadKnowledgeArticleBySlug(slug),
     requireCurrentEmployee(),
+    loadProjectsForPicker(),
   ]);
 
   if (!article) notFound();
@@ -92,12 +97,16 @@ export default async function EditKnowledgeArticlePage({
           articleId: article.id,
           originalSlug: article.slug,
         }}
+        projects={projects}
         initial={{
           slug: article.slug,
           title: article.title,
           summary: article.summary,
           body_md: article.body_md,
           category: article.category as KnowledgeArticleCategory,
+          visibility: article.visibility as KnowledgeArticleVisibility,
+          visibility_roles: article.visibility_roles ?? [],
+          visibility_project_id: article.visibility_project_id,
         }}
       />
     </div>

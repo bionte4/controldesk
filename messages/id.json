@@ -271,6 +271,28 @@
         "internal-sop": "SOP internal",
         "meeting-notes": "Catatan rapat",
         "decisions": "Keputusan"
+      },
+      "visibilityLabel": "Visibilitas",
+      "visibilityHint": "Menentukan siapa saja yang bisa membuka artikel ini di seluruh workspace, pencarian, dan Ask AI.",
+      "visibilityRolesLabel": "Role yang diizinkan",
+      "visibilityRolesHint": "Pilih minimal satu role.",
+      "visibilityRolesEmpty": "Belum ada role terpilih",
+      "visibilityProjectLabel": "Proyek",
+      "visibilityProjectHint": "Hanya anggota aktif proyek yang bisa membaca artikel ini.",
+      "visibilityProjectPlaceholder": "Pilih proyek…",
+      "visibilityProjectEmpty": "Belum ada proyek yang bisa dipilih. Buat proyek terlebih dahulu."
+    },
+    "visibility": {
+      "TENANT_WIDE": "Seluruh workspace",
+      "TENANT_WIDE_hint": "Setiap karyawan aktif di workspace ini bisa membaca.",
+      "ROLE_GATED": "Berdasarkan role",
+      "ROLE_GATED_hint": "Hanya role yang Anda pilih yang bisa membaca (mis. HR & Admin).",
+      "PROJECT_SCOPED": "Berdasarkan proyek",
+      "PROJECT_SCOPED_hint": "Hanya anggota aktif proyek yang bisa membaca.",
+      "badge": {
+        "TENANT_WIDE": "Semua",
+        "ROLE_GATED": "Role",
+        "PROJECT_SCOPED": "Proyek"
       }
     }
   },

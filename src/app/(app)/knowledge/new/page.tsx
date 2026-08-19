@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 
 import { KnowledgeArticleForm } from "@/components/knowledge/knowledge-article-form";
 import { Button } from "@/components/ui/button";
+import { loadProjectsForPicker } from "@/lib/data/projects";
 
 export const metadata: Metadata = { title: "New knowledge article" };
 
@@ -15,7 +16,10 @@ export const metadata: Metadata = { title: "New knowledge article" };
  * `KnowledgeArticleForm` for the shared UI.
  */
 export default async function NewKnowledgeArticlePage() {
-  const t = await getTranslations("knowledge.new");
+  const [t, projects] = await Promise.all([
+    getTranslations("knowledge.new"),
+    loadProjectsForPicker(),
+  ]);
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -32,7 +36,7 @@ export default async function NewKnowledgeArticlePage() {
           {t("subtitle")}
         </p>
       </header>
-      <KnowledgeArticleForm mode={{ kind: "create" }} />
+      <KnowledgeArticleForm mode={{ kind: "create" }} projects={projects} />
     </div>
   );
 }

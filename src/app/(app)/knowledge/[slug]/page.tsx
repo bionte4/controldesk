@@ -6,6 +6,7 @@ import { getTranslations } from "next-intl/server";
 
 import { HelpMarkdown } from "@/components/help/help-markdown";
 import { KnowledgeArticleActionsBar } from "@/components/knowledge/knowledge-article-actions-bar";
+import { KnowledgeVisibilityBadge } from "@/components/knowledge/knowledge-visibility-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireCurrentEmployee } from "@/lib/auth/session";
@@ -13,9 +14,13 @@ import {
   bumpKnowledgeArticleViewCount,
   loadKnowledgeArticleBySlug,
 } from "@/lib/data/knowledge-articles";
+import { loadProjectsForPicker } from "@/lib/data/projects";
 import { formatRelative } from "@/lib/format/date";
 import { canManageKnowledgeArticles } from "@/lib/rbac/roles";
-import type { KnowledgeArticleCategory } from "@/lib/validation/knowledge-article";
+import type {
+  KnowledgeArticleCategory,
+  KnowledgeArticleVisibility,
+} from "@/lib/validation/knowledge-article";
 
 export async function generateMetadata({
   params,
@@ -60,6 +65,21 @@ export default async function KnowledgeArticlePage({
 
   if (!article) notFound();
 
+  // Resolve the project name for a PROJECT_SCOPED article so the
+  // reader badge can show "Project · <name>" instead of a raw uuid.
+  // Cheap because `loadProjectsForPicker` is React-cached and the
+  // reader shares its RSC render with layout.tsx.
+  let projectName: string | null = null;
+  if (
+    article.visibility === "PROJECT_SCOPED" &&
+    article.visibility_project_id
+  ) {
+    const projects = await loadProjectsForPicker({ includeArchived: true });
+    projectName =
+      projects.find((p) => p.id === article.visibility_project_id)?.name ??
+      null;
+  }
+
   // Best-effort view counter — only for published articles. Draft
   // views by the author would inflate the number and give a false
   // signal on readership.
@@ -91,6 +111,11 @@ export default async function KnowledgeArticlePage({
           {t("backToIndex")}
         </Button>
         <Badge variant="outline">{categoryLabel}</Badge>
+        <KnowledgeVisibilityBadge
+          visibility={article.visibility as KnowledgeArticleVisibility}
+          roles={article.visibility_roles ?? []}
+          projectName={projectName}
+        />
         {article.status === "DRAFT" && (
           <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-400">
             DRAFT

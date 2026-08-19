@@ -271,6 +271,28 @@
         "internal-sop": "Internal SOPs",
         "meeting-notes": "Meeting notes",
         "decisions": "Decisions"
+      },
+      "visibilityLabel": "Visibility",
+      "visibilityHint": "Controls who can open this article across the workspace, search, and Ask AI.",
+      "visibilityRolesLabel": "Allowed roles",
+      "visibilityRolesHint": "Pick at least one role.",
+      "visibilityRolesEmpty": "No role selected yet",
+      "visibilityProjectLabel": "Project",
+      "visibilityProjectHint": "Only active project members can read this article.",
+      "visibilityProjectPlaceholder": "Pick a project…",
+      "visibilityProjectEmpty": "No projects available to select. Create a project first."
+    },
+    "visibility": {
+      "TENANT_WIDE": "Entire workspace",
+      "TENANT_WIDE_hint": "Every active employee in this workspace can read.",
+      "ROLE_GATED": "By role",
+      "ROLE_GATED_hint": "Only roles you pick can read (e.g. HR & Admin).",
+      "PROJECT_SCOPED": "By project",
+      "PROJECT_SCOPED_hint": "Only active project members can read.",
+      "badge": {
+        "TENANT_WIDE": "Everyone",
+        "ROLE_GATED": "Roles",
+        "PROJECT_SCOPED": "Project"
       }
     }
   },

@@ -15,6 +15,8 @@ import {
   loadKnowledgeArticles,
   type KnowledgeArticleWithAuthor,
 } from "@/lib/data/knowledge-articles";
+import { loadProjectsForPicker } from "@/lib/data/projects";
+import { KnowledgeVisibilityBadge } from "@/components/knowledge/knowledge-visibility-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +29,7 @@ import {
 import {
   KNOWLEDGE_ARTICLE_CATEGORIES,
   type KnowledgeArticleCategory,
+  type KnowledgeArticleVisibility,
 } from "@/lib/validation/knowledge-article";
 
 export const metadata: Metadata = { title: "Knowledge Base" };
@@ -49,12 +52,19 @@ export const metadata: Metadata = { title: "Knowledge Base" };
  *   both sections technically need it.
  */
 export default async function KnowledgePage() {
-  const [t, employee, published, drafts] = await Promise.all([
+  const [t, employee, published, drafts, projects] = await Promise.all([
     getTranslations("knowledge"),
     requireCurrentEmployee(),
     loadKnowledgeArticles({ status: "PUBLISHED" }),
     loadKnowledgeArticles({ status: "DRAFT" }),
+    // Load once so PROJECT_SCOPED badges can resolve names inline.
+    // The loader is `cache()`-memoised so if the form pages
+    // (`/knowledge/new`, `/knowledge/{slug}/edit`) called it too it
+    // would only fire once per request.
+    loadProjectsForPicker({ includeArchived: true }),
   ]);
+
+  const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
 
   const myDrafts = drafts.filter(
     (a) => a.author_employee_id === employee.id,
@@ -134,6 +144,11 @@ export default async function KnowledgePage() {
                 article={a}
                 editLabel={t("editDraft")}
                 updatedLabel={t("updated")}
+                projectName={
+                  a.visibility_project_id
+                    ? projectNameById.get(a.visibility_project_id) ?? null
+                    : null
+                }
               />
             ))}
           </div>
@@ -156,6 +171,7 @@ export default async function KnowledgePage() {
                   key={catId}
                   category={catId}
                   articles={items}
+                  projectNameById={projectNameById}
                   categoryLabel={t(`category.${catId}` as never)}
                   readLabel={t("read")}
                 />
@@ -198,10 +214,12 @@ function DraftCard({
   article,
   editLabel,
   updatedLabel,
+  projectName,
 }: {
   article: KnowledgeArticleWithAuthor;
   editLabel: string;
   updatedLabel: string;
+  projectName: string | null;
 }) {
   const updated = formatRelative(article.updated_at);
   return (
@@ -216,7 +234,17 @@ function DraftCard({
               {article.summary ?? "—"}
             </CardDescription>
           </div>
-          <Badge variant="outline">DRAFT</Badge>
+          <div className="flex flex-col items-end gap-1.5">
+            <Badge variant="outline">DRAFT</Badge>
+            <KnowledgeVisibilityBadge
+              visibility={
+                article.visibility as KnowledgeArticleVisibility
+              }
+              roles={article.visibility_roles ?? []}
+              projectName={projectName}
+              hideTenantWide
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-2 pt-0">
@@ -239,11 +267,13 @@ function DraftCard({
 function CategoryCard({
   category,
   articles,
+  projectNameById,
   categoryLabel,
   readLabel,
 }: {
   category: KnowledgeArticleCategory;
   articles: KnowledgeArticleWithAuthor[];
+  projectNameById: ReadonlyMap<string, string>;
   categoryLabel: string;
   readLabel: string;
 }) {
@@ -260,9 +290,22 @@ function CategoryCard({
             className="group flex items-start gap-3 rounded-lg border border-transparent p-3 -mx-3 hover:border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label={`${readLabel}: ${a.title}`}
             data-category={category}
+            data-visibility={a.visibility}
           >
             <div className="flex-1 min-w-0">
-              <p className="font-medium leading-snug">{a.title}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium leading-snug">{a.title}</p>
+                <KnowledgeVisibilityBadge
+                  visibility={a.visibility as KnowledgeArticleVisibility}
+                  roles={a.visibility_roles ?? []}
+                  projectName={
+                    a.visibility_project_id
+                      ? projectNameById.get(a.visibility_project_id) ?? null
+                      : null
+                  }
+                  hideTenantWide
+                />
+              </div>
               {a.summary && (
                 <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                   {a.summary}

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import type { ProjectStatus } from "@/lib/validation/project";
 
@@ -152,3 +154,36 @@ export async function hasActivePmAssignment(
   if (error) throw new Error(error.message);
   return (count ?? 0) > 0;
 }
+
+/**
+ * Compact `{id, code, name, status}` list for form pickers. Excludes
+ * ARCHIVED by default because archived projects rarely need a new
+ * association. RLS scopes to the caller's tenant automatically.
+ *
+ * Wrapped in `cache()` so the KB form and any other picker that
+ * mounts on the same RSC render share a single query.
+ */
+export type ProjectPickerRow = {
+  id: string;
+  code: string;
+  name: string;
+  status: ProjectStatus;
+};
+
+export const loadProjectsForPicker = cache(
+  async (opts?: {
+    includeArchived?: boolean;
+  }): Promise<ProjectPickerRow[]> => {
+    const supabase = await createClient();
+    let q = supabase
+      .from("projects")
+      .select("id, code, name, status")
+      .order("name", { ascending: true });
+    if (!opts?.includeArchived) {
+      q = q.neq("status", "ARCHIVED");
+    }
+    const { data, error } = await q;
+    if (error || !data) return [];
+    return data as ProjectPickerRow[];
+  },
+);
