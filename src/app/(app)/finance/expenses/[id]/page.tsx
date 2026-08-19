@@ -38,12 +38,14 @@ import type { EmployeeRole } from "@/lib/rbac/roles";
 import { ExpenseActionButtons } from "../expense-action-buttons";
 import {
   AssignBudgetLine,
+  AssignExpenseCoa,
   AttachedReceipts,
   DeleteDraftButton,
   SubmitDraftButton,
   UploadReceipts,
   type ReceiptEntry,
 } from "../draft-widgets";
+import { EditDraftExpenseButton } from "../edit-draft-sheet";
 
 export const metadata: Metadata = { title: "Expense" };
 
@@ -262,6 +264,30 @@ export default async function ExpenseDetailPage(props: {
           {t("back")}
         </Button>
         <div className="flex flex-wrap items-center gap-2">
+          {canEditReceipts && project ? (
+            <EditDraftExpenseButton
+              expense={{
+                id: expense.id,
+                project_id: project.id,
+                amount_db: expense.amount,
+                description: expense.description,
+                notes: expense.notes,
+                incurred_on: expense.incurred_on,
+                payment_method: expense.payment_method,
+                budget_detail_id: expense.budget_detail_id,
+                coa_id: expense.coa_id,
+                // `category` is present on the row (select "*") but not in the
+                // narrowed ExpenseView type. Cast is safe — server re-validates.
+                category:
+                  ((expense as unknown as { category?: string | null })
+                    .category) ?? null,
+                late_submission_reason:
+                  ((expense as unknown as { late_submission_reason?: string | null })
+                    .late_submission_reason) ?? null,
+              }}
+              project={{ id: project.id, name: project.name, code: project.code }}
+            />
+          ) : null}
           {isDraft && isSubmitter ? (
             <>
               <DeleteDraftButton expenseId={expense.id} />
@@ -427,19 +453,31 @@ export default async function ExpenseDetailPage(props: {
       </div>
 
       {canAssignBudgetLine && project ? (
-        <AssignBudgetLine
-          expenseId={expense.id}
-          projectId={project.id}
-          currentBudgetDetailId={expense.budget_detail_id}
-          currentLabel={
-            expense.budget_detail
-              ? `${
-                  expense.budget_detail.code ??
-                  `#${expense.budget_detail.seq}`
-                } · ${expense.budget_detail.category}`
-              : null
-          }
-        />
+        <div className="grid gap-3 md:grid-cols-2">
+          <AssignBudgetLine
+            expenseId={expense.id}
+            projectId={project.id}
+            currentBudgetDetailId={expense.budget_detail_id}
+            currentLabel={
+              expense.budget_detail
+                ? `${
+                    expense.budget_detail.code ??
+                    `#${expense.budget_detail.seq}`
+                  } · ${expense.budget_detail.category}`
+                : null
+            }
+          />
+          <AssignExpenseCoa
+            expenseId={expense.id}
+            projectId={project.id}
+            currentCoaId={expense.coa_id}
+            currentLabel={
+              expense.coa
+                ? `${expense.coa.code} · ${expense.coa.name}`
+                : null
+            }
+          />
+        </div>
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">

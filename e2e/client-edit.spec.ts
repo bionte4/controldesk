@@ -63,7 +63,9 @@ test.describe("Clients — Edit flow", () => {
   });
 
   test("Non-privileged role does NOT see the Edit button", async ({ page }) => {
-    await loginAs(page, "employee");
+    // PM can view clients but cannot mutate them (OM+ / TENANT_ADMIN only).
+    // EMPLOYEE is redirected away — they lack `view_client`.
+    await loginAs(page, "pm");
     await page.goto(`/clients/${CLIENT_NUSA_ID}`);
 
     // The page itself is readable (RLS allows SELECT for authenticated users

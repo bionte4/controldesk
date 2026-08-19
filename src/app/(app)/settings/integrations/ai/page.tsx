@@ -166,6 +166,7 @@ export default async function AiAdminPage() {
                   baseUrl: cfg.baseUrl,
                   dailyTokenCap: cfg.dailyTokenCap,
                   piiRedactionEnabled: cfg.piiRedactionEnabled,
+                  insightFreshnessMin: cfg.insightFreshnessMin,
                   hasApiKey: cfg.apiKey != null && cfg.apiKey.length > 0,
                   isActive: cfg.isActive,
                 }

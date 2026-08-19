@@ -216,3 +216,92 @@ describe("deactivateAiConfigSchema", () => {
     expect(result.success).toBe(true);
   });
 });
+
+describe("saveAiConfigSchema — insight_freshness_min validation (migration 0091)", () => {
+  const basePayload = {
+    provider: "GOOGLE" as const,
+    model_id: "gemini-2.5-flash",
+    api_key: "test-key",
+  };
+
+  it("defaults to 15 when omitted (legacy behaviour preserved)", () => {
+    const result = saveAiConfigSchema.safeParse(basePayload);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.insight_freshness_min).toBe(15);
+    }
+  });
+
+  it("accepts the min boundary (5)", () => {
+    const result = saveAiConfigSchema.safeParse({
+      ...basePayload,
+      insight_freshness_min: 5,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts the max boundary (1440 = 24h)", () => {
+    const result = saveAiConfigSchema.safeParse({
+      ...basePayload,
+      insight_freshness_min: 1440,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects below-minimum values (would spam the LLM every sweep)", () => {
+    for (const v of [4, 1, 0, -1]) {
+      const result = saveAiConfigSchema.safeParse({
+        ...basePayload,
+        insight_freshness_min: v,
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("rejects above-maximum values (users should DISABLED provider instead)", () => {
+    for (const v of [1441, 10_000]) {
+      const result = saveAiConfigSchema.safeParse({
+        ...basePayload,
+        insight_freshness_min: v,
+      });
+      expect(result.success).toBe(false);
+    }
+  });
+
+  it("rejects a non-integer value", () => {
+    const result = saveAiConfigSchema.safeParse({
+      ...basePayload,
+      insight_freshness_min: 15.5,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("applies the same rule on OPENAI_COMPATIBLE branch", () => {
+    const good = saveAiConfigSchema.safeParse({
+      provider: "OPENAI_COMPATIBLE",
+      model_id: "llama3.1:70b",
+      base_url: "http://localhost:11434/v1",
+      insight_freshness_min: 30,
+    });
+    expect(good.success).toBe(true);
+
+    const bad = saveAiConfigSchema.safeParse({
+      provider: "OPENAI_COMPATIBLE",
+      model_id: "llama3.1:70b",
+      base_url: "http://localhost:11434/v1",
+      insight_freshness_min: 2,
+    });
+    expect(bad.success).toBe(false);
+  });
+
+  it("applies the same rule on DISABLED branch (setting preserved across swaps)", () => {
+    const result = saveAiConfigSchema.safeParse({
+      provider: "DISABLED",
+      insight_freshness_min: 60,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.insight_freshness_min).toBe(60);
+    }
+  });
+});

@@ -11,6 +11,7 @@ describe("buildSystemPrompt", () => {
       excerpt: "ControlDesk is a multi-tenant ERP",
       source: "docs/product/overview.md",
       retrievalMode: "keyword" as const,
+      origin: "repo" as const,
     },
     {
       slug: "approval-workflows",
@@ -19,6 +20,7 @@ describe("buildSystemPrompt", () => {
       excerpt: "Threshold-based approval chains",
       source: "docs/product/approval-workflows.md",
       retrievalMode: "keyword" as const,
+      origin: "repo" as const,
     },
   ];
 
@@ -133,10 +135,11 @@ describe("buildSystemPrompt", () => {
       "MUST NOT try to pass tenant_id, user_id, employee_id",
     );
     // "Other user / other tenant" refusal guardrail present in
-    // the tool-enabled prompt.
-    expect(prompt).toContain(
-      "refuse and explain that you only see the current user's data",
-    );
+    // the tool-enabled prompt. Post-Level-2 the wording clarifies
+    // that tenant-wide tools *do* exist but are role-gated, so
+    // the assertion checks for the stable substrings only.
+    expect(prompt).toContain("refuse and explain");
+    expect(prompt).toContain("caller's own view");
   });
 
   it("carries the same read-only guardrail into the Level 2 prompt (regression)", () => {

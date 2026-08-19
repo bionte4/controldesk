@@ -1,0 +1,10 @@
+# Keystore is a secret — losing it also means losing the ability to
+# update every existing install. Never commit; back up offline.
+keystore.jks
+*.keystore
+*.jks
+
+# Bubblewrap build output — regenerated on every `./build.sh <tenant>`.
+# These are release artifacts, not source of truth; distribute via the
+# app's Help section or a signed download URL, not git.
+dist/

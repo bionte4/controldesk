@@ -73,8 +73,11 @@ export type ExistingEmployee = {
   last_name: string | null;
   email: string;
   phone: string | null;
+  nik: string | null;
+  division: string | null;
   department: string | null;
   position_title: string | null;
+  client_display_name: string | null;
   role: string;
   date_of_birth: string | null;
   join_date: string;
@@ -149,8 +152,11 @@ function buildDefaults(existing?: ExistingEmployee): CreateEmployeeInput {
       last_name: undefined,
       email: "",
       phone: undefined,
+      nik: undefined,
+      division: undefined,
       department: undefined,
       position_title: undefined,
+      client_display_name: undefined,
       role: "EMPLOYEE",
       date_of_birth: undefined,
       join_date: todayIso(),
@@ -166,8 +172,11 @@ function buildDefaults(existing?: ExistingEmployee): CreateEmployeeInput {
     last_name: existing.last_name ?? undefined,
     email: existing.email,
     phone: existing.phone ?? undefined,
+    nik: existing.nik ?? undefined,
+    division: existing.division ?? undefined,
     department: existing.department ?? undefined,
     position_title: existing.position_title ?? undefined,
+    client_display_name: existing.client_display_name ?? undefined,
     role: coerceRole(existing.role),
     date_of_birth: existing.date_of_birth ?? undefined,
     join_date: existing.join_date,
@@ -399,10 +408,71 @@ export function EmployeeUpsertSheet({
               />
             </div>
 
-            {/* Department + Position — free-text with datalist suggestions.
-                Admin curates the option pool via `/settings/lookups`; users
-                may still type a custom value (rules §6 "loose" mode). */}
+            {/* NIK (KTP) — PII per rules §3. Zod enforces 16-digit format;
+                audit.ts redacts the value on write. Single row because it's
+                fixed-width (16 chars) and shouldn't share cell with anything
+                the user might scan visually alongside. */}
+            <FormField
+              control={form.control}
+              name="nik"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{tf("nik")}</FormLabel>
+                  <FormControl>
+                    <Input
+                      inputMode="numeric"
+                      pattern="[0-9]{16}"
+                      maxLength={16}
+                      placeholder="3201234567890001"
+                      autoComplete="off"
+                      value={field.value ?? ""}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value.length > 0
+                            ? e.target.value.replace(/\D/g, "")
+                            : undefined,
+                        )
+                      }
+                      onBlur={field.onBlur}
+                      name={field.name}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">{tf("nikHint")}</p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Division + Department — organisational hierarchy. Division is
+                the coarser bucket (parent-of-department). Both are free text
+                so onboarding a new tenant doesn't need schema migrations;
+                admin curates enum-like values via `/settings/lookups`. */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="division"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("division")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value.length > 0
+                              ? e.target.value
+                              : undefined,
+                          )
+                        }
+                        placeholder={tf("selectDivision")}
+                        autoComplete="off"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
               <FormField
                 control={form.control}
                 name="department"
@@ -433,7 +503,13 @@ export function EmployeeUpsertSheet({
                   </FormItem>
                 )}
               />
+            </div>
 
+            {/* Position + Client display name. Position is the job title
+                (Site Engineer, Support Lead), client_display_name is how
+                the assigned client (e.g. IOH) sees the employee's name —
+                overrides full_name on client-facing artefacts. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <FormField
                 control={form.control}
                 name="position_title"
@@ -460,6 +536,34 @@ export function EmployeeUpsertSheet({
                         <option key={label} value={label} />
                       ))}
                     </datalist>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="client_display_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{tf("clientDisplayName")}</FormLabel>
+                    <FormControl>
+                      <Input
+                        value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(
+                            e.target.value.length > 0
+                              ? e.target.value
+                              : undefined,
+                          )
+                        }
+                        placeholder={tf("clientDisplayNamePlaceholder")}
+                        autoComplete="off"
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      {tf("clientDisplayNameHint")}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

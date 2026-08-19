@@ -81,9 +81,10 @@ describe("notifications/categories", () => {
     );
   });
 
-  it("has the four delivery channels in the frozen tuple", () => {
+  it("has the five delivery channels in the frozen tuple (IN_APP + EMAIL + TELEGRAM + WHATSAPP + PUSH)", () => {
+    // PUSH added in migration 0092 for Web Push (PWA / Android APK).
     expect(new Set(NOTIFICATION_CHANNELS)).toEqual(
-      new Set(["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP"]),
+      new Set(["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP", "PUSH"]),
     );
   });
 

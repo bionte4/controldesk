@@ -253,6 +253,130 @@ export async function resolveAiModel(
 }
 
 /**
+ * Read an env-driven **fallback** provider config. Meant as a
+ * platform-wide safety net for the help chatbot: when the primary
+ * provider (per-tenant row OR env-global `AI_*`) fails at the SDK
+ * construction step — missing key, invalid model, connection refused
+ * — the chat route can try one more provider before giving up.
+ *
+ * Read env vars:
+ *   • `AI_FALLBACK_PROVIDER`  — one of `openai|anthropic|google|ollama`.
+ *     `ollama` maps to `OPENAI_COMPATIBLE` under the hood, and pairs
+ *     with `AI_FALLBACK_BASE_URL` (default `http://localhost:11434/v1`).
+ *   • `AI_FALLBACK_MODEL_ID`  — e.g. `gpt-4o-mini`, `llama3.1`.
+ *   • `AI_FALLBACK_API_KEY`   — optional (Ollama and other on-prem
+ *     endpoints run without auth).
+ *   • `AI_FALLBACK_BASE_URL`  — only used when provider is Ollama /
+ *     OpenAI-compatible. Ignored for cloud providers whose base URL
+ *     is fixed.
+ *
+ * Returns `null` when no fallback env is set — the caller then does
+ * nothing (no fallback provider chain, current behaviour). The
+ * fallback exists **in addition to** the RAG-only fallback (which
+ * runs client-side when the LLM path returns empty). Provider chain
+ * catches SYNC failures ("no primary key"); RAG fallback catches
+ * ASYNC failures ("provider streamed 0 tokens").
+ *
+ * We deliberately never read the tenant `tenant_ai_configs` row for
+ * the fallback — the design intent is a *platform admin* configured
+ * safety net that no tenant can accidentally break. Making the
+ * fallback per-tenant is a Phase 2 (would need migration + UI).
+ */
+function readEnvFallbackConfig(): EnvConfig | TenantConfig | null {
+  const raw = (process.env.AI_FALLBACK_PROVIDER ?? "").trim().toLowerCase();
+  if (raw.length === 0) return null;
+
+  const modelId = process.env.AI_FALLBACK_MODEL_ID?.trim();
+  if (!modelId) {
+    log.warn("ai: AI_FALLBACK_PROVIDER set without AI_FALLBACK_MODEL_ID", {
+      provider: raw,
+    });
+    return null;
+  }
+
+  const apiKey = process.env.AI_FALLBACK_API_KEY?.trim() ?? null;
+  const baseUrl = process.env.AI_FALLBACK_BASE_URL?.trim();
+
+  // `ollama` is a friendlier alias for `openai_compatible` pointed at
+  // the default Ollama endpoint. Anyone already running Ollama can
+  // enable it with a single env var: `AI_FALLBACK_PROVIDER=ollama`.
+  if (raw === "ollama" || raw === "openai_compatible") {
+    // We use the `TenantConfig` shape (not `EnvConfig`) so `buildModel`
+    // takes the `createOpenAI({ apiKey, baseURL })` branch for the
+    // OPENAI_COMPATIBLE case — that's the only path that honours the
+    // custom endpoint. `source: "tenant"` is a bit of a lie
+    // (semantically this IS an env fallback), but downstream code
+    // only reads `source` for audit logging and the caller
+    // (`resolveAiFallbackModel`) overrides `source` to `"env"` on
+    // the returned `ResolvedAiModel`, so the audit trail stays honest.
+    return {
+      source: "tenant",
+      provider: "OPENAI_COMPATIBLE",
+      modelId,
+      apiKey,
+      baseUrl:
+        baseUrl && baseUrl.length > 0
+          ? baseUrl
+          : "http://localhost:11434/v1",
+      piiRedaction: true,
+      dailyCap: null,
+    } satisfies TenantConfig;
+  }
+
+  let provider: EnvConfig["provider"];
+  switch (raw) {
+    case "openai":
+      provider = "OPENAI";
+      break;
+    case "anthropic":
+      provider = "ANTHROPIC";
+      break;
+    case "google":
+      provider = "GOOGLE";
+      break;
+    default:
+      log.warn("ai: unknown AI_FALLBACK_PROVIDER value", { provider: raw });
+      return null;
+  }
+
+  return {
+    source: "env",
+    provider,
+    modelId,
+    apiKey,
+    baseUrl: null,
+    piiRedaction: true,
+    dailyCap: null,
+  };
+}
+
+/**
+ * Materialise the platform-wide fallback model handle, if configured.
+ * Returns `null` when no `AI_FALLBACK_*` env is set OR the SDK for
+ * the configured provider isn't loadable at runtime.
+ *
+ * Callers should try their primary via `resolveAiModel(...)` first
+ * and only reach for this on a synchronous construction failure —
+ * e.g. streamText immediately threw, or the model object returned
+ * `null`. Mid-stream provider errors (rate limit body arriving after
+ * 200 OK headers) are caught by the client-side empty-stream guard,
+ * not this path.
+ */
+export async function resolveAiFallbackModel(): Promise<ResolvedAiModel | null> {
+  const cfg = readEnvFallbackConfig();
+  if (!cfg) return null;
+  const model = await buildModel(cfg);
+  if (!model) return null;
+  return {
+    model,
+    source: "env",
+    modelId: cfg.modelId,
+    piiRedaction: cfg.source === "tenant" ? cfg.piiRedaction : true,
+    dailyCap: null,
+  };
+}
+
+/**
  * Fast helper for callers that only need the tenant's daily token cap
  * override (not the model itself). Used at the top of the insight
  * action so `reserve()` can enforce the per-tenant quota BEFORE we

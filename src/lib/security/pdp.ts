@@ -89,6 +89,7 @@ export type ResourceType =
   | "evaluation"
   | "evaluation_template"
   | "upk_note"
+  | "knowledge_article"
   | "monthly_report"
   | "report"
   | "import_job";
@@ -245,6 +246,8 @@ export function authorize(input: {
       return decideEvaluation(actor, action, attributes);
     case "upk_note":
       return decideUpkNote(actor, action, attributes);
+    case "knowledge_article":
+      return decideKnowledgeArticle(actor, action, attributes);
     case "monthly_report":
       return decideMonthlyReport(actor, action, attributes);
     case "report":
@@ -1400,6 +1403,86 @@ function decideUpkNote(
         : DENY("cancel restricted to HR / Admin");
     default:
       return DENY(`unsupported action on upk_note: ${action}`);
+  }
+}
+
+/**
+ * Knowledge base article guard.
+ *
+ * Policy summary (Fase 1 — Tier 1 KB, rules §17 + KM implementation
+ * spec):
+ *
+ *   • read     — permissive within tenant; RLS filters draft
+ *                visibility (author + admin only).
+ *   • create   — any authenticated employee. Everyone in the
+ *                organization is expected to contribute. Draft
+ *                stays private via RLS until publish.
+ *   • update   — author of the article OR admin/HR management.
+ *                RLS is the failsafe; PDP is the intent.
+ *   • submit   — reused as the "publish" verb (DRAFT → PUBLISHED).
+ *                Any employee may publish their own drafts —
+ *                intentional: forcing a moderation queue would kill
+ *                velocity for what is effectively an internal wiki.
+ *                A `moderate` verb + review workflow lands in Fase 3
+ *                if abuse becomes measurable (rules §21 observability).
+ *   • cancel   — reused as "archive" (PUBLISHED → ARCHIVED). Author
+ *                OR admin.
+ *   • delete   — never allowed. Archive is the user-facing removal;
+ *                hard delete requires service-role escalation.
+ *
+ * `ownerEmployeeId` MUST be populated by the Server Action's
+ * `resolveAttributes()` when the action is update / submit / cancel;
+ * without it we treat the request as non-author and deny.
+ */
+function decideKnowledgeArticle(
+  actor: Actor,
+  action: ActionVerb,
+  attrs: ResourceAttributes,
+): Decision {
+  const isAdmin =
+    actor.role === "TENANT_ADMIN" ||
+    actor.role === "HEAD_MANAGER" ||
+    actor.role === "HR_ADMIN";
+  const isAuthor =
+    attrs.ownerEmployeeId !== undefined &&
+    attrs.ownerEmployeeId === actor.employeeId;
+
+  switch (action) {
+    case "read":
+      return ALLOW("knowledge article read gated by RLS");
+    case "create":
+      return ALLOW("any employee may draft a knowledge article");
+    case "update":
+      return isAuthor || isAdmin
+        ? ALLOW(
+            isAuthor
+              ? "author may edit their own article"
+              : `${actor.role} may edit any article`,
+          )
+        : DENY("edit restricted to article author or admin");
+    case "submit":
+      return isAuthor || isAdmin
+        ? ALLOW(
+            isAuthor
+              ? "author may publish their own draft"
+              : `${actor.role} may publish any draft`,
+          )
+        : DENY("publish restricted to article author or admin");
+    case "cancel":
+      return isAuthor || isAdmin
+        ? ALLOW(
+            isAuthor
+              ? "author may archive their own article"
+              : `${actor.role} may archive any article`,
+          )
+        : DENY("archive restricted to article author or admin");
+    case "delete":
+      // Hard delete is service-role only. See migration 0095 header —
+      // no RLS DELETE policy exists, so the Server Action layer must
+      // not offer this verb.
+      return DENY("knowledge_article hard-delete requires service role");
+    default:
+      return DENY(`unsupported action on knowledge_article: ${action}`);
   }
 }
 

@@ -89,6 +89,7 @@
     "readArticle": "Read article",
     "backToIndex": "Back to Help Center",
     "openFullGuide": "Open full guide",
+    "kbBadge": "KB",
     "hintTrigger": "Show help: {title}",
     "tabBrowse": "Browse articles",
     "tabAsk": "Ask AI",
@@ -99,6 +100,7 @@
       "suggestion1": "How do I submit an expense and what's the approval flow?",
       "suggestion2": "What's the difference between General and Field Ops cash advances?",
       "suggestion3": "Who can approve a budget request over IDR 50 million?",
+      "suggestionsLabel": "Try asking",
       "inputPlaceholder": "Type your question… (Enter to send, Shift+Enter for a new line)",
       "footerHint": "Answers come from the docs. Verify via the citation links in each reply.",
       "send": "Send",
@@ -127,9 +129,34 @@
         "not_configuredTitle": "AI is not configured",
         "not_configuredBody": "An admin has not enabled AI in Settings → Integrations → AI. Ask them to configure it first.",
         "networkTitle": "Connection problem",
-        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again."
+        "networkBody": "We couldn't reach the AI service. Check your internet connection and try again.",
+        "empty_responseTitle": "AI didn't reply",
+        "empty_responseBody": "The AI service accepted the request but returned no answer. This usually means the model provider is rate-limiting the workspace right now, or the daily token budget is exhausted. Try again in a few minutes, or ask an admin to check Settings → Integrations → AI."
+      },
+      "fallback": {
+        "showRelatedDocs": "Show related docs",
+        "badge": "Docs",
+        "title": "Relevant articles from the knowledge base",
+        "hint": "AI synthesis is unavailable right now, but the same retrieval that powers chat found these for you.",
+        "loading": "Looking up related docs…",
+        "emptyBody": "No knowledge-base articles matched your question. Try rephrasing, or browse the full guide list at /help."
       }
     }
+  },
+  "askAi": {
+    "triggerLabel": "Ask AI",
+    "title": "Ask ControlDesk",
+    "subtitle": "Powered by docs + your workspace data",
+    "greeting": "Hi {name} 👋",
+    "greetingFallback": "there",
+    "greetingSubtitle": "Ask me anything about ControlDesk — I can look up your workspace data too.",
+    "suggestionsLabel": "Try asking",
+    "inputPlaceholder": "Type your question…",
+    "footerHint": "Enter to send · Shift+Enter for new line",
+    "send": "Send",
+    "sending": "Sending…",
+    "reset": "New chat",
+    "openFullHelp": "Open full Help & guides"
   },
   "aiCopilot": {
     "triggerLabel": "Draft with AI",
@@ -146,6 +173,105 @@
       "quota_exceeded": "This workspace has hit today's AI token cap.",
       "not_configured": "AI is not configured for this workspace yet. Ask an admin to enable it in Settings → Integrations → AI.",
       "network": "Couldn't reach the AI service. Please try again."
+    }
+  },
+  "knowledge": {
+    "eyebrow": "Knowledge Hub",
+    "title": "Knowledge Base",
+    "subtitle": "Write, share, and search SOPs, meeting notes, and internal guides authored by your team.",
+    "newArticle": "Write article",
+    "editDraft": "Continue draft",
+    "read": "Read article",
+    "backToIndex": "Back to Knowledge Base",
+    "updated": "Updated",
+    "publishedAt": "Published",
+    "manageBanner": "You authored this article",
+    "stat": {
+      "published": "Published",
+      "yourDrafts": "Your drafts",
+      "categories": "Active categories"
+    },
+    "section": {
+      "yourDrafts": "Your drafts",
+      "yourDraftsHint": "Only you and workspace admins can see drafts.",
+      "published": "Published articles"
+    },
+    "empty": {
+      "published": "No published articles yet. Click 'Write article' to start your team's knowledge base."
+    },
+    "category": {
+      "getting-started": "Getting started",
+      "user-guides": "User guides",
+      "approvals": "Approvals & governance",
+      "finance": "Finance",
+      "hr": "HR & operations",
+      "integrations": "Integrations",
+      "reference": "Reference",
+      "internal-sop": "Internal SOPs",
+      "meeting-notes": "Meeting notes",
+      "decisions": "Decisions"
+    },
+    "actions": {
+      "edit": "Edit",
+      "publish": "Publish",
+      "archive": "Archive",
+      "restore": "Restore to draft",
+      "archivedToast": "Article archived.",
+      "restoredToast": "Article restored to draft."
+    },
+    "publish": {
+      "title": "Publish article",
+      "description": "Provide a short summary before the article becomes visible to the workspace.",
+      "summaryLabel": "Summary (required to publish)",
+      "summaryPlaceholder": "e.g. Step-by-step guide for requesting finance system access.",
+      "summaryHint": "Minimum 10 characters.",
+      "cancel": "Cancel",
+      "confirm": "Publish now",
+      "publishedToast": "Article published."
+    },
+    "new": {
+      "title": "New article",
+      "subtitle": "Content is saved as a draft — publish after previewing the rendered output.",
+      "back": "Back"
+    },
+    "edit": {
+      "title": "Edit article",
+      "subtitle": "Changes are stored as a new revision on the article's audit trail.",
+      "back": "Back",
+      "archivedTitle": "Article is archived",
+      "archivedHint": "Restore the article to draft before editing it."
+    },
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "e.g. How to submit an expense in ControlDesk",
+      "slugLabel": "URL slug",
+      "slugHint": "Auto-generated from the title; adjust if needed.",
+      "summaryLabel": "Summary",
+      "summaryPlaceholder": "One or two sentences shown on the article list.",
+      "summaryHint": "Optional for drafts, required to publish.",
+      "categoryLabel": "Category",
+      "bodyLabel": "Article body (Markdown)",
+      "bodyPlaceholder": "# Section title\n\nWrite content in Markdown — headings, lists, code blocks, and tables are all supported.",
+      "emptyPreview": "*Nothing to preview yet.*",
+      "preview": "Preview",
+      "edit": "Edit",
+      "save": "Save changes",
+      "saveDraft": "Save as draft",
+      "cancel": "Cancel",
+      "createdToast": "Draft created.",
+      "savedToast": "Changes saved.",
+      "category": {
+        "getting-started": "Getting started",
+        "user-guides": "User guides",
+        "approvals": "Approvals & governance",
+        "finance": "Finance",
+        "hr": "HR & operations",
+        "integrations": "Integrations",
+        "reference": "Reference",
+        "internal-sop": "Internal SOPs",
+        "meeting-notes": "Meeting notes",
+        "decisions": "Decisions"
+      }
     }
   },
   "profile": {
@@ -255,7 +381,8 @@
         "IN_APP": "In-app",
         "EMAIL": "Email",
         "TELEGRAM": "Telegram",
-        "WHATSAPP": "WhatsApp"
+        "WHATSAPP": "WhatsApp",
+        "PUSH": "Push (mobile)"
       },
       "telegram": {
         "title": "Telegram",
@@ -386,7 +513,7 @@
       "hris": "Multi-branch HRIS + payroll",
       "ai": "AI-forecasted SLA & budget risk"
     },
-    "trust": "Trusted by BPO & Managed Services operations teams"
+    "trust": "Multi-tenant isolation · Immutable audit trail · RBAC/ABAC by design"
   },
   "nav": {
     "openUserMenu": "Open user menu",
@@ -398,6 +525,7 @@
       "analytics": "Analytics",
       "settings": "Settings",
       "navigation": "Navigation",
+      "knowledge": "Knowledge Base",
       "appearance": "Appearance",
       "session": "Session",
       "language": "Language"
@@ -422,7 +550,7 @@
       "leaveOvertime": "Leave & Overtime",
       "payroll": "Payroll",
       "reports": "Reports",
-      "contracts": "BPO Contracts",
+      "contracts": "Contracts",
       "archives": "Data Archives",
       "secrets": "Secret Rotation",
       "lookups": "Reference Data",
@@ -437,7 +565,8 @@
       "approvalThresholds": "Approval thresholds",
       "capabilities": "Capabilities",
       "features": "Active features",
-      "help": "Help"
+      "help": "Help",
+      "knowledge": "Knowledge Base"
     },
     "sidebarFooter": "AI Insights update every 15 min.",
     "commandPlaceholder": "Search commands, jump to a page…",
@@ -884,6 +1013,20 @@
       "toastActivated": "Project activated.",
       "toastActivateFailed": "Failed to activate project."
     },
+    "businessCase": {
+      "editButton": "Edit Business Case",
+      "editTitle": "Project Business Case",
+      "editDescription": "Update the executive summary, target Gross Margin (%), or sponsor. Business Case is editable only while the project is Draft or Planning.",
+      "summaryLabel": "Executive summary",
+      "summaryPlaceholder": "Background, scope, expected business outcome…",
+      "targetGmLabel": "Target margin (%)",
+      "targetGmHint": "Enter 0–100. Example: 25 for 25%.",
+      "sponsorLabel": "Executive sponsor",
+      "sponsorPlaceholder": "Pick sponsor…",
+      "sponsorNone": "None",
+      "submitEdit": "Save changes",
+      "updatedToast": "Business Case updated."
+    },
     "priority": {
       "CRITICAL": "Critical",
       "HIGH": "High",
@@ -918,7 +1061,11 @@
       "description": "Description",
       "descriptionPlaceholder": "Scope, service type, notable points…",
       "submit": "Create project",
-      "created": "Project \"{name}\" created."
+      "created": "Project \"{name}\" created.",
+      "editTitle": "Edit project",
+      "editDescription": "Update project details. Changes propagate to every module. Status transitions (Business Case → Planning → Active) live in the transition panel; client, PM, and Business Case have their own flows.",
+      "submitEdit": "Save changes",
+      "updated": "Project \"{name}\" updated."
     },
     "wizard": {
       "step1": "Info",
@@ -1097,7 +1244,11 @@
       "owner": "Owner (optional)",
       "ownerPlaceholder": "Assign an owner…",
       "submit": "Add milestone",
-      "created": "Milestone added."
+      "created": "Milestone added.",
+      "editTitle": "Edit milestone",
+      "editDescription": "Update milestone details. Remaining weight capacity: {remaining}%.",
+      "submitEdit": "Save changes",
+      "updated": "Milestone updated."
     },
     "actions": {
       "openMenu": "Open milestone actions",
@@ -1270,7 +1421,11 @@
         "partialUploadFailed": "Issue saved, but some attachments failed to upload."
       },
       "submit": "Save",
-      "createdToast": "Issue raised."
+      "createdToast": "Issue raised.",
+      "editTitle": "Edit issue",
+      "editDescription": "Update the issue metadata: title, description, category, priority, tags, or due date. Changing the priority re-stamps the SLA.",
+      "submitEdit": "Save changes",
+      "updatedToast": "Issue updated."
     },
     "actions": {
       "openMenu": "Open issue actions",
@@ -1465,6 +1620,20 @@
       "deletedToast": "Draft deleted.",
       "confirmDelete": "Delete this draft permanently?",
       "confirmDeleteBody": "This action cannot be undone. Uploaded receipts will also be removed.",
+      "editTitle": "Edit expense draft",
+      "editSubtitle": "Update the draft before submitting for approval — project: {project}.",
+      "editSubtitleNoProject": "Update the expense draft before submitting for approval.",
+      "updatedToast": "Draft changes saved.",
+      "coaLineLabel": "Chart of Accounts",
+      "coaLineHint": "Accounting classification (GL). Finance or an MA editor may assign / change it while the expense is non-terminal.",
+      "assignCoaTitle": "Assign CoA",
+      "changeCoa": "Change CoA",
+      "selectCoa": "Select CoA…",
+      "loadingCoa": "Loading CoA list…",
+      "noCoaOptions": "No active CoA for this project.",
+      "saveCoa": "Save CoA",
+      "cancelCoa": "Cancel",
+      "coaAssignedToast": "CoA updated.",
       "budgetLineLabel": "Budget line",
       "coaLabel": "Chart of Accounts",
       "paymentMethodLabel": "Payment method",
@@ -1554,7 +1723,11 @@
       "save": "Save",
       "added": "Line item added.",
       "deleted": "Line item removed.",
-      "delete": "Delete line item"
+      "delete": "Delete line item",
+      "editTitle": "Edit budget line",
+      "editDescription": "Update the category, planned amount, CoA, or description. Realized + outstanding roll up automatically from approved expenses and disbursed cash advances.",
+      "updated": "Budget line updated.",
+      "plannedInvalid": "Planned amount must be a positive integer."
     },
     "detail": {
       "back": "Back to budgets",
@@ -2201,6 +2374,8 @@
         "apiKey": "API Key",
         "dailyCap": "Daily token cap (optional)",
         "dailyCapHint": "Max output tokens per day per tenant. Leave blank to use the global default (10,000).",
+        "freshnessMin": "Insight freshness window (minutes)",
+        "freshnessMinHint": "How long a generated insight is considered fresh before the AI cron re-generates it. Range 5–1440 (default 15). Lower = more up-to-date but more tokens; higher = cheaper but staler data.",
         "piiRedaction": "PII Redaction",
         "piiRedactionHint": "Hash / mask sensitive data before sending to the LLM. Recommended on; only disable for fully self-hosted on-prem LLMs inside your network."
       },
@@ -3279,10 +3454,17 @@
       "lastName": "Last name",
       "email": "Email",
       "phone": "Phone",
+      "nik": "NIK (KTP number)",
+      "nikHint": "16-digit Indonesian national ID. Masked for non-HR roles.",
+      "division": "Division",
+      "selectDivision": "e.g. Field Operations",
       "department": "Department",
       "selectDepartment": "Select department…",
       "position": "Position",
       "selectPosition": "Select position…",
+      "clientDisplayName": "Client display name",
+      "clientDisplayNamePlaceholder": "e.g. IOH version of the name",
+      "clientDisplayNameHint": "Optional. How the assigned client sees this person's name — overrides Full name on client-facing reports and portal.",
       "role": "Role (RBAC)",
       "roleHint": "Drives approval chains, capability gates, and dashboard scope. Change later carries an audit-log entry.",
       "reportsTo": "Reports to",
@@ -3320,11 +3502,14 @@
       "OFF": "Off"
     },
     "actions": {
-      "new": "Add entry"
+      "new": "Add entry",
+      "edit": "Edit entry"
     },
     "form": {
       "title": "Create / update roster entry",
       "description": "One entry per (employee, date). Conflicts are updated in place.",
+      "editTitle": "Edit roster entry",
+      "editDescription": "Update the shift, project, status, or notes. The (employee, date) pair is locked because it must stay unique.",
       "employee": "Employee",
       "shift": "Shift",
       "project": "Project",
@@ -3337,6 +3522,7 @@
       "save": "Save",
       "saving": "Saving…",
       "successToast": "Roster entry saved.",
+      "updatedToast": "Roster entry updated.",
       "errorToast": "Failed to save roster entry."
     }
   },
@@ -3883,7 +4069,13 @@
       "markPaid": "Mark paid",
       "paidReference": "Payment reference (optional)",
       "notesPlaceholder": "Add a note (required when rejecting)…",
-      "directorNeeded": "Amount ≥ IDR 50 M — Director approval required after Finance."
+      "directorNeeded": "Amount ≥ IDR 50 M — Director approval required after Finance.",
+      "contractEndDate": "Contract end date",
+      "serviceMonthsHint": "Enter 0–600 months.",
+      "editTitle": "Edit UPK draft",
+      "editDescription": "Update base salary, months of service, or the multiplier — the UPK amount is recomputed automatically. Only DRAFT notes can be edited before Finance review.",
+      "submitEdit": "Save changes",
+      "updatedToast": "UPK draft updated."
     }
   },
   "monthlyReport": {

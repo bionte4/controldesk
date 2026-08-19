@@ -16,6 +16,8 @@ import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadLookupOptions } from "@/lib/data/lookups";
 import { authorize } from "@/lib/security/pdp";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
+import { canReadSensitive } from "@/lib/security/crypto";
+import { decryptEmployeePii } from "@/lib/security/employee-pii";
 import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import { resolveEmployeeScope } from "@/lib/security/project-scope";
 import { createClient } from "@/lib/supabase/server";
@@ -50,8 +52,16 @@ type EmployeeRow = {
   last_name: string | null;
   email: string;
   phone: string | null;
+  // Decrypted NIK plaintext, populated ONLY for callers whose canonical
+  // role passes `canReadSensitive()` (HR / Finance / Admin tiers).
+  // Everyone else sees `null` and cannot even see the field in the
+  // Edit sheet (which the PDP would already deny anyway; this is
+  // defence-in-depth). See migration 0094 for the at-rest format.
+  nik: string | null;
+  division: string | null;
   department: string | null;
   position_title: string | null;
+  client_display_name: string | null;
   role: EmployeeRoleEnum;
   date_of_birth: string | null;
   join_date: string;
@@ -81,8 +91,11 @@ function toExistingEmployee(row: EmployeeRow): ExistingEmployee {
     last_name: row.last_name,
     email: row.email,
     phone: row.phone,
+    nik: row.nik,
+    division: row.division,
     department: row.department,
     position_title: row.position_title,
+    client_display_name: row.client_display_name,
     role: row.role as string,
     date_of_birth: row.date_of_birth,
     join_date: row.join_date,
@@ -117,6 +130,14 @@ async function loadEmployees(
   // `canViewEmployeeDirectory()` at the page level.
   const scope = await resolveEmployeeScope(caller);
 
+  // NIK decryption is guarded by the caller's canonical role. HR /
+  // Finance / Admin tiers get plaintext; everyone else who slipped
+  // past the page guard (Supervisor / PM viewing teammates) still
+  // sees the row but with `nik: null`. This keeps NIK out of Node
+  // process memory whenever it isn't strictly needed. Cheap check
+  // — evaluated once per loader call, not per row.
+  const canDecryptPii = canReadSensitive(caller.role);
+
   // Include the columns the Edit sheet needs to prefill (first_name,
   // last_name, date_of_birth, reports_to_employee_id) so the row-action
   // menu can hand a fully-hydrated snapshot straight to
@@ -124,7 +145,7 @@ async function loadEmployees(
   let query = supabase
     .from("employees")
     .select(
-      "id, full_name, first_name, last_name, email, phone, department, position_title, role, date_of_birth, join_date, employment_type, contract_end_date, availability, reports_to_employee_id",
+      "id, full_name, first_name, last_name, email, phone, nik_enc, division, department, position_title, client_display_name, role, date_of_birth, join_date, employment_type, contract_end_date, availability, reports_to_employee_id",
     )
     .order("full_name", { ascending: true })
     .limit(500);
@@ -149,8 +170,16 @@ async function loadEmployees(
     last_name: row.last_name,
     email: row.email,
     phone: row.phone,
+    // Decrypt only when the caller's role has passed `canReadSensitive`.
+    // A malformed / stale ciphertext (post-rotation) throws — we swallow
+    // to `null` so the list keeps rendering; the affected row will show
+    // a blank NIK, and re-saving the row through the Edit sheet re-encrypts
+    // with the current master key.
+    nik: canDecryptPii ? safeDecryptNik(row.nik_enc) : null,
+    division: row.division,
     department: row.department,
     position_title: row.position_title,
+    client_display_name: row.client_display_name,
     role: row.role as EmployeeRoleEnum,
     date_of_birth: row.date_of_birth,
     join_date: row.join_date,
@@ -159,6 +188,22 @@ async function loadEmployees(
     availability: row.availability as EmployeeAvailability,
     reports_to_employee_id: row.reports_to_employee_id,
   }));
+}
+
+/**
+ * Wrap `decryptEmployeePii()` so a bad ciphertext (e.g. post-rotation)
+ * doesn't take down the whole employee list render. We can't recover
+ * the plaintext but we can at least keep the rest of the page usable.
+ * A future audit sweep should flag rows returning `null` here so HR
+ * can re-enter the NIK.
+ */
+function safeDecryptNik(nikEnc: string | null): string | null {
+  if (!nikEnc) return null;
+  try {
+    return decryptEmployeePii(nikEnc);
+  } catch {
+    return null;
+  }
 }
 
 export default async function EmployeesPage() {

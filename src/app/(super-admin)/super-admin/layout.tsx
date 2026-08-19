@@ -59,6 +59,12 @@ export default async function SuperAdminLayout({
               >
                 Admins
               </Link>
+              <Link
+                href="/super-admin/system"
+                className="hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                System
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3 text-sm">

@@ -35,6 +35,7 @@ import {
 import {
   bucketSalary,
   redactEmployee,
+  rehydrateHashes,
   scrubPrompt,
 } from "./redact";
 import { assertTenantScope } from "./index";
@@ -323,6 +324,11 @@ export async function analyzeResourceUtilization(
     .eq("tenant_id", actor.tenant_id)
     .eq("status", "ACTIVE");
 
+  // Build a reverse map hash -> display name at the same time we redact so
+  // the LLM output can be rehydrated post-hoc without re-hashing every
+  // employee (id_ref is the SHA-256 of the UUID; not reversible).
+  const idRefToName = new Map<string, string>();
+
   const empRedacted = new Map<
     string,
     { id_ref: string; role: string; total: number }
@@ -330,6 +336,9 @@ export async function analyzeResourceUtilization(
   for (const e of employees ?? []) {
     const red = redactEmployee({ id: e.id, role: e.role, full_name: e.full_name });
     empRedacted.set(e.id, { id_ref: red.id_ref, role: red.role, total: 0 });
+    if (e.full_name && e.full_name.trim().length > 0) {
+      idRefToName.set(red.id_ref, e.full_name.trim());
+    }
   }
   for (const a of employeeAllocs ?? []) {
     const entry = empRedacted.get(a.employee_id);
@@ -349,6 +358,9 @@ export async function analyzeResourceUtilization(
     if (a.assignment_role === "PRIMARY_PM") entry.primary += 1;
     else entry.co += 1;
     pmLoad.set(e.id, entry);
+    if (e.full_name && e.full_name.trim().length > 0) {
+      idRefToName.set(red.id_ref, e.full_name.trim());
+    }
   }
 
   const contextLines = [
@@ -446,7 +458,7 @@ export async function analyzeResourceUtilization(
           ],
   };
 
-  return run<AnalyzeResourceUtilization>({
+  const result = await run<AnalyzeResourceUtilization>({
     schema: analyzeResourceUtilizationSchema,
     system:
       "You are a resource planner for a BPO. Reason only within this tenant. Do NOT invent employees.",
@@ -455,6 +467,14 @@ export async function analyzeResourceUtilization(
     locale,
     tenantId: actor.tenant_id,
   });
+
+  // Rehydrate id_ref hashes back to real names for tenant-scoped display.
+  // Safe post-LLM because RLS on ai_insights + employees already restrict
+  // reads to same-tenant members (rules §5, §15 note in redact.ts).
+  return {
+    ...result,
+    payload: rehydrateHashes(result.payload, idRefToName),
+  };
 }
 
 // ---------------------------------------------------------------------------

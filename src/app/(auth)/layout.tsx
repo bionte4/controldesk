@@ -56,8 +56,12 @@ export default async function AuthLayout({
           <span>ControlDesk</span>
         </Link>
 
-        {/* Main content — centered, height-constrained */}
-        <div className="flex-1 min-h-0 flex items-center py-4 lg:py-6">
+        {/* Main content — centered, height-constrained. `overflow-y-auto`
+            protects against overlap with the pinned trust badge below when
+            the viewport is short (13" laptop zoom, split-screen, DevTools
+            docked). Content scrolls inside the middle band instead of
+            bleeding past the aside's `overflow-hidden` boundary. */}
+        <div className="flex-1 min-h-0 flex items-center overflow-y-auto py-4 lg:py-6">
           <div className="w-full max-w-md mx-auto space-y-4 lg:space-y-5">
             {/* Illustration with animated gradient glow */}
             <div className="relative mx-auto w-full max-w-[280px] lg:max-w-[340px] xl:max-w-[400px]">
@@ -110,8 +114,11 @@ export default async function AuthLayout({
           </div>
         </div>
 
-        {/* Trust badge — pinned bottom */}
-        <div className="shrink-0 flex items-center gap-2 text-xs text-sidebar-foreground/60">
+        {/* Trust badge — pinned bottom. Explicit `pt-4 mt-2 border-t`
+            provides a visible buffer + hairline separator so the badge
+            never appears to collide with the feature list above, even
+            when the middle band is close to scrolling. */}
+        <div className="shrink-0 flex items-center gap-2 pt-4 mt-2 text-xs text-sidebar-foreground/60 border-t border-sidebar-foreground/10">
           <ShieldCheck className="size-3.5 text-primary/80" aria-hidden="true" />
           <span>{t("trust")}</span>
         </div>

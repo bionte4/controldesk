@@ -1,10 +1,36 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const fromMock = vi.fn();
+
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(async () => ({ from: fromMock })),
+}));
 
 import {
   buildApproverOrSelfClause,
   classifyProjectScope,
   isApproverRole,
+  resolveEmployeeScope,
+  resolveProjectScope,
 } from "./project-scope";
+
+/**
+ * Thenable PostgREST chain so `await supabase.from().select().eq().in()`
+ * resolves to `{ data, error }` without a real client.
+ */
+function query(data: unknown) {
+  const result = { data, error: null };
+  const chain: Record<string, unknown> = {};
+  const self = () => chain;
+  chain.select = self;
+  chain.eq = self;
+  chain.in = self;
+  chain.then = (
+    resolve: (v: unknown) => unknown,
+    reject: (e: unknown) => unknown,
+  ) => Promise.resolve(result).then(resolve, reject);
+  return chain;
+}
 
 describe("classifyProjectScope", () => {
   it("classifies executive + finance + HR roles as org-wide", () => {
@@ -158,5 +184,145 @@ describe("buildApproverOrSelfClause", () => {
       { treatAsApprover: true },
     );
     expect(clause).toContain("requester_employee_id.eq.");
+  });
+});
+
+describe("resolveProjectScope", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+  });
+
+  it("returns org scope without touching assignment tables", async () => {
+    const scope = await resolveProjectScope({
+      id: "emp-org-1",
+      role: "DIRECTOR",
+    });
+    expect(scope).toEqual({ kind: "org" });
+    expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("returns assigned project ids from both PM and member tables", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "project_pm_assignments") {
+        return query([
+          { project_id: "proj-a" },
+          { project_id: "proj-b" },
+        ]);
+      }
+      if (table === "project_employee_assignments") {
+        return query([
+          { project_id: "proj-b" },
+          { project_id: "proj-c" },
+        ]);
+      }
+      return query([]);
+    });
+
+    const scope = await resolveProjectScope({
+      id: "emp-assigned-1",
+      role: "EMPLOYEE",
+    });
+    expect(scope.kind).toBe("assigned");
+    if (scope.kind === "org") throw new Error("expected assigned");
+    expect(scope.empty).toBe(false);
+    expect(scope.projectIds.sort()).toEqual(["proj-a", "proj-b", "proj-c"]);
+  });
+
+  it("marks assigned scope empty when both assignment queries return null", async () => {
+    fromMock.mockImplementation(() => query(null));
+
+    const scope = await resolveProjectScope({
+      id: "emp-assigned-empty",
+      role: "PM",
+    });
+    expect(scope).toEqual({
+      kind: "assigned",
+      projectIds: [],
+      empty: true,
+    });
+  });
+
+  it("walks the reporting tree for portfolio roles and unions assignments", async () => {
+    let employeeHops = 0;
+    fromMock.mockImplementation((table: string) => {
+      if (table === "employees") {
+        employeeHops += 1;
+        if (employeeHops === 1) {
+          return query([{ id: "sub-1" }, { id: "sub-1" }]);
+        }
+        return query([]);
+      }
+      if (table === "project_pm_assignments") {
+        return query([{ project_id: "port-1" }]);
+      }
+      if (table === "project_employee_assignments") {
+        return query([{ project_id: "port-2" }]);
+      }
+      return query([]);
+    });
+
+    const scope = await resolveProjectScope({
+      id: "emp-om-1",
+      role: "OM",
+    });
+    expect(scope.kind).toBe("portfolio");
+    if (scope.kind === "org") throw new Error("expected portfolio");
+    expect(scope.empty).toBe(false);
+    expect(scope.projectIds.sort()).toEqual(["port-1", "port-2"]);
+  });
+});
+
+describe("resolveEmployeeScope", () => {
+  beforeEach(() => {
+    fromMock.mockReset();
+  });
+
+  it("returns org when the caller is an org-tier role", async () => {
+    const scope = await resolveEmployeeScope({
+      id: "emp-hr-1",
+      role: "HR_ADMIN",
+    });
+    expect(scope).toEqual({ kind: "org" });
+  });
+
+  it("returns just the caller when their project scope is empty", async () => {
+    fromMock.mockImplementation(() => query([]));
+
+    const scope = await resolveEmployeeScope({
+      id: "emp-pm-empty",
+      role: "PROJECT_MANAGER",
+    });
+    expect(scope).toEqual({
+      kind: "scoped",
+      ids: ["emp-pm-empty"],
+    });
+  });
+
+  it("unions PM + member ids on assigned projects and always includes the caller", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "project_pm_assignments") {
+        return query([
+          { project_id: "proj-x", pm_employee_id: "other-pm" },
+        ]);
+      }
+      if (table === "project_employee_assignments") {
+        return query([
+          { project_id: "proj-x", employee_id: "other-dev" },
+        ]);
+      }
+      return query([]);
+    });
+
+    const scope = await resolveEmployeeScope({
+      id: "emp-pm-team",
+      role: "PM",
+    });
+    expect(scope.kind).toBe("scoped");
+    if (scope.kind === "org") throw new Error("expected scoped");
+    expect(scope.ids.sort()).toEqual([
+      "emp-pm-team",
+      "other-dev",
+      "other-pm",
+    ]);
   });
 });

@@ -1,15 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { loadTenantSmtpConfig } from "@/lib/integrations/smtp";
 import {
   __setTransporterForTests,
   sendEmail,
 } from "./mailer";
+
+vi.mock("@/lib/integrations/smtp", () => ({
+  loadTenantSmtpConfig: vi.fn(),
+}));
 
 describe("mailer", () => {
   const originalEnv = { ...process.env };
 
   beforeEach(() => {
     __setTransporterForTests(null);
+    vi.mocked(loadTenantSmtpConfig).mockReset();
+    vi.mocked(loadTenantSmtpConfig).mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -78,18 +85,20 @@ describe("mailer", () => {
   it("degrades gracefully when the tenant SMTP loader throws", async () => {
     // Even if the per-tenant loader implodes (bad DB session, etc.),
     // the mailer must fall back to env — never crash a cron.
+    // Mock the loader: the real repository talks to Supabase and hangs
+    // in CI (no Postgres), which used to trip Vitest's 5s timeout.
     process.env.SMTP_HOST = "127.0.0.1";
     process.env.SMTP_PORT = "1025";
     process.env.SMTP_FROM = "fallback@controldesk.test";
+
+    vi.mocked(loadTenantSmtpConfig).mockRejectedValueOnce(
+      new Error("db session exploded"),
+    );
 
     __setTransporterForTests({
       sendMail: async () => ({ messageId: "<fallback@stub>" }),
     });
 
-    // A bogus tenantId that the repository will reject or return null
-    // for is enough — the loader either returns null (falls through)
-    // or throws (caught in resolveConfig, falls through). Either way
-    // the caller lands on env config.
     const res = await sendEmail({
       to: "x@example.com",
       subject: "hi",
@@ -97,6 +106,9 @@ describe("mailer", () => {
     });
     expect(res.status).toBe("SENT");
     expect(res.configSource).toBe("env");
+    expect(loadTenantSmtpConfig).toHaveBeenCalledWith(
+      "00000000-0000-0000-0000-000000000000",
+    );
   });
 
   it("returns FAILED with error message when transporter throws", async () => {

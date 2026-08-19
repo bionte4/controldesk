@@ -59,6 +59,7 @@ import {
   type EmployeeOption,
 } from "./milestones/new-milestone-sheet";
 import { MilestoneRowActions } from "./milestones/milestone-row-actions";
+import { EditMilestoneSheet } from "./milestones/edit-milestone-sheet";
 import { ProjectIssuesSection } from "./issues/issues-section";
 import type { IssueAssigneeOption } from "./issues/new-issue-sheet";
 import { ProjectDirectLaborSection } from "./direct-labor-section";
@@ -67,6 +68,8 @@ import {
   ProjectLifecycleBanner,
   type PmPickOption,
 } from "./lifecycle-banner";
+import { EditProjectSheet } from "./edit-project-sheet";
+import { EditBusinessCaseSheet } from "./edit-business-case-sheet";
 
 export const metadata: Metadata = { title: "Project detail" };
 
@@ -280,7 +283,43 @@ export default async function ProjectDetailPage(props: {
     canonicalRole === "OM" ||
     canonicalRole === "DIRECTOR" ||
     canonicalRole === "ADMIN";
+
+  // OM+ / TENANT_ADMIN may edit project meta (name, timeline, contract
+  // value, etc.). Mirrors PDP `decideProject('update')` — keep both in
+  // sync (rules §17: PDP is single source of truth). Delegate the
+  // decision to `authorize()` so RLS + Server Action + UI all agree.
+  const canEditProject =
+    authorize({
+      actor: {
+        userId: employee.user_id,
+        employeeId: employee.id,
+        role: employee.role as EmployeeRole,
+        tenantId: employee.tenant_id,
+      },
+      action: "update",
+      resource: "project",
+      attributes: { tenantId: employee.tenant_id },
+    }).effect === "ALLOW";
   const canDeleteMilestones =
+    canonicalRole === "OM" ||
+    canonicalRole === "DIRECTOR" ||
+    canonicalRole === "ADMIN";
+
+  // Tasks (WBS) — canonical PDP `decideProjectTask` (pdp-canonical.ts):
+  //   SUPERVISOR / PM / OM / DIRECTOR / ADMIN may CREATE + UPDATE.
+  //   PM / OM / DIRECTOR / ADMIN may DELETE.
+  // Mirror those role gates client-side so the row-actions menu (Edit,
+  // Add child, status transitions, progress presets, delete) hides for
+  // viewers who would only get a 403 from the server. Server still
+  // enforces via `withSecureAction()` — this is UX, not security.
+  const canManageTasks =
+    canonicalRole === "SUPERVISOR" ||
+    canonicalRole === "PM" ||
+    canonicalRole === "OM" ||
+    canonicalRole === "DIRECTOR" ||
+    canonicalRole === "ADMIN";
+  const canDeleteTasks =
+    canonicalRole === "PM" ||
     canonicalRole === "OM" ||
     canonicalRole === "DIRECTOR" ||
     canonicalRole === "ADMIN";
@@ -412,6 +451,46 @@ export default async function ProjectDetailPage(props: {
             </div>
           </div>
         </div>
+        {canEditProject ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <EditProjectSheet
+              project={{
+                id: project.id as string,
+                name: project.name as string,
+                description: (project.description as string | null) ?? null,
+                priority: (project.priority as string | null) ?? "MEDIUM",
+                project_type: project.project_type as string,
+                location: (project.location as string | null) ?? null,
+                start_date: (project.start_date as string | null) ?? null,
+                end_date: (project.end_date as string | null) ?? null,
+                contract_value:
+                  (project.contract_value as string | number | null) ?? null,
+                currency: (project.currency as string | null) ?? "IDR",
+                notes: (project.notes as string | null) ?? null,
+                sync_calendar:
+                  (project.sync_calendar as boolean | null) ?? true,
+              }}
+            />
+            {project.status === "DRAFT" || project.status === "PLANNING" ? (
+              <EditBusinessCaseSheet
+                project={{
+                  id: project.id as string,
+                  bc_executive_summary:
+                    (project.bc_executive_summary as string | null) ?? null,
+                  bc_target_gm_pct:
+                    (project.bc_target_gm_pct as number | string | null) ??
+                    null,
+                  bc_sponsor_id:
+                    (project.bc_sponsor_id as string | null) ?? null,
+                }}
+                sponsors={employeeOptions.map((e) => ({
+                  id: e.id,
+                  label: e.label,
+                }))}
+              />
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <ProjectLifecycleBanner
@@ -620,12 +699,37 @@ export default async function ProjectDetailPage(props: {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <MilestoneRowActions
-                          id={m.id}
-                          status={m.status}
-                          canEdit={canEditMilestones}
-                          canDelete={canDeleteMilestones}
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          {canEditMilestones ? (
+                            <EditMilestoneSheet
+                              milestone={{
+                                id: m.id,
+                                seq: m.seq,
+                                name: m.name,
+                                description: m.description,
+                                weight_bps: m.weight_bps,
+                                planned_start_date: m.planned_start_date,
+                                planned_end_date: m.planned_end_date,
+                                owner_employee_id: m.owner_employee_id,
+                              }}
+                              employees={employeeOptions}
+                              // otherWeightBps = total across the project
+                              // minus this row (so the friendly cap in
+                              // the sheet header reflects reality).
+                              otherWeightBps={milestones.reduce(
+                                (sum, row) =>
+                                  row.id === m.id ? sum : sum + row.weight_bps,
+                                0,
+                              )}
+                            />
+                          ) : null}
+                          <MilestoneRowActions
+                            id={m.id}
+                            status={m.status}
+                            canEdit={canEditMilestones}
+                            canDelete={canDeleteMilestones}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -760,7 +864,12 @@ export default async function ProjectDetailPage(props: {
         ) : null}
       </div>
 
-      <ProjectTasksSection projectId={id} tenantId={employee.tenant_id} />
+      <ProjectTasksSection
+        projectId={id}
+        tenantId={employee.tenant_id}
+        canManage={canManageTasks}
+        canDelete={canDeleteTasks}
+      />
 
       {/* Direct Labor Cost surfaces per-employee hourly rate + cost —
           this is derived payroll data. Gate behind the same

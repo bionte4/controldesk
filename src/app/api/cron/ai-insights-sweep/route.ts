@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 
 import { AI_INSIGHT_KINDS, runInsight } from "@/lib/ai/generators";
 import { commit, reserve } from "@/lib/ai/cost-cap";
-import { resolveAiCapContext } from "@/lib/integrations/ai";
+import {
+  loadTenantAiConfig,
+  resolveAiCapContext,
+} from "@/lib/integrations/ai";
 import { schemaForKind, type AiInsightKindLiteral } from "@/lib/ai/schemas";
 import type { CurrentEmployee } from "@/lib/auth/session";
 import { log } from "@/lib/observability/log";
@@ -24,8 +27,9 @@ import type {
  * Iterates every tenant with an active `tenant_ai_configs` row (or any
  * tenant when the env fallback is configured), and — for each of the four
  * insight kinds — regenerates the row only when the newest existing row
- * is older than `FRESHNESS_WINDOW_MIN` minutes. That keeps the token
- * spend bounded even at the tight 15-minute schedule.
+ * is older than the tenant's freshness window (per-tenant since migration
+ * 0091 — `tenant_ai_configs.insight_freshness_min`, default 15 min). That
+ * keeps the token spend bounded even at the tight 15-minute schedule.
  *
  * Multi-tenant safety: each per-tenant iteration synthesises a "system"
  * actor (see `resolveSystemActor` below) that carries only that tenant's
@@ -46,17 +50,20 @@ import type {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// A newly-produced insight is treated as "fresh" for this window. The cron
-// only regenerates when the latest row is older than this — so the 15-minute
-// schedule turns into "top up any kind that fell out of the freshness
-// window", and re-firing the endpoint during that window is effectively a
-// no-op (cheap read + skip).
-const FRESHNESS_WINDOW_MIN = 15;
+// A newly-produced insight is treated as "fresh" for a per-tenant window.
+// Historically this was a hardcoded 15-minute constant; it moved to
+// `tenant_ai_configs.insight_freshness_min` in migration 0091 so admins
+// can tune the tradeoff between real-time data and token spend from
+// Settings > Integrations > AI. `DEFAULT_FRESHNESS_WINDOW_MIN` remains
+// the fallback for tenants without a config row (env-global provider).
+const DEFAULT_FRESHNESS_WINDOW_MIN = 15;
 const ESTIMATED_OUTPUT_TOKENS = 800;
 
 type SweepPerTenant = {
   tenant_id: string;
   tenant_slug: string;
+  /** Effective freshness window used for this tenant on this run. */
+  freshness_window_min: number;
   generated: Array<{ kind: AiInsightKindLiteral; severity: string }>;
   skipped_fresh: AiInsightKindLiteral[];
   errors: Array<{ kind: AiInsightKindLiteral; reason: string }>;
@@ -147,10 +154,14 @@ async function latestInsightForKind(
   return data ?? null;
 }
 
-function isFresh(latest: { created_at: string } | null, now: Date): boolean {
+function isFresh(
+  latest: { created_at: string } | null,
+  now: Date,
+  freshnessMin: number,
+): boolean {
   if (!latest) return false;
   const ageMs = now.getTime() - new Date(latest.created_at).getTime();
-  return ageMs < FRESHNESS_WINDOW_MIN * 60_000;
+  return ageMs < freshnessMin * 60_000;
 }
 
 async function sweepTenant(
@@ -159,9 +170,18 @@ async function sweepTenant(
   now: Date,
   dryRun: boolean,
 ): Promise<SweepPerTenant> {
+  // Resolve the tenant's per-tenant freshness window (migration 0091).
+  // Rows created before that migration land at the DB default of 15; a
+  // tenant with no `tenant_ai_configs` row at all falls back to the
+  // module-level default so behaviour matches the pre-0091 code path.
+  const aiCfg = await loadTenantAiConfig(tenant.id);
+  const freshnessMin =
+    aiCfg?.insightFreshnessMin ?? DEFAULT_FRESHNESS_WINDOW_MIN;
+
   const result: SweepPerTenant = {
     tenant_id: tenant.id,
     tenant_slug: tenant.slug,
+    freshness_window_min: freshnessMin,
     generated: [],
     skipped_fresh: [],
     errors: [],
@@ -184,7 +204,7 @@ async function sweepTenant(
   for (const kind of AI_INSIGHT_KINDS) {
     try {
       const latest = await latestInsightForKind(supabase, tenant.id, kind);
-      if (isFresh(latest, now)) {
+      if (isFresh(latest, now, freshnessMin)) {
         result.skipped_fresh.push(kind);
         continue;
       }
@@ -308,7 +328,11 @@ export async function POST(request: Request) {
           rows_processed: generated,
           details: {
             dry_run: dryRun,
-            freshness_window_min: FRESHNESS_WINDOW_MIN,
+            // Kept as `default_freshness_window_min` so ops dashboards can
+            // still surface the module default while `per_tenant[i]
+            // .freshness_window_min` shows the effective value each tenant
+            // actually used (may differ post-migration 0091).
+            default_freshness_window_min: DEFAULT_FRESHNESS_WINDOW_MIN,
             tenants_scanned: tenants.length,
             generated,
             skipped_fresh: skipped,
@@ -324,7 +348,7 @@ export async function POST(request: Request) {
         status: "success",
         dry_run: dryRun,
         started_at: startedAt.toISOString(),
-        freshness_window_min: FRESHNESS_WINDOW_MIN,
+        default_freshness_window_min: DEFAULT_FRESHNESS_WINDOW_MIN,
         tenants_scanned: tenants.length,
         generated,
         skipped_fresh: skipped,

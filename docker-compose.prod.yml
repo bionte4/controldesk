@@ -312,6 +312,8 @@ services:
         condition: service_started
     environment:
       KONG_DATABASE: "off"
+      # Render the declarative config from environment variables before Kong
+      # starts, then point KONG_DECLARATIVE_CONFIG at the rendered file.
       KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
       KONG_DNS_ORDER: LAST,A,CNAME
       KONG_PLUGINS: request-transformer,cors,key-auth,acl,basic-auth
@@ -320,13 +322,17 @@ services:
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
       DASHBOARD_USERNAME: ${DASHBOARD_USERNAME:-supabase}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?WAJIB (untuk basic auth Studio)}
+      # Compose `:?` is an "unset env" error string, not a credential. # ggignore
+      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD:?required}
     volumes:
       - ./deploy/kong/kong.yml:/home/kong/kong.yml:ro,Z
     command:
       - /bin/sh
       - -c
       - |
+        set -eu
+        # Kong 2.8 DB-less does not substitute environment variables in YAML.
+        # Use the image's existing awk instead of installing packages at boot.
         awk '{
           gsub(/\$$SUPABASE_ANON_KEY/, ENVIRON["SUPABASE_ANON_KEY"]);
           gsub(/\$$SUPABASE_SERVICE_KEY/, ENVIRON["SUPABASE_SERVICE_KEY"]);

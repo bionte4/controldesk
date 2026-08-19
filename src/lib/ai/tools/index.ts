@@ -796,6 +796,284 @@ async function runBudgetRemaining(
 }
 
 // ---------------------------------------------------------------------------
+// tenant_project_stats — tenant-wide project counts (management + finance).
+// ---------------------------------------------------------------------------
+
+/**
+ * Roles that see tenant-wide stats. Employees and Supervisors get
+ * `forbidden` so we don't accidentally expose cross-project data
+ * they wouldn't otherwise see in the app UI. Same principle as
+ * `canViewBudget` — RLS + PDP scoping already gates the individual
+ * tables, but the chatbot must not become a workaround.
+ */
+function canViewTenantStats(role: CanonicalRole): boolean {
+  return (
+    role === "ADMIN" ||
+    role === "DIRECTOR" ||
+    role === "FINANCE" ||
+    role === "OM"
+  );
+}
+
+async function runTenantProjectStats(ctx: ToolContext): Promise<
+  | { error: "forbidden"; message: string }
+  | {
+      total: number;
+      by_status: Record<string, number>;
+      active_projects: Array<{
+        id: string;
+        name: string;
+        status: string;
+        client_name: string | null;
+      }>;
+      overflow: boolean;
+    }
+> {
+  if (!canViewTenantStats(ctx.canonicalRole)) {
+    return {
+      error: "forbidden",
+      message:
+        ctx.locale === "id"
+          ? "Peran Anda tidak berwenang melihat statistik tenant-wide. Gunakan `my_projects` untuk daftar proyek Anda sendiri."
+          : "Your role is not authorized to view tenant-wide project stats. Use `my_projects` for your own project list instead.",
+    };
+  }
+
+  const supabase = ctx.supabase;
+  const { data } = await supabase
+    .from("projects")
+    .select(
+      "id, name, status, clients:client_id (name)",
+    )
+    .eq("tenant_id", ctx.tenantId);
+
+  const byStatus: Record<string, number> = {};
+  const activeItems: Array<{
+    id: string;
+    name: string;
+    status: string;
+    client_name: string | null;
+  }> = [];
+
+  for (const row of data ?? []) {
+    const status = row.status ?? "UNKNOWN";
+    byStatus[status] = (byStatus[status] ?? 0) + 1;
+    // "Active" for the summary means ACTIVE + PLANNING (project is
+    // running or ramping up). COMPLETED, ON_HOLD, ARCHIVED, DRAFT are
+    // excluded — they don't represent live work.
+    if (status === "ACTIVE" || status === "PLANNING") {
+      activeItems.push({
+        id: row.id,
+        name: row.name ?? "(untitled)",
+        status,
+        client_name:
+          (row as unknown as { clients?: { name?: string | null } | null })
+            .clients?.name ?? null,
+      });
+    }
+  }
+
+  activeItems.sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    total: data?.length ?? 0,
+    by_status: byStatus,
+    active_projects: activeItems.slice(0, MAX_ITEMS),
+    overflow: activeItems.length > MAX_ITEMS,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// tenant_employee_stats — headcount + breakdown (management + HR).
+// ---------------------------------------------------------------------------
+
+function canViewTenantHeadcount(role: CanonicalRole): boolean {
+  // HR + management need this. FINANCE typically doesn't need
+  // headcount breakdown but ADMIN/DIRECTOR do; OM oversees ops.
+  return (
+    role === "ADMIN" ||
+    role === "DIRECTOR" ||
+    role === "OM" ||
+    role === "FINANCE"
+  );
+}
+
+async function runTenantEmployeeStats(ctx: ToolContext): Promise<
+  | { error: "forbidden"; message: string }
+  | {
+      total_active: number;
+      total_all: number;
+      by_role: Record<string, number>;
+      by_department: Record<string, number>;
+      by_employment_type: Record<string, number>;
+      contract_expiring_soon: number;
+    }
+> {
+  if (!canViewTenantHeadcount(ctx.canonicalRole)) {
+    return {
+      error: "forbidden",
+      message:
+        ctx.locale === "id"
+          ? "Peran Anda tidak berwenang melihat statistik karyawan tenant-wide."
+          : "Your role is not authorized to view tenant-wide headcount.",
+    };
+  }
+
+  const supabase = ctx.supabase;
+  const { data } = await supabase
+    .from("employees")
+    .select(
+      "id, role, department, is_active, employment_type, contract_end_date",
+    )
+    .eq("tenant_id", ctx.tenantId);
+
+  const byRole: Record<string, number> = {};
+  const byDepartment: Record<string, number> = {};
+  const byEmploymentType: Record<string, number> = {};
+  let totalActive = 0;
+  let expiringSoon = 0;
+
+  const soon = new Date();
+  soon.setUTCDate(soon.getUTCDate() + 30);
+  const soonIso = soon.toISOString().slice(0, 10);
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  for (const row of data ?? []) {
+    if (row.is_active) totalActive += 1;
+    if (row.role) byRole[row.role] = (byRole[row.role] ?? 0) + 1;
+    if (row.department) {
+      byDepartment[row.department] = (byDepartment[row.department] ?? 0) + 1;
+    }
+    if (row.employment_type) {
+      byEmploymentType[row.employment_type] =
+        (byEmploymentType[row.employment_type] ?? 0) + 1;
+    }
+    if (
+      row.contract_end_date &&
+      row.contract_end_date >= todayIso &&
+      row.contract_end_date <= soonIso &&
+      row.is_active
+    ) {
+      expiringSoon += 1;
+    }
+  }
+
+  return {
+    total_active: totalActive,
+    total_all: data?.length ?? 0,
+    by_role: byRole,
+    by_department: byDepartment,
+    by_employment_type: byEmploymentType,
+    contract_expiring_soon: expiringSoon,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// tenant_finance_stats — budgets + expenses MTD + pending approvals count.
+// ---------------------------------------------------------------------------
+
+function canViewTenantFinance(role: CanonicalRole): boolean {
+  // Same gate as tenant stats but tighter: FINANCE, ADMIN, DIRECTOR only.
+  // OM sees operations; not necessarily total budget book.
+  return role === "ADMIN" || role === "DIRECTOR" || role === "FINANCE";
+}
+
+async function runTenantFinanceStats(ctx: ToolContext): Promise<
+  | { error: "forbidden"; message: string }
+  | {
+      period: string;
+      total_budget_planned_label: string;
+      expenses_this_month_label: string;
+      expenses_this_month_count: number;
+      pending_expense_approvals: number;
+      pending_ca_approvals: number;
+      outstanding_cash_advances_label: string;
+    }
+> {
+  if (!canViewTenantFinance(ctx.canonicalRole)) {
+    return {
+      error: "forbidden",
+      message:
+        ctx.locale === "id"
+          ? "Peran Anda tidak berwenang melihat statistik keuangan tenant-wide."
+          : "Your role is not authorized to view tenant-wide finance stats.",
+    };
+  }
+
+  const supabase = ctx.supabase;
+  const now = new Date();
+  const start = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+  ).toISOString();
+  const end = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+  ).toISOString();
+
+  const [
+    { data: budgetRows },
+    { data: expenseRows },
+    { data: pendingExpense },
+    { data: pendingCa },
+    { data: caOutstanding },
+  ] = await Promise.all([
+    supabase
+      .from("budgets")
+      .select("total_planned_amount, status")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "APPROVED"),
+    supabase
+      .from("project_expenses")
+      .select("amount, status, submitted_at")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "APPROVED")
+      .gte("submitted_at", start)
+      .lt("submitted_at", end),
+    supabase
+      .from("project_expenses")
+      .select("id, status", { count: "exact", head: false })
+      .eq("tenant_id", ctx.tenantId)
+      .like("status", "PENDING_%"),
+    supabase
+      .from("cash_advances")
+      .select("id, status", { count: "exact", head: false })
+      .eq("tenant_id", ctx.tenantId)
+      .like("status", "PENDING_%"),
+    supabase
+      .from("cash_advances")
+      .select("amount, status")
+      .eq("tenant_id", ctx.tenantId)
+      .eq("status", "DISBURSED"),
+  ]);
+
+  let budgetTotal = 0n;
+  for (const r of budgetRows ?? []) {
+    if (r.total_planned_amount != null) {
+      budgetTotal += parseMoneyFromDb(r.total_planned_amount);
+    }
+  }
+
+  let expenseTotal = 0n;
+  for (const r of expenseRows ?? []) {
+    if (r.amount != null) expenseTotal += parseMoneyFromDb(r.amount);
+  }
+
+  let outstandingTotal = 0n;
+  for (const r of caOutstanding ?? []) {
+    if (r.amount != null) outstandingTotal += parseMoneyFromDb(r.amount);
+  }
+
+  return {
+    period: start.slice(0, 7),
+    total_budget_planned_label: formatIDR(budgetTotal),
+    expenses_this_month_label: formatIDR(expenseTotal),
+    expenses_this_month_count: expenseRows?.length ?? 0,
+    pending_expense_approvals: pendingExpense?.length ?? 0,
+    pending_ca_approvals: pendingCa?.length ?? 0,
+    outstanding_cash_advances_label: formatIDR(outstandingTotal),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Registry factory
 // ---------------------------------------------------------------------------
 
@@ -807,7 +1085,10 @@ export type Level2Tool =
   | "my_direct_reports"
   | "pending_timesheets_to_approve"
   | "project_status"
-  | "budget_remaining";
+  | "budget_remaining"
+  | "tenant_project_stats"
+  | "tenant_employee_stats"
+  | "tenant_finance_stats";
 
 export function makeToolRegistry(ctx: ToolContext) {
   const traces: ToolTrace[] = [];
@@ -863,8 +1144,8 @@ export function makeToolRegistry(ctx: ToolContext) {
     list_pending_approvals: tool({
       description:
         ctx.locale === "id"
-          ? "Ambil approval yang MENUNGGU TINDAKAN dari user saat ini (expense + cash advance). Kembalikan total + daftar (maks. 10). Panggil bila user bertanya 'ada approval yg harus saya lakukan?', 'apa yg saya blokir?', 'inbox saya', dll."
-          : "Fetch approvals AWAITING THE CURRENT USER's action (expenses + cash advances). Returns total + up to 10 items. Call when the user asks 'what needs my attention', 'am I blocking anything', 'my inbox', etc.",
+          ? "Ambil approval yang MENUNGGU TINDAKAN dari user saat ini (expense + cash advance). Kembalikan total + daftar (maks. 10). WAJIB DIPANGGIL untuk pertanyaan seperti: 'ada approval yg harus saya lakukan?', 'apa yg saya blokir?', 'inbox saya', 'berapa approval pending?', 'ada berapa yang menunggu saya?', 'approval yg menunggu saya berapa'."
+          : "Fetch approvals AWAITING THE CURRENT USER's action (expenses + cash advances). Returns total + up to 10 items. MUST BE CALLED for: 'what needs my attention', 'am I blocking anything', 'my inbox', 'how many pending approvals', 'how many are waiting for me', etc.",
       inputSchema: listPendingApprovalsInput,
       execute: async () =>
         wrapExecute("list_pending_approvals", {}, () =>
@@ -874,8 +1155,8 @@ export function makeToolRegistry(ctx: ToolContext) {
     my_projects: tool({
       description:
         ctx.locale === "id"
-          ? "Ambil daftar proyek dimana user saat ini terlibat (assigned employee ATAU PM). Kembalikan total + daftar (maks. 10). Panggil bila user bertanya 'proyek apa yg saya kerjakan', 'saya PM proyek mana', dst."
-          : "Fetch projects the current user is on (assigned employee OR PM). Returns total + up to 10 items. Call when the user asks 'what projects am I on', 'which projects am I managing', etc.",
+          ? "Ambil daftar proyek dimana user saat ini terlibat (assigned employee ATAU PM). Kembalikan total + daftar (maks. 10). WAJIB DIPANGGIL untuk pertanyaan seperti: 'proyek apa yg saya kerjakan', 'saya PM proyek mana', 'berapa proyek saya', 'berapa banyak proyek yang saya kerjakan', 'proyek aktif saya berapa', 'saya lagi handle berapa proyek', 'my active projects', 'what am I working on'."
+          : "Fetch projects the CURRENT USER is on (assigned employee OR PM). Returns total + up to 10 items. MUST BE CALLED for: 'what projects am I on', 'which projects am I managing', 'how many projects do I have', 'my active projects', 'how many projects am I working on'. If the user asks about tenant-wide project counts (not just theirs), use `tenant_project_stats` instead.",
       inputSchema: z.object({}),
       execute: async () =>
         wrapExecute("my_projects", {}, () => runMyProjects(ctx)),
@@ -883,8 +1164,8 @@ export function makeToolRegistry(ctx: ToolContext) {
     expense_summary_this_month: tool({
       description:
         ctx.locale === "id"
-          ? "Rekap expense yang DISUBMIT oleh user saat ini di bulan berjalan: total nominal, jumlah, proyek terbanyak, sebaran status. Panggil bila user bertanya 'total pengeluaran saya bulan ini', 'sudah berapa expense saya', dst."
-          : "Summary of expenses SUBMITTED BY the current user this month: total, count, top project, by-state breakdown. Call when the user asks 'my expenses this month', 'how much have I spent', etc.",
+          ? "Rekap expense yang DISUBMIT oleh user saat ini di bulan berjalan: total nominal, jumlah, proyek terbanyak, sebaran status. WAJIB DIPANGGIL untuk pertanyaan seperti: 'total pengeluaran saya bulan ini', 'sudah berapa expense saya', 'expense saya bulan ini berapa', 'berapa yang sudah saya submit bulan ini', 'my spending this month'."
+          : "Summary of expenses SUBMITTED BY the current user this month: total, count, top project, by-state breakdown. MUST BE CALLED for: 'my expenses this month', 'how much have I spent', 'what did I submit this month', 'my monthly spending'. For tenant-wide expense totals, use `tenant_finance_stats` instead.",
       inputSchema: z.object({}),
       execute: async () =>
         wrapExecute("expense_summary_this_month", {}, () =>
@@ -940,6 +1221,39 @@ export function makeToolRegistry(ctx: ToolContext) {
       execute: async (args) =>
         wrapExecute("budget_remaining", args, () =>
           runBudgetRemaining(ctx, args),
+        ),
+    }),
+    tenant_project_stats: tool({
+      description:
+        ctx.locale === "id"
+          ? "Statistik proyek TENANT-WIDE (semua proyek di workspace). Kembalikan total, breakdown by status (ACTIVE/COMPLETED/ON_HOLD/PLANNING), dan daftar proyek aktif (maks. 10). WAJIB DIPANGGIL untuk pertanyaan seperti: 'berapa proyek aktif saat ini', 'berapa banyak proyek di tenant ini', 'total proyek', 'proyek yang sedang jalan berapa', 'ada berapa project di workspace'. HANYA untuk role ADMIN/DIRECTOR/FINANCE/OM."
+          : "TENANT-WIDE project statistics (all projects in the workspace). Returns total, breakdown by status (ACTIVE/COMPLETED/ON_HOLD/PLANNING), and list of active projects (up to 10). MUST BE CALLED for: 'how many active projects', 'total projects in the tenant', 'how many projects are running', 'what's my workspace project count'. ONLY for ADMIN/DIRECTOR/FINANCE/OM roles.",
+      inputSchema: z.object({}),
+      execute: async () =>
+        wrapExecute("tenant_project_stats", {}, () =>
+          runTenantProjectStats(ctx),
+        ),
+    }),
+    tenant_employee_stats: tool({
+      description:
+        ctx.locale === "id"
+          ? "Statistik karyawan TENANT-WIDE: total aktif, breakdown by role, by department, by employment_type (PERMANENT/CONTRACT/PROBATION/INTERN/OUTSOURCE/OUTTASK), dan jumlah kontrak yang akan expire dalam 30 hari. WAJIB DIPANGGIL untuk pertanyaan seperti: 'berapa karyawan tenant ini', 'berapa banyak employee', 'total karyawan', 'headcount berapa', 'karyawan kontrak berapa yang akan habis', 'komposisi tim per departemen'. HANYA untuk ADMIN/DIRECTOR/FINANCE/OM (kalau butuh info bawahan langsung saja, pakai `my_direct_reports`)."
+          : "TENANT-WIDE headcount stats: total active, by role, by department, by employment_type (PERMANENT/CONTRACT/PROBATION/INTERN/OUTSOURCE/OUTTASK), and count of contracts expiring within 30 days. MUST BE CALLED for: 'how many employees', 'total headcount', 'team composition by department', 'how many contract employees are expiring'. ONLY for ADMIN/DIRECTOR/FINANCE/OM (for direct reports only, use `my_direct_reports`).",
+      inputSchema: z.object({}),
+      execute: async () =>
+        wrapExecute("tenant_employee_stats", {}, () =>
+          runTenantEmployeeStats(ctx),
+        ),
+    }),
+    tenant_finance_stats: tool({
+      description:
+        ctx.locale === "id"
+          ? "Rekap keuangan TENANT-WIDE bulan berjalan: total budget planned (APPROVED), total expense APPROVED bulan ini, jumlah expense pending approval, jumlah CA pending approval, outstanding cash advance (DISBURSED — sudah cair, belum settle). WAJIB DIPANGGIL untuk pertanyaan seperti: 'total pengeluaran tenant bulan ini', 'berapa expense yg approved', 'berapa yang masih pending', 'total anggaran project', 'outstanding CA berapa', 'rekap keuangan'. HANYA untuk ADMIN/DIRECTOR/FINANCE."
+          : "TENANT-WIDE finance rollup for this month: total APPROVED budget planned, APPROVED expenses this month, pending expense approvals count, pending CA approvals count, outstanding cash advances (DISBURSED — money is out, not yet settled). MUST BE CALLED for: 'total tenant spending this month', 'how many pending approvals', 'total budget across projects', 'outstanding cash advances', 'finance summary'. ONLY for ADMIN/DIRECTOR/FINANCE.",
+      inputSchema: z.object({}),
+      execute: async () =>
+        wrapExecute("tenant_finance_stats", {}, () =>
+          runTenantFinanceStats(ctx),
         ),
     }),
   };

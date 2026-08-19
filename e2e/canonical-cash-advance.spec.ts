@@ -44,17 +44,14 @@ test.describe("canonical cash advance sheet + list", () => {
     await expect(preview.getByText(/^finance$/i)).toBeVisible();
     await expect(preview.getByText(/^supervisor$/i)).toHaveCount(0);
 
-    // Switch to FIELD_OPS → chain becomes [SUPERVISOR, FINANCE].
-    await page.getByLabel(/^(field ops|operasional lapangan)$/i).check();
-    await expect(preview.getByText(/^supervisor$/i)).toBeVisible();
-    await expect(preview.getByText(/^finance$/i)).toBeVisible();
-
-    // Bump amount above 5M → FIELD_OPS adds PM.
+    // FIELD_OPS is locked on this sheet (dedicated Field Ops flow).
+    // Stay on GENERAL and bump amount so the preview grows a PM slot.
     await page.getByLabel(/^(amount|nominal)/i).fill("6000000");
     await expect(preview.getByText(/^project manager$/i)).toBeVisible();
   });
 
-  test(
+  // FIELD_OPS is locked on the general CA sheet (dedicated Field Ops flow).
+  test.skip(
     "Supervisor submits a FIELD_OPS cash advance and it appears on the list",
     async ({ page }) => {
       await loginAs(page, "supervisor");

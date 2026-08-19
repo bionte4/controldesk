@@ -172,3 +172,44 @@ curl -s -X POST http://localhost:3000/api/observability/report \
 If the sink is misconfigured, the app still runs — only the sink
 dispatch is silent. Check the process stderr for the JSON line to prove
 the log fired.
+
+## Dev-only stdout / stderr redactor
+
+Next.js 16 Turbopack's dev server automatically logs every Server
+Action invocation with a shallow JSON dump of its arguments, e.g.:
+
+```
+POST /login 200 in 815ms
+  └─ ƒ signInWithPassword({"email":"…","password":"…"}, {}) in 815ms src/app/(auth)/actions.ts
+```
+
+The formatter lives in `next/dist/server/dev/server-action-logger.js`
+and has no config knob to disable or redact keys as of Next 16.3.
+That is a real leak vector — terminal scrollback, shared Docker
+container logs, forwarded-to-aggregator dev streams — so we install
+a stdout/stderr wrapper via `src/instrumentation.ts` that
+regex-scrubs credential-shaped JSON key-value pairs before they hit
+the terminal.
+
+**Keys redacted** (case-insensitive):
+`password`, `passwd`, `pwd`, `api_key` (+ camel + kebab variants),
+`secret`, `access_token`, `refresh_token`, `id_token`, `authorization`,
+`client_secret`, `service_role_key`, `encryption_key`. Also
+`Bearer <token>` in headers.
+
+**Not redacted**: `email`. Auth-flow debugging needs it, the
+concurrent request-line already shows it, and redacting emails would
+make dev logs unreadable.
+
+**Scope**: Only installed in Node.js runtime under `NODE_ENV !==
+"production"`. Production Next.js does not run the dev logger, and
+our own `log.ts` never puts credential-shaped fields on the wire —
+so prod stdout stays untouched (no regex tax on the hot path).
+
+**Removal path**: When Next.js ships arg redaction natively (e.g.
+`experimental.logging.serverActions.redactKeys`), swap to that config
+and delete `src/instrumentation.ts` + `src/lib/observability/redact-stdout.ts`.
+
+Unit tests: `pnpm vitest run src/lib/observability/redact-stdout.test.ts`
+— 9 cases covering key variants, case-insensitivity, Bearer headers,
+escaped quotes, idempotency, and false-positive prose.

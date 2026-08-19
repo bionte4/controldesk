@@ -22,6 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { UpkStatus } from "@/lib/validation/upk";
 
 import { UpkActionsPanel } from "./actions-panel";
+import { EditUpkNoteSheet } from "./edit-upk-sheet";
 
 export const metadata: Metadata = { title: "UPK detail" };
 
@@ -109,11 +110,23 @@ export default async function UpkDetailPage(props: {
             <span>· contract ends {formatDateOnly(row.contract_end_date)}</span>
           </div>
         </div>
-        <div className="text-right">
+        <div className="flex flex-col items-end gap-2 text-right">
           <p className="text-xs text-muted-foreground">{t("form.computed")}</p>
           <p className="font-display text-3xl font-semibold tabular-nums">
             {formatIDR(parseMoneyFromDb(row.computed_upk))}
           </p>
+          {isDrafter && row.status === "DRAFT" ? (
+            <EditUpkNoteSheet
+              upk={{
+                id: row.id,
+                contract_end_date: row.contract_end_date,
+                service_months: row.service_months,
+                base_salary_db: row.base_salary,
+                multiplier: row.multiplier,
+                justification: row.justification,
+              }}
+            />
+          ) : null}
         </div>
       </header>
 

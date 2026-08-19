@@ -87,6 +87,7 @@ export const saveAiConfigAction = withSecureAction({
       baseUrl: baseUrlInput,
       dailyTokenCap: input.daily_token_cap ?? null,
       piiRedactionEnabled: input.pii_redaction_enabled,
+      insightFreshnessMin: input.insight_freshness_min,
     });
 
     revalidatePath(REVALIDATE_PATH);
@@ -103,6 +104,7 @@ export const saveAiConfigAction = withSecureAction({
             provider: prev.provider,
             model_id: prev.modelId,
             base_url: prev.baseUrl,
+            insight_freshness_min: prev.insightFreshnessMin,
             is_active: prev.isActive,
             last_error: prev.lastError,
           }
@@ -111,6 +113,7 @@ export const saveAiConfigAction = withSecureAction({
         provider: input.provider,
         model_id: input.model_id,
         base_url: baseUrlInput,
+        insight_freshness_min: input.insight_freshness_min,
         is_active: true,
         last_error: null,
       },

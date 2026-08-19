@@ -2353,11 +2353,13 @@ export type Database = {
       employees: {
         Row: {
           availability: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number: string | null
+          bank_account_number_enc: string | null
+          client_display_name: string | null
           contract_end_date: string | null
           created_at: string
           date_of_birth: string | null
           department: string | null
+          division: string | null
           email: string
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -2370,6 +2372,8 @@ export type Database = {
           join_date: string
           last_name: string | null
           monthly_salary: number
+          nik_enc: string | null
+          nik_hash: string | null
           notes: string | null
           phone: string | null
           pii_anonymized_at: string | null
@@ -2384,11 +2388,13 @@ export type Database = {
         }
         Insert: {
           availability?: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number?: string | null
+          bank_account_number_enc?: string | null
+          client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
+          division?: string | null
           email: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2401,6 +2407,8 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
+          nik_enc?: string | null
+          nik_hash?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null
@@ -2415,11 +2423,13 @@ export type Database = {
         }
         Update: {
           availability?: Database["public"]["Enums"]["employee_availability"]
-          bank_account_number?: string | null
+          bank_account_number_enc?: string | null
+          client_display_name?: string | null
           contract_end_date?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
+          division?: string | null
           email?: string
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -2432,6 +2442,8 @@ export type Database = {
           join_date?: string
           last_name?: string | null
           monthly_salary?: number
+          nik_enc?: string | null
+          nik_hash?: string | null
           notes?: string | null
           phone?: string | null
           pii_anonymized_at?: string | null
@@ -3045,6 +3057,240 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_article_embeddings: {
+        Row: {
+          article_id: string
+          chunk_index: number
+          content: string
+          created_at: string
+          embedding: Json
+          id: string
+          model_id: string
+          tenant_id: string
+        }
+        Insert: {
+          article_id: string
+          chunk_index: number
+          content: string
+          created_at?: string
+          embedding: Json
+          id?: string
+          model_id: string
+          tenant_id: string
+        }
+        Update: {
+          article_id?: string
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          embedding?: Json
+          id?: string
+          model_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_article_embeddings_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_embeddings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_article_revisions: {
+        Row: {
+          article_id: string
+          body_md: string
+          category: string
+          edit_note: string | null
+          edited_at: string
+          edited_by_employee_id: string
+          id: string
+          revision_no: number
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id: string | null
+          visibility_roles: string[] | null
+        }
+        Insert: {
+          article_id: string
+          body_md: string
+          category: string
+          edit_note?: string | null
+          edited_at?: string
+          edited_by_employee_id: string
+          id?: string
+          revision_no: number
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Update: {
+          article_id?: string
+          body_md?: string
+          category?: string
+          edit_note?: string | null
+          edited_at?: string
+          edited_by_employee_id?: string
+          id?: string
+          revision_no?: number
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_article_revisions_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_edited_by_employee_id_fkey"
+            columns: ["edited_by_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "knowledge_article_revisions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_articles: {
+        Row: {
+          archived_at: string | null
+          author_employee_id: string
+          body_md: string
+          category: string
+          created_at: string
+          id: string
+          published_at: string | null
+          slug: string
+          status: Database["public"]["Enums"]["knowledge_article_status"]
+          summary: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          view_count: number
+          visibility: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id: string | null
+          visibility_roles: string[] | null
+        }
+        Insert: {
+          archived_at?: string | null
+          author_employee_id: string
+          body_md: string
+          category: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          slug: string
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          view_count?: number
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Update: {
+          archived_at?: string | null
+          author_employee_id?: string
+          body_md?: string
+          category?: string
+          created_at?: string
+          id?: string
+          published_at?: string | null
+          slug?: string
+          status?: Database["public"]["Enums"]["knowledge_article_status"]
+          summary?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          view_count?: number
+          visibility?: Database["public"]["Enums"]["knowledge_article_visibility"]
+          visibility_project_id?: string | null
+          visibility_roles?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees_canonical"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_author_employee_id_fkey"
+            columns: ["author_employee_id"]
+            isOneToOne: false
+            referencedRelation: "v_employee_workload"
+            referencedColumns: ["employee_id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_articles_visibility_project_id_fkey"
+            columns: ["visibility_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -6364,6 +6610,56 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          disabled_at: string | null
+          disabled_reason: string | null
+          endpoint: string
+          id: string
+          keys_auth: string
+          keys_p256dh: string
+          last_used_at: string | null
+          tenant_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          endpoint: string
+          id?: string
+          keys_auth: string
+          keys_p256dh: string
+          last_used_at?: string | null
+          tenant_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          endpoint?: string
+          id?: string
+          keys_auth?: string
+          keys_p256dh?: string
+          last_used_at?: string | null
+          tenant_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       secret_rotations: {
         Row: {
           created_at: string
@@ -6551,6 +6847,7 @@ export type Database = {
           created_at: string
           daily_token_cap: number | null
           encrypted_api_key: string | null
+          insight_freshness_min: number
           is_active: boolean
           last_error: string | null
           model_id: string
@@ -6564,6 +6861,7 @@ export type Database = {
           created_at?: string
           daily_token_cap?: number | null
           encrypted_api_key?: string | null
+          insight_freshness_min?: number
           is_active?: boolean
           last_error?: string | null
           model_id: string
@@ -6577,6 +6875,7 @@ export type Database = {
           created_at?: string
           daily_token_cap?: number | null
           encrypted_api_key?: string | null
+          insight_freshness_min?: number
           is_active?: boolean
           last_error?: string | null
           model_id?: string
@@ -8378,6 +8677,11 @@ export type Database = {
         | "EXPENSE"
         | "PETTY_CASH"
       import_job_status: "DRY_RUN" | "COMMITTED" | "FAILED"
+      knowledge_article_status: "DRAFT" | "PUBLISHED" | "ARCHIVED"
+      knowledge_article_visibility:
+        | "TENANT_WIDE"
+        | "ROLE_GATED"
+        | "PROJECT_SCOPED"
       milestone_status:
         | "PLANNED"
         | "IN_PROGRESS"
@@ -8410,7 +8714,12 @@ export type Database = {
         | "TIMESHEETS"
         | "EMPLOYEES"
         | "SYSTEM"
-      notification_channel: "IN_APP" | "EMAIL" | "TELEGRAM" | "WHATSAPP"
+      notification_channel:
+        | "IN_APP"
+        | "EMAIL"
+        | "TELEGRAM"
+        | "WHATSAPP"
+        | "PUSH"
       notification_kind:
         | "APPROVAL_REQUESTED"
         | "APPROVAL_APPROVED"
@@ -8894,6 +9203,12 @@ export const Constants = {
         "PETTY_CASH",
       ],
       import_job_status: ["DRY_RUN", "COMMITTED", "FAILED"],
+      knowledge_article_status: ["DRAFT", "PUBLISHED", "ARCHIVED"],
+      knowledge_article_visibility: [
+        "TENANT_WIDE",
+        "ROLE_GATED",
+        "PROJECT_SCOPED",
+      ],
       milestone_status: [
         "PLANNED",
         "IN_PROGRESS",
@@ -8930,7 +9245,7 @@ export const Constants = {
         "EMPLOYEES",
         "SYSTEM",
       ],
-      notification_channel: ["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP"],
+      notification_channel: ["IN_APP", "EMAIL", "TELEGRAM", "WHATSAPP", "PUSH"],
       notification_kind: [
         "APPROVAL_REQUESTED",
         "APPROVAL_APPROVED",

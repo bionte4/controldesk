@@ -23,6 +23,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { requireCurrentEmployee } from "@/lib/auth/session";
+import { authorize } from "@/lib/security/pdp";
+import type { EmployeeRole } from "@/lib/rbac/roles";
+
 import { listClientPortalLoginEvents, listClientPortalUsers } from "./actions";
 import { PortalUsersManager } from "./portal-users-manager";
 
@@ -81,7 +85,8 @@ export default async function ClientPortalUsersPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await props.params;
-  const [result, events, t, tStatus, tEvents, formatter] = await Promise.all([
+  const [employee, result, events, t, tStatus, tEvents, formatter] = await Promise.all([
+    requireCurrentEmployee(),
     listClientPortalUsers(id),
     listClientPortalLoginEvents(id, { limit: 25 }),
     getTranslations("clients.portalUsers"),
@@ -93,6 +98,24 @@ export default async function ClientPortalUsersPage(props: {
   if (!result) notFound();
   const { client, users } = result;
   const loginEvents = events?.events ?? [];
+
+  // Portal-user management is sensitive (Rules §28) — mirror PDP
+  // `decideClientPortalUser('update')` client-side so the invite
+  // button + row-level Reset/Toggle actions hide for viewers who
+  // would be rejected server-side. Delegating to `authorize()`
+  // keeps this gate in lock-step with the Server Action + RLS.
+  const canManagePortalUsers =
+    authorize({
+      actor: {
+        userId: employee.user_id,
+        employeeId: employee.id,
+        role: employee.role as EmployeeRole,
+        tenantId: employee.tenant_id,
+      },
+      action: "update",
+      resource: "client_portal_user",
+      attributes: { tenantId: employee.tenant_id },
+    }).effect === "ALLOW";
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,7 +145,9 @@ export default async function ClientPortalUsersPage(props: {
             </p>
           </div>
         </div>
-        <PortalUsersManager clientId={id} clientName={client.name} />
+        {canManagePortalUsers ? (
+          <PortalUsersManager clientId={id} clientName={client.name} />
+        ) : null}
       </header>
 
       <Card className="glass">
@@ -186,17 +211,23 @@ export default async function ClientPortalUsersPage(props: {
                           : "—"}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <PortalUsersManager
-                          clientId={id}
-                          clientName={client.name}
-                          row={{
-                            id: u.id,
-                            email: u.email,
-                            full_name: u.full_name,
-                            status: u.status,
-                          }}
-                          rowMode
-                        />
+                        {canManagePortalUsers ? (
+                          <PortalUsersManager
+                            clientId={id}
+                            clientName={client.name}
+                            row={{
+                              id: u.id,
+                              email: u.email,
+                              full_name: u.full_name,
+                              status: u.status,
+                            }}
+                            rowMode
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            —
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

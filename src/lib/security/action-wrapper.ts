@@ -76,6 +76,14 @@ export type SecureActionSnapshot<T> = {
   auditOldValues?: Record<string, unknown> | null;
   auditNewValues?: Record<string, unknown> | null;
   auditMetadata?: Record<string, unknown> | null;
+  /**
+   * Optional override for the audit `action_type` column. Use when a
+   * single PDP action verb (e.g. `create` on an upsert) may correspond
+   * to either INSERT or UPDATE at the DB level — the handler knows
+   * which branch it took, and the audit row should reflect that. When
+   * omitted the wrapper falls back to `options.auditAction`.
+   */
+  auditActionOverride?: AuditActionType;
 };
 
 export type SecureActionOptions<TSchema extends z.ZodTypeAny, TResult> = {
@@ -167,7 +175,7 @@ export function withSecureAction<TSchema extends z.ZodTypeAny, TResult>(
     // have succeeded but we couldn't record it, which is unacceptable.
     try {
       await recordAudit({
-        actionType: options.auditAction,
+        actionType: snapshot.auditActionOverride ?? options.auditAction,
         resourceName: options.auditResourceName,
         resourceId: snapshot.auditResourceId ?? null,
         oldValues: snapshot.auditOldValues ?? null,
@@ -321,7 +329,7 @@ export function withCanonicalSecureAction<TSchema extends z.ZodTypeAny, TResult>
     // 5. Audit.
     try {
       await recordAudit({
-        actionType: options.auditAction,
+        actionType: snapshot.auditActionOverride ?? options.auditAction,
         resourceName: options.auditResourceName,
         resourceId: snapshot.auditResourceId ?? null,
         oldValues: snapshot.auditOldValues ?? null,

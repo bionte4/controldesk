@@ -9,6 +9,8 @@ import { log } from "@/lib/observability/log";
 import type { AnyDbEmployeeRole, EmployeeRole } from "@/lib/rbac/roles";
 import type { NotificationKind } from "@/types/database";
 
+import { dispatchWebPush } from "@/lib/push/send";
+
 import { categoryForKind } from "./categories";
 import { dispatchNotificationEmail } from "./email-dispatcher";
 import { isChannelEnabled } from "./preferences";
@@ -138,6 +140,23 @@ export async function notifyUser(input: {
       actionUrl: input.actionUrl,
     }).catch((err) => {
       log.warn("email_dispatch_failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    });
+    // Web Push (PWA / Android APK) — Day 2 wiring. Same pattern as the
+    // other side channels: fire-and-forget, per-user preference gate
+    // handled INSIDE dispatchWebPush (so a slow prefs query on one
+    // channel doesn't cascade to another). Missing VAPID env vars
+    // gracefully no-op instead of crashing.
+    void dispatchWebPush({
+      tenantId: input.tenantId,
+      userId: input.recipient.userId,
+      kind: input.kind,
+      title: input.title,
+      body: input.body,
+      actionUrl: input.actionUrl,
+    }).catch((err) => {
+      log.warn("web_push_dispatch_failed", {
         err: err instanceof Error ? err.message : String(err),
       });
     });

@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Pencil } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -36,17 +37,25 @@ const ROSTER_STATUSES: readonly RosterEntryStatus[] = [
 
 type Row = {
   id: string;
+  employee_id: string;
   employee_name: string;
+  shift_id: string;
   shift_code: string;
+  project_id: string | null;
   project_name: string | null;
   work_date: string;
   status: RosterEntryStatus;
+  notes: string | null;
 };
 
 type RawRow = {
   id: string;
   work_date: string;
   status: RosterEntryStatus;
+  notes: string | null;
+  employee_id: string;
+  shift_id: string;
+  project_id: string | null;
   employee: { full_name: string } | null;
   shift: { code: string } | null;
   project: { code: string; name: string } | null;
@@ -78,7 +87,7 @@ async function loadRoster(
   let query = supabase
     .from("employee_rosters")
     .select(
-      "id, work_date, status, employee:employee_id(full_name), shift:shift_id(code), project:project_id(code, name)",
+      "id, work_date, status, notes, employee_id, shift_id, project_id, employee:employee_id(full_name), shift:shift_id(code), project:project_id(code, name)",
     )
     .gte("work_date", iso(from))
     .lte("work_date", iso(to))
@@ -98,8 +107,12 @@ async function loadRoster(
   const rows = data as unknown as RawRow[];
   return rows.map((row) => ({
     id: row.id,
+    employee_id: row.employee_id,
+    shift_id: row.shift_id,
+    project_id: row.project_id,
     work_date: row.work_date,
     status: row.status,
+    notes: row.notes,
     employee_name: row.employee?.full_name ?? "—",
     shift_code: row.shift?.code ?? "—",
     project_name: row.project ? `${row.project.code} · ${row.project.name}` : null,
@@ -312,6 +325,7 @@ export default async function RosterPage() {
                     <Th>{t("columns.shift")}</Th>
                     <Th>{t("columns.project")}</Th>
                     <Th>{t("columns.status")}</Th>
+                    {canManageRoster ? <Th className="text-right">·</Th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -335,6 +349,59 @@ export default async function RosterPage() {
                           {tStatus(r.status)}
                         </Badge>
                       </td>
+                      {canManageRoster ? (
+                        <td className="px-2 py-2 text-right">
+                          <RosterUpsertSheet
+                            triggerNode={
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                aria-label={t("actions.edit")}
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                            }
+                            title={t("form.editTitle")}
+                            description={t("form.editDescription")}
+                            employees={options.employees}
+                            shifts={options.shifts}
+                            projects={options.projects}
+                            allowedProjectIdsByEmployee={
+                              options.allowedProjectIdsByEmployee
+                            }
+                            defaultDate={today}
+                            initial={{
+                              employee_id: r.employee_id,
+                              shift_id: r.shift_id,
+                              project_id: r.project_id,
+                              work_date: r.work_date,
+                              status: r.status,
+                              notes: r.notes,
+                            }}
+                            labels={{
+                              employee: t("form.employee"),
+                              shift: t("form.shift"),
+                              project: t("form.project"),
+                              workDate: t("form.workDate"),
+                              status: t("form.status"),
+                              notes: t("form.notes"),
+                              notesPlaceholder: t("form.notesPlaceholder"),
+                              cancel: t("form.cancel"),
+                              save: t("form.save"),
+                              saving: t("form.saving"),
+                              successToast: t("form.updatedToast"),
+                              errorToast: t("form.errorToast"),
+                              unassigned: t("form.unassigned"),
+                              statuses: {
+                                PLANNED: tStatus("PLANNED"),
+                                LEAVE: tStatus("LEAVE"),
+                                SICK: tStatus("SICK"),
+                                OFF: tStatus("OFF"),
+                              },
+                            }}
+                          />
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

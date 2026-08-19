@@ -89,6 +89,7 @@
     "readArticle": "Baca artikel",
     "backToIndex": "Kembali ke Pusat Bantuan",
     "openFullGuide": "Buka panduan lengkap",
+    "kbBadge": "KB",
     "hintTrigger": "Tampilkan bantuan: {title}",
     "tabBrowse": "Telusuri artikel",
     "tabAsk": "Tanya AI",
@@ -99,6 +100,7 @@
       "suggestion1": "Bagaimana cara submit expense dan alur approval-nya?",
       "suggestion2": "Apa perbedaan kas bon General dan Field Ops?",
       "suggestion3": "Siapa yang bisa approve budget request di atas Rp 50 juta?",
+      "suggestionsLabel": "Coba tanyakan",
       "inputPlaceholder": "Ketik pertanyaan Anda… (Enter untuk kirim, Shift+Enter untuk baris baru)",
       "footerHint": "Jawaban berbasis dokumentasi. Verifikasi via link kutipan di jawaban.",
       "send": "Kirim",
@@ -127,9 +129,34 @@
         "not_configuredTitle": "AI belum dikonfigurasi",
         "not_configuredBody": "Admin belum mengaktifkan AI di Settings → Integrations → AI. Minta admin untuk mengaturnya terlebih dahulu.",
         "networkTitle": "Koneksi bermasalah",
-        "networkBody": "Tidak dapat mencapai layanan AI. Cek koneksi internet Anda dan coba lagi."
+        "networkBody": "Tidak dapat mencapai layanan AI. Cek koneksi internet Anda dan coba lagi.",
+        "empty_responseTitle": "AI tidak menjawab",
+        "empty_responseBody": "Layanan AI menerima permintaan tapi tidak mengembalikan jawaban. Biasanya karena penyedia model sedang membatasi workspace ini, atau kuota token harian sudah habis. Coba lagi beberapa menit ke depan, atau minta admin memeriksa Settings → Integrations → AI."
+      },
+      "fallback": {
+        "showRelatedDocs": "Tampilkan artikel terkait",
+        "badge": "Docs",
+        "title": "Artikel relevan dari knowledge base",
+        "hint": "Sintesis AI sedang tidak tersedia, tapi mesin pencari yang sama dengan chat menemukan artikel-artikel ini untuk Anda.",
+        "loading": "Mencari artikel terkait…",
+        "emptyBody": "Tidak ada artikel knowledge base yang cocok dengan pertanyaan Anda. Coba dengan kata lain, atau jelajahi daftar lengkap panduan di /help."
       }
     }
+  },
+  "askAi": {
+    "triggerLabel": "Tanya AI",
+    "title": "Tanya ControlDesk",
+    "subtitle": "Didukung dokumentasi + data workspace Anda",
+    "greeting": "Halo {name} 👋",
+    "greetingFallback": "di sana",
+    "greetingSubtitle": "Tanya apa saja tentang ControlDesk — saya juga bisa mencari data workspace Anda.",
+    "suggestionsLabel": "Coba tanyakan",
+    "inputPlaceholder": "Ketik pertanyaan Anda…",
+    "footerHint": "Enter untuk kirim · Shift+Enter untuk baris baru",
+    "send": "Kirim",
+    "sending": "Mengirim…",
+    "reset": "Chat baru",
+    "openFullHelp": "Buka Bantuan lengkap"
   },
   "aiCopilot": {
     "triggerLabel": "Draft dengan AI",
@@ -146,6 +173,105 @@
       "quota_exceeded": "Tenant ini sudah mencapai batas token AI hari ini.",
       "not_configured": "AI belum diaktifkan untuk workspace ini. Minta admin mengaktifkan di Settings → Integrations → AI.",
       "network": "Tidak dapat mencapai layanan AI. Coba lagi."
+    }
+  },
+  "knowledge": {
+    "eyebrow": "Basis Pengetahuan",
+    "title": "Knowledge Base",
+    "subtitle": "Tulis, bagikan, dan cari SOP, catatan rapat, serta panduan internal yang dikelola oleh tim Anda sendiri.",
+    "newArticle": "Tulis artikel",
+    "editDraft": "Lanjutkan draft",
+    "read": "Baca artikel",
+    "backToIndex": "Kembali ke Knowledge Base",
+    "updated": "Diperbarui",
+    "publishedAt": "Diterbitkan",
+    "manageBanner": "Anda adalah penulis artikel ini",
+    "stat": {
+      "published": "Terpublikasi",
+      "yourDrafts": "Draft Anda",
+      "categories": "Kategori aktif"
+    },
+    "section": {
+      "yourDrafts": "Draft Anda",
+      "yourDraftsHint": "Hanya Anda dan admin yang dapat melihat draft.",
+      "published": "Artikel terpublikasi"
+    },
+    "empty": {
+      "published": "Belum ada artikel yang dipublikasikan di workspace ini. Klik 'Tulis artikel' untuk memulai."
+    },
+    "category": {
+      "getting-started": "Memulai",
+      "user-guides": "Panduan pengguna",
+      "approvals": "Approval & tata kelola",
+      "finance": "Keuangan",
+      "hr": "HR & operasional",
+      "integrations": "Integrasi",
+      "reference": "Referensi",
+      "internal-sop": "SOP internal",
+      "meeting-notes": "Catatan rapat",
+      "decisions": "Keputusan"
+    },
+    "actions": {
+      "edit": "Edit",
+      "publish": "Terbitkan",
+      "archive": "Arsip",
+      "restore": "Kembalikan ke draft",
+      "archivedToast": "Artikel diarsipkan.",
+      "restoredToast": "Artikel dikembalikan ke draft."
+    },
+    "publish": {
+      "title": "Terbitkan artikel",
+      "description": "Berikan ringkasan singkat sebelum artikel bisa dibaca oleh seluruh workspace.",
+      "summaryLabel": "Ringkasan (wajib untuk publikasi)",
+      "summaryPlaceholder": "Contoh: Panduan cara meminta akses baru ke sistem finance.",
+      "summaryHint": "Minimum 10 karakter.",
+      "cancel": "Batal",
+      "confirm": "Terbitkan sekarang",
+      "publishedToast": "Artikel berhasil dipublikasikan."
+    },
+    "new": {
+      "title": "Artikel baru",
+      "subtitle": "Konten disimpan sebagai draft — Anda dapat mempublikasikannya setelah preview.",
+      "back": "Kembali"
+    },
+    "edit": {
+      "title": "Sunting artikel",
+      "subtitle": "Perubahan disimpan sebagai revisi baru di jejak audit artikel.",
+      "back": "Kembali",
+      "archivedTitle": "Artikel sudah diarsipkan",
+      "archivedHint": "Kembalikan artikel ke draft terlebih dahulu untuk menyuntingnya."
+    },
+    "form": {
+      "titleLabel": "Judul",
+      "titlePlaceholder": "Contoh: Cara submit expense di ControlDesk",
+      "slugLabel": "URL slug",
+      "slugHint": "Otomatis dihasilkan dari judul; sesuaikan bila perlu.",
+      "summaryLabel": "Ringkasan",
+      "summaryPlaceholder": "Deskripsi singkat 1-2 kalimat yang tampil di daftar artikel.",
+      "summaryHint": "Opsional untuk draft, wajib saat publikasi.",
+      "categoryLabel": "Kategori",
+      "bodyLabel": "Isi artikel (Markdown)",
+      "bodyPlaceholder": "# Judul bagian\n\nTulis konten dalam Markdown — heading, list, code block, tabel semua didukung.",
+      "emptyPreview": "*Belum ada konten untuk dipreview.*",
+      "preview": "Preview",
+      "edit": "Edit",
+      "save": "Simpan perubahan",
+      "saveDraft": "Simpan sebagai draft",
+      "cancel": "Batal",
+      "createdToast": "Draft artikel dibuat.",
+      "savedToast": "Perubahan disimpan.",
+      "category": {
+        "getting-started": "Memulai",
+        "user-guides": "Panduan pengguna",
+        "approvals": "Approval & tata kelola",
+        "finance": "Keuangan",
+        "hr": "HR & operasional",
+        "integrations": "Integrasi",
+        "reference": "Referensi",
+        "internal-sop": "SOP internal",
+        "meeting-notes": "Catatan rapat",
+        "decisions": "Keputusan"
+      }
     }
   },
   "profile": {
@@ -255,7 +381,8 @@
         "IN_APP": "In-app",
         "EMAIL": "Email",
         "TELEGRAM": "Telegram",
-        "WHATSAPP": "WhatsApp"
+        "WHATSAPP": "WhatsApp",
+        "PUSH": "Push (HP)"
       },
       "telegram": {
         "title": "Telegram",
@@ -386,7 +513,7 @@
       "hris": "HRIS + payroll multi-cabang",
       "ai": "Prediksi risiko SLA & anggaran dengan AI"
     },
-    "trust": "Dipercaya tim operasional BPO & Managed Services"
+    "trust": "Isolasi multi-tenant · Audit trail permanen · RBAC/ABAC by design"
   },
   "nav": {
     "openUserMenu": "Buka menu pengguna",
@@ -398,6 +525,7 @@
       "analytics": "Analitik",
       "settings": "Setelan",
       "navigation": "Navigasi",
+      "knowledge": "Basis Pengetahuan",
       "appearance": "Tampilan",
       "session": "Sesi",
       "language": "Bahasa"
@@ -422,7 +550,7 @@
       "leaveOvertime": "Cuti & Lembur",
       "payroll": "Payroll",
       "reports": "Laporan",
-      "contracts": "Kontrak BPO",
+      "contracts": "Kontrak",
       "archives": "Arsip Data",
       "secrets": "Rotasi Secret",
       "lookups": "Data Referensi",
@@ -437,7 +565,8 @@
       "approvalThresholds": "Ambang Approval",
       "capabilities": "Kapabilitas",
       "features": "Fitur Aktif",
-      "help": "Bantuan"
+      "help": "Bantuan",
+      "knowledge": "Knowledge Base"
     },
     "sidebarFooter": "AI Insights diperbarui tiap 15 menit.",
     "commandPlaceholder": "Cari perintah, lompat ke halaman…",
@@ -884,6 +1013,20 @@
       "toastActivated": "Proyek diaktifkan.",
       "toastActivateFailed": "Gagal mengaktifkan proyek."
     },
+    "businessCase": {
+      "editButton": "Edit Business Case",
+      "editTitle": "Business Case proyek",
+      "editDescription": "Perbarui ringkasan eksekutif, target Gross Margin (%), atau sponsor. Business Case hanya dapat diedit saat proyek masih Draft atau Perencanaan.",
+      "summaryLabel": "Ringkasan eksekutif",
+      "summaryPlaceholder": "Latar belakang, ruang lingkup, hasil bisnis yang diharapkan…",
+      "targetGmLabel": "Target margin (%)",
+      "targetGmHint": "Isi 0–100. Contoh: 25 untuk 25%.",
+      "sponsorLabel": "Sponsor eksekutif",
+      "sponsorPlaceholder": "Pilih sponsor…",
+      "sponsorNone": "Tidak ada",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Business Case berhasil diperbarui."
+    },
     "priority": {
       "CRITICAL": "Kritis",
       "HIGH": "Tinggi",
@@ -918,7 +1061,11 @@
       "description": "Deskripsi",
       "descriptionPlaceholder": "Cakupan, jenis layanan, catatan penting…",
       "submit": "Buat proyek",
-      "created": "Proyek \"{name}\" berhasil dibuat."
+      "created": "Proyek \"{name}\" berhasil dibuat.",
+      "editTitle": "Edit proyek",
+      "editDescription": "Perbarui detail proyek. Perubahan langsung dipakai di semua modul. Status (Business Case → Planning → Active) dikelola lewat panel transisi; klien, PM, dan Business Case punya alur khusus.",
+      "submitEdit": "Simpan perubahan",
+      "updated": "Proyek \"{name}\" berhasil diperbarui."
     },
     "wizard": {
       "step1": "Info",
@@ -1097,7 +1244,11 @@
       "owner": "Owner (opsional)",
       "ownerPlaceholder": "Pilih owner…",
       "submit": "Tambah milestone",
-      "created": "Milestone ditambahkan."
+      "created": "Milestone ditambahkan.",
+      "editTitle": "Ubah milestone",
+      "editDescription": "Perbarui detail milestone. Sisa kapasitas bobot: {remaining}%.",
+      "submitEdit": "Simpan perubahan",
+      "updated": "Milestone berhasil diperbarui."
     },
     "actions": {
       "openMenu": "Buka menu milestone",
@@ -1270,7 +1421,11 @@
         "partialUploadFailed": "Issue tersimpan, tapi ada lampiran yang gagal diunggah."
       },
       "submit": "Simpan",
-      "createdToast": "Issue dibuat."
+      "createdToast": "Issue dibuat.",
+      "editTitle": "Edit issue",
+      "editDescription": "Perbarui metadata issue: judul, deskripsi, kategori, prioritas, tag, atau tenggat. Perubahan prioritas akan menyetel ulang SLA.",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Issue berhasil diperbarui."
     },
     "actions": {
       "openMenu": "Buka menu issue",
@@ -1465,6 +1620,20 @@
       "deletedToast": "Draft dihapus.",
       "confirmDelete": "Hapus draft ini secara permanen?",
       "confirmDeleteBody": "Aksi ini tidak dapat dibatalkan. Nota yang sudah diunggah akan ikut dihapus.",
+      "editTitle": "Edit draft biaya",
+      "editSubtitle": "Perbarui detail sebelum submit ke approval — proyek: {project}.",
+      "editSubtitleNoProject": "Perbarui detail draft biaya sebelum submit ke approval.",
+      "updatedToast": "Perubahan draft biaya berhasil disimpan.",
+      "coaLineLabel": "Chart of Accounts",
+      "coaLineHint": "Klasifikasi akuntansi (GL). Finance atau MA-editor dapat menetapkan/ubah selama biaya masih non-terminal.",
+      "assignCoaTitle": "Tetapkan CoA",
+      "changeCoa": "Ubah CoA",
+      "selectCoa": "Pilih CoA…",
+      "loadingCoa": "Memuat daftar CoA…",
+      "noCoaOptions": "Tidak ada CoA aktif untuk proyek ini.",
+      "saveCoa": "Simpan CoA",
+      "cancelCoa": "Batal",
+      "coaAssignedToast": "CoA berhasil diperbarui.",
       "budgetLineLabel": "MA / Budget line",
       "coaLabel": "Chart of Accounts",
       "paymentMethodLabel": "Metode pembayaran",
@@ -1554,7 +1723,11 @@
       "save": "Simpan",
       "added": "Baris ditambahkan.",
       "deleted": "Baris dihapus.",
-      "delete": "Hapus baris"
+      "delete": "Hapus baris",
+      "editTitle": "Ubah baris anggaran",
+      "editDescription": "Perbarui kategori, nominal, CoA, atau deskripsi baris ini. Nominal realisasi dan outstanding di-track otomatis dari approval biaya dan disburse CA.",
+      "updated": "Baris anggaran berhasil diperbarui.",
+      "plannedInvalid": "Nominal harus bilangan bulat positif."
     },
     "detail": {
       "back": "Kembali ke daftar",
@@ -2201,6 +2374,8 @@
         "apiKey": "API Key",
         "dailyCap": "Daily token cap (opsional)",
         "dailyCapHint": "Batas maksimum token output per hari per tenant. Kosongkan untuk pakai default global (10.000).",
+        "freshnessMin": "Insight freshness window (menit)",
+        "freshnessMinHint": "Berapa lama insight yang sudah di-generate dianggap masih segar sebelum AI cron generate ulang. Range 5–1440 (default 15). Lebih kecil = data lebih up-to-date tapi boros token; lebih besar = hemat tapi data lebih basi.",
         "piiRedaction": "PII Redaction",
         "piiRedactionHint": "Hash / mask data sensitif sebelum dikirim ke LLM. Direkomendasikan aktif; hanya matikan untuk LLM on-prem sepenuhnya di dalam network Anda."
       },
@@ -3279,10 +3454,17 @@
       "lastName": "Nama belakang",
       "email": "Email",
       "phone": "Telepon",
+      "nik": "NIK (Nomor KTP)",
+      "nikHint": "16 digit NIK KTP. Otomatis di-mask untuk role selain HR/Finance/Admin.",
+      "division": "Divisi",
+      "selectDivision": "mis. Field Operations",
       "department": "Departemen",
       "selectDepartment": "Pilih departemen…",
       "position": "Jabatan",
       "selectPosition": "Pilih jabatan…",
+      "clientDisplayName": "Nama versi klien",
+      "clientDisplayNamePlaceholder": "mis. Nama versi IOH",
+      "clientDisplayNameHint": "Opsional. Nama yang muncul di sisi klien (report, portal, invoice) — menimpa Nama Lengkap.",
       "role": "Peran (RBAC)",
       "roleHint": "Menentukan chain approval, capability gate, dan scope dashboard. Perubahan akan tercatat di audit log.",
       "reportsTo": "Melapor kepada",
@@ -3320,11 +3502,14 @@
       "OFF": "Libur"
     },
     "actions": {
-      "new": "Tambah entri"
+      "new": "Tambah entri",
+      "edit": "Edit entri"
     },
     "form": {
       "title": "Buat / perbarui entri roster",
       "description": "Satu entri per (karyawan, tanggal). Konflik akan diperbarui otomatis.",
+      "editTitle": "Edit entri roster",
+      "editDescription": "Perbarui shift, proyek, status, atau catatan. Tanggal & karyawan pair terkunci karena unik per (karyawan, tanggal).",
       "employee": "Karyawan",
       "shift": "Shift",
       "project": "Proyek",
@@ -3337,6 +3522,7 @@
       "save": "Simpan",
       "saving": "Menyimpan…",
       "successToast": "Entri roster tersimpan.",
+      "updatedToast": "Entri roster diperbarui.",
       "errorToast": "Gagal menyimpan entri roster."
     }
   },
@@ -3883,7 +4069,13 @@
       "markPaid": "Tandai dibayarkan",
       "paidReference": "Referensi pembayaran (opsional)",
       "notesPlaceholder": "Tambahkan catatan (wajib saat menolak)…",
-      "directorNeeded": "Nominal ≥ IDR 50 jt — perlu approval Direktur setelah Finance."
+      "directorNeeded": "Nominal ≥ IDR 50 jt — perlu approval Direktur setelah Finance.",
+      "contractEndDate": "Tanggal akhir kontrak",
+      "serviceMonthsHint": "Isi 0–600 bulan.",
+      "editTitle": "Edit draft UPK",
+      "editDescription": "Perbarui gaji pokok, masa kerja, atau faktor pengali — nilai UPK terhitung otomatis. Draft hanya dapat diedit sebelum dikirim ke Finance.",
+      "submitEdit": "Simpan perubahan",
+      "updatedToast": "Draft UPK berhasil diperbarui."
     }
   },
   "monthlyReport": {

@@ -8,7 +8,11 @@ import { requireCurrentEmployee } from "@/lib/auth/session";
 import { buildSystemPrompt } from "@/lib/help/chat-prompt";
 import { retrieveContext } from "@/lib/help/retrieval";
 import { deriveTitle } from "@/lib/help/title";
-import { resolveAiCapContext, resolveAiModel } from "@/lib/integrations/ai";
+import {
+  resolveAiCapContext,
+  resolveAiFallbackModel,
+  resolveAiModel,
+} from "@/lib/integrations/ai";
 import { commit, reserve } from "@/lib/ai/cost-cap";
 import { makeToolRegistry } from "@/lib/ai/tools";
 import { isFeatureEnabled } from "@/lib/ops/feature-flags";
@@ -158,7 +162,23 @@ export async function POST(request: Request): Promise<Response> {
     );
   }
 
-  const resolved = await resolveAiModel(tenantId);
+  // Resolve BOTH the primary and platform-fallback models up front.
+  //
+  // - `resolved` is the tenant's configured provider (or env-global
+  //   `AI_*` fallback). If missing entirely, we still check for a
+  //   platform-wide `AI_FALLBACK_*` before returning 503 — this lets
+  //   a platform admin keep the chatbot alive for tenants who haven't
+  //   configured AI yet, without giving away a per-tenant credential.
+  // - `fallback` is the platform safety-net (readEnvFallbackConfig).
+  //   Non-null only when `AI_FALLBACK_PROVIDER` + `AI_FALLBACK_MODEL_ID`
+  //   are both set at the process level. Used ONLY when the primary
+  //   fails synchronously (e.g. SDK cannot construct due to missing
+  //   key). Mid-stream provider errors like Groq's rate limit body
+  //   arriving after 200 OK are handled by the client-side empty-
+  //   stream guard, not this path — once headers are on the wire we
+  //   can't retry with a different provider.
+  const fallback = await resolveAiFallbackModel();
+  const resolved = (await resolveAiModel(tenantId)) ?? fallback;
   if (!resolved) {
     await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS, bypass });
     return NextResponse.json(
@@ -169,6 +189,15 @@ export async function POST(request: Request): Promise<Response> {
       },
       { status: 503 },
     );
+  }
+  const resolvedIsFallback = resolved === fallback;
+  if (resolvedIsFallback) {
+    log.info("help_chat_using_platform_fallback", {
+      tenant_id: tenantId,
+      user_id: userId,
+      reason: "primary_missing",
+      fallback_model_id: fallback?.modelId ?? null,
+    });
   }
 
   const supabase = await createClient();
@@ -189,7 +218,15 @@ export async function POST(request: Request): Promise<Response> {
     cookies: await cookies(),
     acceptLanguage: request.headers.get("accept-language"),
   });
-  const retrieved = await retrieveContext(lastUser.content, 3);
+  // `includeTenant: true` merges hits from the tenant Knowledge
+  // Base (migration 0095) into the same result set. Tenant articles
+  // arrive with a `kb-` prefixed slug so the client renderer can
+  // route citations to `/knowledge/{slug}` — the LLM is instructed
+  // in the system prompt (§chat-prompt.ts rule 5) to preserve the
+  // prefix verbatim.
+  const retrieved = await retrieveContext(lastUser.content, 3, {
+    includeTenant: true,
+  });
 
   // ------------------------------------------------------------------
   // Persistence: load or create conversation row + persist user turn.
@@ -286,9 +323,19 @@ export async function POST(request: Request): Promise<Response> {
       : null;
 
   const t0 = Date.now();
-  try {
+
+  /**
+   * Build a streaming Response from a specific model handle. Wrapped
+   * as a closure so the fallback path can re-issue the same request
+   * with a different provider (`resolveAiFallbackModel()`) after a
+   * SYNC failure — without duplicating 100 lines of onFinish
+   * persistence logic. Errors during construction (invalid model
+   * shape, immediately-thrown provider auth) surface synchronously
+   * to the outer catch below.
+   */
+  const buildStreamResponse = (modelHandle: unknown, modelId: string) => {
     const result = streamText({
-      model: resolved.model as Parameters<typeof streamText>[0]["model"],
+      model: modelHandle as Parameters<typeof streamText>[0]["model"],
       system,
       messages: payload.messages.map((m) => ({
         role: m.role,
@@ -306,6 +353,31 @@ export async function POST(request: Request): Promise<Response> {
             stopWhen: stepCountIs(MAX_STEPS),
           }
         : {}),
+      onError: ({ error }) => {
+        // The AI SDK v5 fires this when the upstream provider errors
+        // AFTER the response has already committed to a 200 status
+        // — most commonly a Groq / OpenAI daily-tokens-per-day cap.
+        // The SDK closes the stream cleanly (client sees 0 tokens)
+        // and does NOT propagate the error to the outer catch block,
+        // so this callback is the ONLY hook where we get to see the
+        // real cause. The client compensates via an empty-stream
+        // guard (see HelpAskPanel + AskAiSheet) — this log entry is
+        // what an operator greps when a user reports "AI didn't
+        // reply". Redacted to keep provider org IDs out of the log.
+        const msg = error instanceof Error ? error.message : String(error);
+        const redacted = msg
+          .replace(/org_[a-z0-9]+/gi, "org_<redacted>")
+          .replace(/key-[a-z0-9]+/gi, "key_<redacted>");
+        log.warn("help_chat_upstream_stream_error", {
+          tenant_id: tenantId,
+          user_id: userId,
+          conversation_id: conversationId,
+          model_id: modelId,
+          level: registry ? 2 : 1,
+          upstream_error: redacted.slice(0, 400),
+          latency_ms: Date.now() - t0,
+        });
+      },
       onFinish: async ({ usage, text }) => {
         const output = usage?.outputTokens ?? ESTIMATED_OUTPUT_TOKENS;
         const delta = output - ESTIMATED_OUTPUT_TOKENS;
@@ -356,7 +428,7 @@ export async function POST(request: Request): Promise<Response> {
           user_id: userId,
           conversation_id: conversationId,
           level: registry ? 2 : 1,
-          model_id: resolved.modelId,
+          model_id: modelId,
           input_tokens: usage?.inputTokens ?? null,
           output_tokens: output,
           latency_ms: Date.now() - t0,
@@ -375,12 +447,52 @@ export async function POST(request: Request): Promise<Response> {
       },
     });
     return result.toTextStreamResponse();
-  } catch (err) {
+  };
+
+  try {
+    return buildStreamResponse(resolved.model, resolved.modelId);
+  } catch (primaryErr) {
+    // Primary provider threw synchronously (bad model handle, immediate
+    // SDK-level auth failure, etc.). If a platform fallback is
+    // configured AND we haven't already been running on it, try
+    // rebuilding the stream with the fallback provider. Mid-stream
+    // errors (like Groq's post-headers 429 body) don't reach this
+    // catch — those are handled client-side via the empty-stream
+    // guard + `/api/help/rag` retrieval fallback.
+    if (fallback && !resolvedIsFallback) {
+      log.warn("help_chat_primary_failed_trying_fallback", {
+        tenant_id: tenantId,
+        user_id: userId,
+        primary_model_id: resolved.modelId,
+        fallback_model_id: fallback.modelId,
+        error:
+          primaryErr instanceof Error
+            ? primaryErr.message
+            : String(primaryErr),
+      });
+      try {
+        return buildStreamResponse(fallback.model, fallback.modelId);
+      } catch (fallbackErr) {
+        log.warn("help_chat_fallback_also_failed", {
+          tenant_id: tenantId,
+          user_id: userId,
+          fallback_model_id: fallback.modelId,
+          error:
+            fallbackErr instanceof Error
+              ? fallbackErr.message
+              : String(fallbackErr),
+        });
+        // fall through to 502
+      }
+    }
     await commit({ tenantId, delta: -ESTIMATED_OUTPUT_TOKENS, bypass });
     log.warn("help_chat_error", {
       tenant_id: tenantId,
       user_id: userId,
-      error: err instanceof Error ? err.message : String(err),
+      error:
+        primaryErr instanceof Error
+          ? primaryErr.message
+          : String(primaryErr),
     });
     return NextResponse.json({ error: "llm_failed" }, { status: 502 });
   }

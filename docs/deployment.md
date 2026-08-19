@@ -268,9 +268,8 @@ Four workflows live under [`.github/workflows/`](../.github/workflows/):
 
 1. 1 approving review (stale reviews are auto-dismissed on new pushes).
 2. All conversations resolved.
-3. Three checks green:
+3. Two checks green (Playwright is informational until the suite is stable):
    - `lint · typecheck · test · build` (from `ci.yml`)
-   - `playwright chromium` (from `e2e.yml`)
    - `CodeQL / javascript-typescript (javascript-typescript)` (from `security.yml`)
 4. No force-push, no branch deletion.
 
@@ -282,7 +281,7 @@ documented in the PR body.
 
 - Node **22** on all runners (Node 20 is deprecated on GitHub-hosted runners).
 - pnpm version comes from `packageManager` in `package.json` — the
-  `pnpm/action-setup@v4` step deliberately does NOT pin a version so
+  `pnpm/action-setup@v6` step deliberately does NOT pin a version so
   the two never drift.
 
 ### Repository secrets

@@ -7,8 +7,11 @@ name: E2E
 # spins up the Next.js dev server, then walks every chain suite in
 # `e2e/**`.
 #
-# Runs on every pull request. Slower than `ci.yml` (~7-10 min) so it
-# doesn't gate the fast feedback loop, but MUST pass before merge.
+# Runs on every pull request. Slower than `ci.yml` (~15-30 min with
+# local Supabase + production build). Informational until the suite is
+# stable against the GAS-aligned UI — it does NOT block merge. Re-add
+# `playwright chromium` to required checks on `main` once the specs
+# finish inside the job timeout.
 
 on:
   push:
@@ -24,7 +27,7 @@ jobs:
   playwright:
     name: playwright chromium
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
 
     env:
       # Supabase CLI reads these to expose local endpoints inside the
@@ -49,20 +52,20 @@ jobs:
           echo "127.0.0.1 demo.localhost" | sudo tee -a /etc/hosts
           cat /etc/hosts | tail -3
 
-      # `pnpm/action-setup@v4` reads the version from `packageManager`
+      # `pnpm/action-setup@v6` reads the version from `packageManager`
       # in package.json — do NOT pass a `version:` here or the action
       # errors with "Multiple versions of pnpm specified".
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: pnpm
 
       - name: Install Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: latest
 

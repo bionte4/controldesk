@@ -7,6 +7,7 @@ import {
   redactEmployee,
   redactName,
   redactPhone,
+  rehydrateHashes,
   scrubPrompt,
 } from "./redact";
 
@@ -124,5 +125,67 @@ describe("scrubPrompt", () => {
     expect(scrubPrompt("email me at fajar@demo.controldesk.app")).toContain(
       "[EMAIL_REDACTED]",
     );
+  });
+});
+
+describe("rehydrateHashes", () => {
+  const map = new Map([
+    ["c569936c", "Alice PM"],
+    ["c7e3140d", "Budi Engineer"],
+    ["fd8867d1", "Cici Ops"],
+  ]);
+
+  it("returns the payload unchanged when the map is empty", () => {
+    const payload = { headline: "c569936c overloaded" };
+    expect(rehydrateHashes(payload, new Map())).toEqual(payload);
+  });
+
+  it("replaces hex-8 tokens inside free-text strings", () => {
+    const payload = {
+      headline: "c569936c dan c7e3140d masing-masing memegang 1 proyek utama",
+      summary: "fd8867d1 hanya terlibat dalam 1 proyek co-project",
+    };
+    const out = rehydrateHashes(payload, map);
+    expect(out.headline).toBe(
+      "Alice PM dan Budi Engineer masing-masing memegang 1 proyek utama",
+    );
+    expect(out.summary).toBe(
+      "Cici Ops hanya terlibat dalam 1 proyek co-project",
+    );
+  });
+
+  it("replaces hashes inside nested arrays + objects", () => {
+    const payload = {
+      overallocated: [
+        { employee_ref: "c569936c", role: "PROJECT_MANAGER", pct: 110 },
+      ],
+      pm_load: [{ pm_ref: "c7e3140d", primary_projects: 3 }],
+      recommended_actions: [
+        "Reduce fd8867d1's co-project load",
+        "Do not touch c569936c",
+      ],
+    };
+    const out = rehydrateHashes(payload, map);
+    expect(out.overallocated[0].employee_ref).toBe("Alice PM");
+    expect(out.pm_load[0].pm_ref).toBe("Budi Engineer");
+    expect(out.recommended_actions).toEqual([
+      "Reduce Cici Ops's co-project load",
+      "Do not touch Alice PM",
+    ]);
+  });
+
+  it("leaves untouched strings alone (non-hash tokens, numbers, nulls)", () => {
+    const payload = {
+      severity: "WARNING",
+      confidence: 0.7,
+      count: null,
+      note: "no hash here",
+    };
+    expect(rehydrateHashes(payload, map)).toEqual(payload);
+  });
+
+  it("does not accidentally replace hex-8 substrings that aren't in the map", () => {
+    const payload = { note: "deadbeef is not mapped" };
+    expect(rehydrateHashes(payload, map).note).toBe("deadbeef is not mapped");
   });
 });

@@ -41,12 +41,36 @@ ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ARG NEXT_PUBLIC_ROOT_DOMAIN
 ARG NEXT_PUBLIC_APP_NAME
+# VAPID public key baked in at build time — see Web Push docs in
+# `src/lib/push/send.ts`. Public keys are safe to bundle client-side.
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL} \
     NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY} \
     NEXT_PUBLIC_ROOT_DOMAIN=${NEXT_PUBLIC_ROOT_DOMAIN} \
-    NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+    NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME} \
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
 
-RUN pnpm run build
+# Skip the redundant in-Next `tsc --noEmit` pass during the Docker image
+# build — Next.js 16 Turbopack regularly hangs that step in the 4 GB
+# Docker Desktop VM. Full typecheck is still enforced in CI
+# (`.github/workflows/ci.yml`) and locally before commit, so this only
+# affects the image bake path. See `next.config.ts` for the conditional
+# wiring. (Next.js 16 dropped built-in ESLint from `next build`, so
+# there is no separate lint bypass needed here.)
+ENV NEXT_SKIP_TYPECHECK=1
+
+# BuildKit cache mount for `.next/cache` — Turbopack's persistence layer.
+# Without this, every rebuild recompiles ~500 modules from scratch
+# (~10 min in a 4 GB Docker Desktop VM). With the mount, only files
+# touched since the previous build get re-transformed, cutting incremental
+# rebuilds to 2-4 min. The cache is BuildKit-managed and never lands in
+# the final image, so image size is unchanged. Docs:
+# https://docs.docker.com/build/cache/optimize/#use-cache-mounts
+# The `id=` scope keeps this cache separate from other projects on the
+# same BuildKit builder. Combined with the pnpm-store mount in `deps`
+# stage, first-time builds warm the cache; subsequent builds reuse both.
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
+    pnpm run build
 
 # -----------------------------------------------------------------------------
 # Stage 4: runner — minimal runtime image, non-root user, healthcheck.

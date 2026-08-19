@@ -51,8 +51,18 @@ type FormValues = {
   notes: string;
 };
 
+export type RosterEditInitial = {
+  employee_id: string;
+  shift_id: string;
+  project_id: string | null;
+  work_date: string;
+  status: RosterEntryStatus;
+  notes: string | null;
+};
+
 export function RosterUpsertSheet({
   triggerLabel,
+  triggerNode,
   title,
   description,
   employees,
@@ -61,8 +71,15 @@ export function RosterUpsertSheet({
   allowedProjectIdsByEmployee,
   defaultDate,
   labels,
+  initial,
 }: {
-  triggerLabel: string;
+  triggerLabel?: string;
+  /**
+   * Custom trigger element — used by row-level Edit buttons that want
+   * an icon-only pencil control. When provided this takes precedence
+   * over `triggerLabel`.
+   */
+  triggerNode?: React.ReactElement;
   title: string;
   description: string;
   employees: Option[];
@@ -93,6 +110,14 @@ export function RosterUpsertSheet({
     unassigned: string;
     statuses: Record<RosterEntryStatus, string>;
   };
+  /**
+   * Pre-fill from an existing roster row. Server action is upsert-by-
+   * (employee_id, work_date) so we don't need a distinct `updateRoster`
+   * codepath — passing initial values here plus the same submit
+   * routes through `upsertRosterEntryAction`, which will hit the
+   * UPDATE branch and audit as UPDATE (see roster actions.ts).
+   */
+  initial?: RosterEditInitial;
 }) {
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
@@ -114,14 +139,30 @@ export function RosterUpsertSheet({
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
-      employee_id: employees[0]?.value ?? "",
-      shift_id: baseShifts[0]?.value ?? shifts[0]?.value ?? "",
-      project_id: "",
-      work_date: defaultDate,
-      status: "PLANNED",
-      notes: "",
+      employee_id: initial?.employee_id ?? employees[0]?.value ?? "",
+      shift_id:
+        initial?.shift_id ?? baseShifts[0]?.value ?? shifts[0]?.value ?? "",
+      project_id: initial?.project_id ?? "",
+      work_date: initial?.work_date ?? defaultDate,
+      status: initial?.status ?? "PLANNED",
+      notes: initial?.notes ?? "",
     },
   });
+
+  React.useEffect(() => {
+    if (!initial) return;
+    if (open) {
+      reset({
+        employee_id: initial.employee_id,
+        shift_id: initial.shift_id,
+        project_id: initial.project_id ?? "",
+        work_date: initial.work_date,
+        status: initial.status,
+        notes: initial.notes ?? "",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial?.employee_id, initial?.work_date]);
 
   const employeeId = watch("employee_id");
   const shiftId = watch("shift_id");
@@ -225,7 +266,11 @@ export function RosterUpsertSheet({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<Button size="sm">{triggerLabel}</Button>} />
+      <SheetTrigger
+        render={
+          triggerNode ?? <Button size="sm">{triggerLabel ?? "Add"}</Button>
+        }
+      />
       <SheetContent
         side="right"
         className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl data-[side=right]:lg:max-w-3xl"

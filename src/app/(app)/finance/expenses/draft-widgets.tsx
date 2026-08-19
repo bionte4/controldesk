@@ -27,11 +27,15 @@ import { ALLOWED_MIME_TYPES } from "@/lib/attachments/constants";
 
 import {
   assignExpenseBudgetLineAction,
+  assignExpenseCoaAction,
   deleteDraftExpenseAction,
   detachReceiptAction,
   submitDraftExpenseAction,
 } from "./actions";
-import { fetchBudgetLinesForProject } from "./lookup-actions";
+import {
+  fetchBudgetLinesForProject,
+  fetchCoaForProject,
+} from "./lookup-actions";
 import { uploadExpenseReceiptsAction } from "./upload-actions";
 
 // ---------------------------------------------------------------------------
@@ -413,6 +417,172 @@ export function AssignBudgetLine({
               disabled={isPending}
             >
               {t("cancelBudgetLine")}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Assign / change Chart of Accounts on a non-terminal expense. Mirrors
+// `AssignBudgetLine` — but for the GL / CoA classification handled by
+// `assignExpenseCoaAction`. Same PDP branch (`decideMoneyRequest.update`)
+// gates the action server-side; parent picks the eligibility bit and
+// only renders this widget when the role/status match.
+// ---------------------------------------------------------------------------
+
+type CoaListItem = { id: string; code: string; name: string };
+
+export function AssignExpenseCoa({
+  expenseId,
+  projectId,
+  currentCoaId,
+  currentLabel,
+}: {
+  expenseId: string;
+  projectId: string;
+  currentCoaId: string | null;
+  currentLabel: string | null;
+}) {
+  const t = useTranslations("expenses.detail");
+  const router = useRouter();
+  const [options, setOptions] = React.useState<CoaListItem[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [selection, setSelection] = React.useState<string>(currentCoaId ?? "");
+  const [editing, setEditing] = React.useState<boolean>(!currentCoaId);
+  const [isPending, startTransition] = React.useTransition();
+
+  React.useEffect(() => {
+    if (!editing) return;
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await fetchCoaForProject({ project_id: projectId });
+        if (cancelled) return;
+        setOptions(
+          res.ok
+            ? res.data.map((c) => ({ id: c.id, code: c.code, name: c.name }))
+            : [],
+        );
+      } catch {
+        if (!cancelled) setOptions([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, editing]);
+
+  function onSave() {
+    if (!selection) return;
+    startTransition(async () => {
+      const res = await assignExpenseCoaAction({
+        id: expenseId,
+        coa_id: selection,
+      });
+      if (res.ok) {
+        toast.success(t("coaAssignedToast"));
+        setEditing(false);
+        router.refresh();
+      } else {
+        toast.error(res.reason);
+      }
+    });
+  }
+
+  const labelFor = (id: string): string => {
+    const found = options.find((o) => o.id === id);
+    return found ? `${found.code} · ${found.name}` : id;
+  };
+
+  if (!editing && currentCoaId) {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border/60 bg-muted/20 px-3 py-2">
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            {t("coaLineLabel")}
+          </p>
+          <p className="truncate text-sm font-medium">
+            {currentLabel ?? currentCoaId}
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setEditing(true)}
+        >
+          {t("changeCoa")}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-3">
+      <p className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+        {currentCoaId ? t("changeCoa") : t("assignCoaTitle")}
+      </p>
+      <p className="mb-2 text-[11px] text-muted-foreground">
+        {t("coaLineHint")}
+      </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Select
+          value={selection}
+          onValueChange={(v) => setSelection(v ?? "")}
+          disabled={loading || isPending || options.length === 0}
+        >
+          <SelectTrigger className="w-full min-w-0 sm:min-w-[280px]">
+            <SelectValue
+              placeholder={
+                loading
+                  ? t("loadingCoa")
+                  : options.length === 0
+                    ? t("noCoaOptions")
+                    : t("selectCoa")
+              }
+            >
+              {(value) =>
+                value ? labelFor(value as string) : t("selectCoa")
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.code} · {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={onSave}
+            disabled={!selection || isPending}
+          >
+            {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+            {t("saveCoa")}
+          </Button>
+          {currentCoaId ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setSelection(currentCoaId);
+                setEditing(false);
+              }}
+              disabled={isPending}
+            >
+              {t("cancelCoa")}
             </Button>
           ) : null}
         </div>

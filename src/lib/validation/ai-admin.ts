@@ -45,6 +45,18 @@ const dailyTokenCap = z
   .nullable()
   .optional();
 
+// Legacy `FRESHNESS_WINDOW_MIN` (15) is now per-tenant. The lower bound
+// is deliberately 5 min — anything smaller wastes tokens because the
+// sidecar cron polls every 15 min anyway (so a 1-min freshness just
+// forces regeneration on every sweep). Upper bound 1440 (24 h) — beyond
+// that, tenants should just set provider=DISABLED.
+const insightFreshnessMin = z
+  .number({ error: "Freshness window must be a number." })
+  .int("Freshness window must be an integer.")
+  .min(5, "Minimum 5 minutes.")
+  .max(1440, "Maximum 1440 minutes (24 hours).")
+  .default(15);
+
 const cloudProviderBase = z.object({
   model_id: modelId,
   // Cloud providers require a key — empty string is rejected.
@@ -52,6 +64,7 @@ const cloudProviderBase = z.object({
   base_url: z.null().optional(),
   daily_token_cap: dailyTokenCap,
   pii_redaction_enabled: z.boolean().default(true),
+  insight_freshness_min: insightFreshnessMin,
 });
 
 export const saveAiConfigSchema = z.discriminatedUnion("provider", [
@@ -69,6 +82,7 @@ export const saveAiConfigSchema = z.discriminatedUnion("provider", [
     // On-prem models are the ONLY path where PII redaction may be
     // safely disabled — the data never leaves the tenant network.
     pii_redaction_enabled: z.boolean().default(true),
+    insight_freshness_min: insightFreshnessMin,
   }),
   z.object({
     provider: z.literal("DISABLED"),
@@ -79,6 +93,9 @@ export const saveAiConfigSchema = z.discriminatedUnion("provider", [
     base_url: z.null().optional(),
     daily_token_cap: dailyTokenCap,
     pii_redaction_enabled: z.boolean().default(true),
+    // Kept on the DISABLED branch too so switching provider back to
+    // GOOGLE/OPENAI/etc doesn't reset the user's chosen freshness.
+    insight_freshness_min: insightFreshnessMin,
   }),
 ]);
 export type SaveAiConfigInput = z.infer<typeof saveAiConfigSchema>;

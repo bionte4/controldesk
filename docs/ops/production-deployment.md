@@ -163,22 +163,47 @@ Semua service harus `Status: Up (healthy)`. Kalau ada yang `Restarting`,
 
 ### 5. Apply migration + seed default
 Postgres saat pertama boot masih kosong (belum ada schema `public.tenants`,
-dsb.). Migrations harus di-apply lewat Supabase CLI:
+dsb.). Image `supabase/postgres` **TIDAK** otomatis apply migration di
+subdir `/docker-entrypoint-initdb.d/migrations/*` (hanya top-level `.sql`),
+jadi kita gunakan helper skrip `deploy/scripts/apply-migrations.sh` yang:
+
+- Loop semua file `supabase/migrations/*.sql` (sorted lexicographic).
+- Skip file yang sudah applied (tracked via `public._migration_history`).
+- Verifikasi post-apply — memastikan `custom_access_token_hook`,
+  `provision_tenant`, `seed_default_master_data`, dan
+  `seed_default_eval_templates` semua exist.
 
 ```bash
-# 5.1 Install Supabase CLI di VPS (sekali saja).
-curl -fsSL https://supabase.com/install.sh | sh
+# 5.1 Apply semua migration (idempotent — aman di-run ulang).
+./deploy/scripts/apply-migrations.sh
 
-# 5.2 Link ke Postgres self-hosted lokal + push migrations.
-export SUPABASE_DB_URL="postgres://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/postgres"
-supabase db push --db-url "$SUPABASE_DB_URL"
+# Contoh output sukses:
+#   [apply-migrations] APPLY 0001_initial_schema.sql
+#   [apply-migrations] APPLY 0002_...
+#   ...
+#   [apply-migrations]   applied: 90
+#   [apply-migrations]   skipped: 0
+#   NOTICE: Semua objek critical terverifikasi. Migration OK.
 
-# 5.3 Verify migration.
+# 5.2 Verifikasi manual (opsional).
 docker exec -it controldesk-db psql -U postgres -c '\dt public.*' | head -20
+
+# 5.3 Verifikasi custom_access_token_hook — WAJIB ada sebelum first login.
+docker exec -it controldesk-db psql -U postgres -c \
+  "SELECT proname FROM pg_proc WHERE proname='custom_access_token_hook';"
+# Harus return 1 row. Kalau kosong → migration 0020 belum apply, jangan
+# lanjut ke step 6 (login akan gagal).
 ```
 
-Semua migration di `supabase/migrations/` (termasuk `0090_seed_default_area_and_unit_pengaju.sql`) akan ter-apply berurutan. Migration `0020_jwt_role_claim_fix.sql` juga
-akan setup `custom_access_token_hook` yang dibutuhkan GoTrue.
+**Kenapa tidak pakai Supabase CLI?** Skrip ini bekerja tanpa Supabase CLI
+di VPS. Kalau kamu mau pakai CLI (mis. sudah punya di dev machine), install:
+```bash
+wget -qO- https://github.com/supabase/cli/releases/latest/download/supabase_linux_amd64.tar.gz \
+  | tar -xz -C /tmp && sudo mv /tmp/supabase /usr/local/bin/
+supabase db push --db-url "postgres://postgres:${POSTGRES_PASSWORD}@127.0.0.1:5432/postgres"
+```
+Tapi `apply-migrations.sh` lebih idempotent + include verification, jadi lebih
+recommended untuk prod.
 
 ### 6. Provision super admin + tenant pertama
 ```bash
@@ -221,7 +246,17 @@ Login tenant admin ke `https://demo.controldesk.app/sign-in`.
 - [ ] Test approval end-to-end: buat proyek → buat CA General kecil → approve chain.
 - [ ] Cek email approver di inbox (verifikasi SMTP).
 - [ ] Cek AI insight di `/insights` (kalau AI key diisi).
-- [ ] Cek realtime notification bell (buka dua tab, submit approval, badge naik).
+- [ ] Cek realtime notification bell (buka dua tab, submit approval, badge
+      naik tanpa refresh — validasi WebSocket upgrade).
+- [ ] **Tenant isolation smoke test** (rules §5 + §19):
+  - Provision tenant kedua `alpha`.
+  - Login sebagai user tenant `demo`, upload avatar profile.
+  - Copy signed URL avatar tersebut.
+  - Login incognito sebagai user tenant `alpha`, paste signed URL → harus
+    kembali `403 Forbidden` (bukan gambar). RLS `storage.objects` enforce
+    prefix `{tenant_id}/` per rules §19.
+  - Dari SQL Editor tenant `alpha`, run `SELECT count(*) FROM public.employees;`
+    → harus HANYA return employees tenant `alpha` (bukan demo).
 
 ### 8. Setup backup verifikasi
 Sidecar backup jalan otomatis di 02:00 WIB tiap hari. Sekali seminggu, restore
@@ -278,13 +313,36 @@ docker compose -f docker-compose.prod.yml logs caddy | grep -i acme
 3. Cek route manual: `curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/ai-insights-sweep`.
 
 ### Rotate JWT_SECRET (setelah 90 hari, rules §22)
-1. Generate JWT_SECRET baru: `openssl rand -base64 48`.
-2. Update `.env.production`.
-3. Regenerate ANON_KEY + SERVICE_ROLE_KEY: `./deploy/scripts/generate-supabase-keys.sh`.
-4. `NEXT_PUBLIC_SUPABASE_ANON_KEY` di-bake ke browser bundle → **wajib rebuild** `app` image.
-5. Restart semua service: `docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build`.
-6. **CATATAN**: Semua user existing akan force logout (JWT lama invalid).
-   Coordinate dengan tenant admin dulu.
+
+Otomatis via skrip `deploy/scripts/rotate-jwt.sh`:
+
+```bash
+cd ~/controldesk
+./deploy/scripts/rotate-jwt.sh
+# → backup .env.production ke .env.production.bak-<timestamp>
+# → generate JWT_SECRET + ANON_KEY + SERVICE_ROLE_KEY baru
+# → tulis kembali ke .env.production
+# → print instruksi rebuild + restart step-by-step
+```
+
+Lalu ikut instruksi yang di-print skrip (rebuild `app` + recreate
+`app auth rest realtime storage kong`). Downtime ~2-5 menit.
+
+**Konsekuensi rotate:**
+- Semua user existing force logout — JWT lama tidak valid lagi.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` di-bake ke browser bundle di build time
+  → wajib rebuild image `app` (skrip sudah suggest command).
+- Kong config di-render ulang via `envsubst` di container entrypoint,
+  jadi `--force-recreate kong` cukup (bukan restart).
+- Storage + Realtime + PostgREST validate token pakai JWT_SECRET baru
+  otomatis (env variable, tidak perlu rebuild).
+
+**Rollback kalau ada issue:**
+```bash
+cp .env.production.bak-<timestamp> .env.production
+docker compose -f docker-compose.prod.yml --env-file .env.production \
+  up -d --force-recreate app auth rest realtime storage kong
+```
 
 ### Scale beyond 10 tenants
 Signal untuk pindah ke Tier C (32 GB / 8 vCPU) atau split ke multi-node:

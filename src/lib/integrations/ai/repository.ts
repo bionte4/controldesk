@@ -36,6 +36,13 @@ export type TenantAiConfig = {
   dailyTokenCap: number | null;
   /** When false, resolver skips PII redaction (on-prem models only). */
   piiRedactionEnabled: boolean;
+  /**
+   * Minutes an existing insight is considered "fresh". The cron sweep
+   * won't regenerate an insight of the same kind within this window.
+   * Range 5-1440 (see migration 0091). Default 15 mirrors the legacy
+   * hardcoded value.
+   */
+  insightFreshnessMin: number;
   isActive: boolean;
   lastError: string | null;
 };
@@ -57,11 +64,20 @@ export async function loadTenantAiConfig(
   const { data, error } = await supabase
     .from("tenant_ai_configs")
     .select(
-      "tenant_id, provider, model_id, encrypted_api_key, base_url, daily_token_cap, pii_redaction_enabled, is_active, last_error",
+      "tenant_id, provider, model_id, encrypted_api_key, base_url, daily_token_cap, pii_redaction_enabled, insight_freshness_min, is_active, last_error",
     )
     .eq("tenant_id", tenantId)
     .maybeSingle();
   if (error || !data) return null;
+  // Defensive fallback: rows created before migration 0091 landed
+  // won't have the column populated in the JS object literal even
+  // though the DB default guarantees a value at rest. Coerce to 15
+  // (the legacy hardcoded window) so the sweep route never sees NaN.
+  const freshness =
+    typeof data.insight_freshness_min === "number" &&
+    Number.isFinite(data.insight_freshness_min)
+      ? data.insight_freshness_min
+      : 15;
   try {
     return {
       tenantId: data.tenant_id,
@@ -73,6 +89,7 @@ export async function loadTenantAiConfig(
       baseUrl: data.base_url,
       dailyTokenCap: data.daily_token_cap,
       piiRedactionEnabled: data.pii_redaction_enabled,
+      insightFreshnessMin: freshness,
       isActive: data.is_active,
       lastError: data.last_error,
     };
@@ -85,6 +102,7 @@ export async function loadTenantAiConfig(
       baseUrl: data.base_url,
       dailyTokenCap: data.daily_token_cap,
       piiRedactionEnabled: data.pii_redaction_enabled,
+      insightFreshnessMin: freshness,
       isActive: false,
       lastError:
         err instanceof Error
@@ -102,6 +120,7 @@ export async function saveTenantAiConfig(input: {
   baseUrl: string | null;
   dailyTokenCap: number | null;
   piiRedactionEnabled: boolean;
+  insightFreshnessMin: number;
 }): Promise<void> {
   const supabase = createServiceRoleClient();
   const { error } = await supabase.from("tenant_ai_configs").upsert(
@@ -113,6 +132,7 @@ export async function saveTenantAiConfig(input: {
       base_url: input.baseUrl,
       daily_token_cap: input.dailyTokenCap,
       pii_redaction_enabled: input.piiRedactionEnabled,
+      insight_freshness_min: input.insightFreshnessMin,
       is_active: true,
       last_error: null,
       updated_at: new Date().toISOString(),

@@ -43,6 +43,7 @@ import {
 import {
   AddBudgetLineItem,
   DeleteBudgetLineItemButton,
+  EditBudgetLineItemButton,
 } from "../budget-line-item-form";
 import { BudgetRequestsSection } from "../../budget-requests/budget-requests-section";
 import type { BudgetDetailOption } from "../../budget-requests/new-budget-request-sheet";
@@ -517,10 +518,24 @@ export default async function BudgetDetailPage(props: {
                         })}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <DeleteBudgetLineItemButton
-                          id={l.id}
-                          readOnly={readOnly}
-                        />
+                        <div className="flex items-center justify-end gap-1">
+                          <EditBudgetLineItemButton
+                            id={l.id}
+                            readOnly={readOnly}
+                            initial={{
+                              category: l.category,
+                              coa_id: l.coa_id,
+                              planned_amount_db: l.planned_amount_db,
+                              description: l.description,
+                            }}
+                            categoryOptions={categoryOptions}
+                            coaOptions={coaOptions}
+                          />
+                          <DeleteBudgetLineItemButton
+                            id={l.id}
+                            readOnly={readOnly}
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}

@@ -47,8 +47,9 @@ describe("validation/preferences.updatePreferencesSchema", () => {
   });
 
   it("rejects payloads exceeding the maximum grid size", () => {
-    // 7 categories × 4 channels = 28 legitimate max. 29 must fail.
-    const toggles = Array.from({ length: 29 }, () => ({
+    // 7 categories × 5 channels = 35 legitimate max (PUSH added in
+    // migration 0092). 36 must fail.
+    const toggles = Array.from({ length: 36 }, () => ({
       category: "APPROVALS" as const,
       channel: "EMAIL" as const,
       enabled: true,

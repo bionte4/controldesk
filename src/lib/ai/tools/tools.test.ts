@@ -27,6 +27,7 @@ type FakeQuery = {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   in: ReturnType<typeof vi.fn>;
+  like: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
   lt: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
@@ -39,6 +40,7 @@ function makeChainableStub(data: Array<Record<string, unknown>> = []) {
     select: vi.fn(),
     eq: vi.fn(),
     in: vi.fn(),
+    like: vi.fn(),
     gte: vi.fn(),
     lt: vi.fn(),
     order: vi.fn(),
@@ -122,7 +124,7 @@ const stubClient = () => {
 };
 
 describe("makeToolRegistry — Level 2 safety guardrails", () => {
-  it("exposes exactly the eight whitelisted tools — no accidental extras", () => {
+  it("exposes exactly the eleven whitelisted tools — no accidental extras", () => {
     const supabase = stubClient();
     const ctx = makeToolContext({ supabase });
     const { tools } = makeToolRegistry(ctx);
@@ -136,6 +138,9 @@ describe("makeToolRegistry — Level 2 safety guardrails", () => {
         "my_timesheet_this_week",
         "pending_timesheets_to_approve",
         "project_status",
+        "tenant_employee_stats",
+        "tenant_finance_stats",
+        "tenant_project_stats",
       ].sort(),
     );
   });
@@ -309,6 +314,79 @@ describe("makeToolRegistry — Level 2 safety guardrails", () => {
     expect(traces[0]!.name).toBe("list_pending_approvals");
     expect(traces[0]!.ok).toBe(true);
     expect(traces[0]!.duration_ms).toBeGreaterThanOrEqual(0);
+  });
+
+  it("tenant_project_stats refuses non-management roles (EMPLOYEE, SUPERVISOR, PM)", async () => {
+    for (const dbRole of ["EMPLOYEE", "SUPERVISOR", "PROJECT_MANAGER"] as const) {
+      const supabase = stubClient();
+      const ctx = makeToolContext({ supabase, dbRole });
+      const { tools } = makeToolRegistry(ctx);
+      const t = tools.tenant_project_stats as unknown as {
+        execute: (input: unknown) => Promise<{ error?: string }>;
+      };
+      const result = await t.execute({});
+      expect(result.error).toBe("forbidden");
+      // Fast path — no DB read attempted for roles that can't see it.
+      expect(scopeCalls).not.toContain("projects");
+    }
+  });
+
+  it("tenant_project_stats allows ADMIN / DIRECTOR / FINANCE / OM", async () => {
+    for (const dbRole of [
+      "TENANT_ADMIN",
+      "GENERAL_MANAGER",
+      "LEAD_FINANCE",
+      "OPERATIONS_MANAGER",
+    ] as const) {
+      const supabase = stubClient();
+      const ctx = makeToolContext({ supabase, dbRole });
+      const { tools } = makeToolRegistry(ctx);
+      const t = tools.tenant_project_stats as unknown as {
+        execute: (input: unknown) => Promise<{ error?: string; total?: number }>;
+      };
+      const result = await t.execute({});
+      expect(result.error).toBeUndefined();
+      expect(typeof result.total).toBe("number");
+    }
+  });
+
+  it("tenant_employee_stats refuses non-management (EMPLOYEE, SUPERVISOR)", async () => {
+    for (const dbRole of ["EMPLOYEE", "SUPERVISOR"] as const) {
+      const supabase = stubClient();
+      const ctx = makeToolContext({ supabase, dbRole });
+      const { tools } = makeToolRegistry(ctx);
+      const t = tools.tenant_employee_stats as unknown as {
+        execute: (input: unknown) => Promise<{ error?: string }>;
+      };
+      const result = await t.execute({});
+      expect(result.error).toBe("forbidden");
+      expect(scopeCalls).not.toContain("employees");
+    }
+  });
+
+  it("tenant_finance_stats refuses OM (OM sees ops, not finance rollups) but allows FINANCE", async () => {
+    // OM = forbidden
+    {
+      const supabase = stubClient();
+      const ctx = makeToolContext({ supabase, dbRole: "OPERATIONS_MANAGER" });
+      const { tools } = makeToolRegistry(ctx);
+      const t = tools.tenant_finance_stats as unknown as {
+        execute: (input: unknown) => Promise<{ error?: string }>;
+      };
+      const result = await t.execute({});
+      expect(result.error).toBe("forbidden");
+    }
+    // FINANCE = allowed
+    {
+      const supabase = stubClient();
+      const ctx = makeToolContext({ supabase, dbRole: "LEAD_FINANCE" });
+      const { tools } = makeToolRegistry(ctx);
+      const t = tools.tenant_finance_stats as unknown as {
+        execute: (input: unknown) => Promise<{ error?: string }>;
+      };
+      const result = await t.execute({});
+      expect(result.error).toBeUndefined();
+    }
   });
 
   it("returns a structured error object when a tool throws — the whole request must not 500", async () => {

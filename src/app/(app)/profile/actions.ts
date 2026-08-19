@@ -219,10 +219,21 @@ export async function changePasswordAction(
  * send just the toggles that flipped.
  *
  * PDP: this touches `user_notification_preferences`, which is scoped
- * to `auth.uid()` via RLS. There is no "read someone else's prefs"
- * path — everyone edits their own, so we don't route through
- * `withSecureAction`'s PDP layer (it would just no-op). Audit is
- * still written manually per rules §3.
+ * to `auth.uid()` via RLS (migration 0053). There is no "read
+ * someone else's prefs" path — everyone edits their own row set, so
+ * we don't route through `withSecureAction`'s PDP layer (it would
+ * just no-op with an ALWAYS-ALLOW rule).
+ *
+ * §17 acknowledged deviation:
+ *   • The rule requires `withSecureAction()` for every mutation. This
+ *     endpoint stays outside that wrapper because the wrapper's
+ *     PDP + audit layers do not carry any decision beyond
+ *     `actor.userId === row.user_id`, which RLS already enforces
+ *     server-side.
+ *   • Audit is still recorded manually below via `recordAudit()`
+ *     (rules §3, immutable INSERT-only log). If we ever start
+ *     routing preference updates through a role-based decision
+ *     (e.g. HR-forced quiet hours), fold this into the wrapper.
  */
 export async function updatePreferencesAction(
   input: UpdatePreferencesInput,

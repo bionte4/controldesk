@@ -14,33 +14,35 @@ import {
 } from "@/components/ui/card";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadApprovalThresholdsForAdmin } from "@/lib/data/approval-thresholds";
-import type { EmployeeRole } from "@/lib/rbac/roles";
+import { authorizeCanonical } from "@/lib/security/pdp-canonical";
+import { toCanonicalRole } from "@/lib/rbac/roles";
 
 import { ThresholdManager } from "./threshold-manager";
 
 export const metadata: Metadata = { title: "Approval Thresholds" };
 
-/**
- * Only tenant admins + the top-level ops role may edit approval
- * thresholds. Mirrors the `lookups` gate — the DB RLS on
- * `public.approval_thresholds` also restricts writes to canonical
- * ADMIN / DIRECTOR (migration 0024).
- */
-const WRITE_ROLES: readonly EmployeeRole[] = [
-  "TENANT_ADMIN",
-  "GENERAL_MANAGER",
-];
-
-function isWriteRole(role: string): boolean {
-  return (WRITE_ROLES as readonly string[]).includes(role);
-}
-
 export default async function ApprovalThresholdsPage() {
   const employee = await requireCurrentEmployee();
-  if (!isWriteRole(employee.role as string)) {
-    // Non-admins can't even see the surface — keeps the URL an
-    // unreachable 404 rather than a 403 to avoid enumerating admin
-    // routes.
+
+  // Canonical PDP `decideApprovalThreshold('update')` — ADMIN /
+  // DIRECTOR (GENERAL_MANAGER folds to DIRECTOR post-Fase 0). This
+  // replaces the previous hand-rolled `WRITE_ROLES` array to guarantee
+  // the page gate never drifts from the server-action / RLS policy
+  // that guards the actual mutations (migration 0024, rules §9).
+  const gate = authorizeCanonical({
+    actor: {
+      userId: employee.user_id,
+      employeeId: employee.id,
+      role: toCanonicalRole(employee.role),
+      tenantId: employee.tenant_id,
+    },
+    action: "update",
+    resource: "approval_threshold",
+    attributes: { tenantId: employee.tenant_id },
+  });
+  if (gate.effect !== "ALLOW") {
+    // Non-admins get a 404 (not 403) so the URL doesn't advertise
+    // the existence of an admin route.
     notFound();
   }
 

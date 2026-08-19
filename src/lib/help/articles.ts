@@ -102,21 +102,38 @@ export const HELP_MANIFEST: readonly HelpArticleManifestEntry[] = [
     category: "getting-started",
     source: "docs/product/glossary.md",
   },
+  // Personal account settings (theme, locale, notification channels,
+  // Telegram / WhatsApp link). Visible to every authenticated user,
+  // matches the sidebar Preferences entry.
+  //
+  // NOTE: Do NOT put comments INSIDE the object literal — the RAG
+  // reindex script (`scripts/help-reindex.mjs`) parses this manifest
+  // via a regex that expects `{ slug: "..." ...` with only whitespace
+  // between `{` and `slug:`. A `//` comment there silently skips the
+  // entry from the embedding index, degrading chatbot recall to
+  // Fuse-only keyword search for that article.
   {
-    // Personal account settings (theme, locale, notification channels,
-    // Telegram / WhatsApp link). Visible to every authenticated user,
-    // matches the sidebar Preferences entry.
     slug: "preferences",
     category: "getting-started",
     source: "docs/product/preferences.md",
   },
+  // How-to for installing ControlDesk as a mobile / desktop app
+  // (PWA + optional TWA APK). Lives in "getting-started" alongside
+  // preferences because it's a personal-setup topic every new user
+  // benefits from — separate from ops docs on how to BUILD the APK
+  // (`deploy/twa/README.md`), which is dev-only.
   {
-    // Sequential end-to-end walkthrough — one fictional tenant
-    // (PT Nusa Digital) journey from Super Admin provisioning
-    // through the first project's delivery cycle, with concrete
-    // sample data at every step. Complements the per-role
-    // playbooks in `docs/user-guides/*` and the module deep-dives
-    // in `docs/modules/*` — this one is the "start here" tour.
+    slug: "install-mobile-app",
+    category: "getting-started",
+    source: "docs/product/install-mobile-app.md",
+  },
+  // Sequential end-to-end walkthrough — one fictional tenant
+  // (PT Nusa Digital) journey from Super Admin provisioning
+  // through the first project's delivery cycle, with concrete
+  // sample data at every step. Complements the per-role
+  // playbooks in `docs/user-guides/*` and the module deep-dives
+  // in `docs/modules/*` — this one is the "start here" tour.
+  {
     slug: "end-to-end-walkthrough",
     category: "getting-started",
     source: "docs/product/end-to-end-walkthrough.md",

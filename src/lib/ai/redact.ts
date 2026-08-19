@@ -120,3 +120,59 @@ export function scrubPrompt(prompt: string): string {
       .replace(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi, "[EMAIL_REDACTED]")
   );
 }
+
+/**
+ * Post-LLM rehydration — walk the returned payload and replace every
+ * 8-char lowercase hex hash (`id_ref` produced by `redactEmployee`) with
+ * the caller-supplied display name. This is safe to run BEFORE storing in
+ * `ai_insights.payload` because:
+ *
+ *   1. RLS on `ai_insights` scopes rows to `tenant_id`, so only tenant
+ *      members can read them (rules §5).
+ *   2. Full names are visible to anyone with `employees` read grant in
+ *      the same tenant anyway — we're not exposing anything new.
+ *   3. The redaction happens WHERE IT MATTERS: at prompt-send time
+ *      (rules §15 — model never receives PII). Rehydration on the way
+ *      back is a UX affordance, not a security concession.
+ *
+ * Design note: the schema (`employee_ref`, `pm_ref`) keeps `z.string()`,
+ * so replacing a hash with a full name in place still validates. If we
+ * ever need the raw hash back (e.g. for de-duplication or joining to a
+ * later insight), we should split the schema to carry BOTH `id_ref` and
+ * `display_name` explicitly.
+ *
+ * Only pure JSON values are visited (string / number / boolean / null /
+ * plain object / array). Class instances or functions are returned
+ * as-is to avoid corrupting internal state.
+ */
+export function rehydrateHashes<T>(
+  payload: T,
+  hashMap: ReadonlyMap<string, string>,
+): T {
+  if (hashMap.size === 0) return payload;
+
+  // Precompile a single regex from the map keys so a payload with many
+  // strings only pays a single pass per string. Keys are hex-8 by
+  // construction, but we escape defensively.
+  const escaped = Array.from(hashMap.keys()).map((k) =>
+    k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  );
+  const re = new RegExp(`\\b(${escaped.join("|")})\\b`, "g");
+
+  function walk(v: unknown): unknown {
+    if (typeof v === "string") {
+      return v.replace(re, (m) => hashMap.get(m) ?? m);
+    }
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+        out[k] = walk(val);
+      }
+      return out;
+    }
+    return v;
+  }
+
+  return walk(payload) as T;
+}

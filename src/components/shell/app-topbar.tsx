@@ -30,6 +30,7 @@ import {
   AiInsightsBadge,
   type InsightPreview,
 } from "@/components/shell/ai-insights-badge";
+import { AskAiTrigger } from "@/components/help/ask-ai-trigger";
 import {
   formatRole,
   type AnyDbEmployeeRole,
@@ -69,6 +70,7 @@ export function AppTopbar({
   notifications,
   aiInsights,
   locale,
+  helpArticleSlugs,
 }: {
   fullName: string;
   email: string;
@@ -79,6 +81,12 @@ export function AppTopbar({
   notifications: NotificationItem[];
   aiInsights: InsightPreview[];
   locale: "id" | "en";
+  /**
+   * Slug allowlist forwarded to the AskAI drawer so its citation
+   * rewrite only links to `/help/{slug}` targets that actually
+   * resolve. Source of truth is `HELP_MANIFEST` in the app layout.
+   */
+  helpArticleSlugs: readonly string[];
 }) {
   const showAiInsights = AI_INSIGHT_ROLES.includes(role);
   const pathname = usePathname();
@@ -91,6 +99,11 @@ export function AppTopbar({
     .slice(0, 2)
     .join("")
     .toUpperCase();
+
+  // First name only — the greeting in the AskAI drawer reads best
+  // with a short informal handle. Fall back to the full field if the
+  // employee only registered a single name.
+  const firstName = fullName.trim().split(/\s+/)[0] ?? fullName;
 
   return (
     <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-border/60 bg-background/70 px-4 backdrop-blur-md">
@@ -130,6 +143,11 @@ export function AppTopbar({
 
       <div className="ml-auto flex items-center gap-2">
         <CommandPaletteTrigger />
+
+        <AskAiTrigger
+          firstName={firstName}
+          articleSlugs={helpArticleSlugs}
+        />
 
         <Badge variant="secondary" className="hidden sm:inline-flex">
           {tenantSlug}
