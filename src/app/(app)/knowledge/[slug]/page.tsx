@@ -14,6 +14,7 @@ import {
   loadKnowledgeArticleBySlug,
 } from "@/lib/data/knowledge-articles";
 import { formatRelative } from "@/lib/format/date";
+import { canManageKnowledgeArticles } from "@/lib/rbac/roles";
 import type { KnowledgeArticleCategory } from "@/lib/validation/knowledge-article";
 
 export async function generateMetadata({
@@ -70,12 +71,13 @@ export default async function KnowledgeArticlePage({
     }
   }
 
+  // Single source of truth for the KM admin gate lives in
+  // `canManageKnowledgeArticles` — same helper the PDP and (soon) the
+  // RLS SELECT / UPDATE policies delegate to. Keeps the reader, the
+  // server actions, and the DB aligned on one 4-role list.
   const canManage =
     article.author_employee_id === employee.id ||
-    employee.role === "TENANT_ADMIN" ||
-    employee.role === "ADMIN" ||
-    employee.role === "HEAD_MANAGER" ||
-    employee.role === "HR_ADMIN";
+    canManageKnowledgeArticles(employee.role);
 
   const categoryLabel = t(
     `category.${article.category as KnowledgeArticleCategory}` as never,

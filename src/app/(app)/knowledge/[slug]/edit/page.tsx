@@ -8,6 +8,7 @@ import { KnowledgeArticleForm } from "@/components/knowledge/knowledge-article-f
 import { Button } from "@/components/ui/button";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadKnowledgeArticleBySlug } from "@/lib/data/knowledge-articles";
+import { canManageKnowledgeArticles } from "@/lib/rbac/roles";
 import type { KnowledgeArticleCategory } from "@/lib/validation/knowledge-article";
 
 export const metadata: Metadata = { title: "Edit knowledge article" };
@@ -40,12 +41,9 @@ export default async function EditKnowledgeArticlePage({
   if (!article) notFound();
 
   const isAuthor = article.author_employee_id === employee.id;
-  const isAdmin =
-    employee.role === "TENANT_ADMIN" ||
-    employee.role === "ADMIN" ||
-    employee.role === "HEAD_MANAGER" ||
-    employee.role === "HR_ADMIN";
-  if (!isAuthor && !isAdmin) notFound();
+  // Delegates to `canManageKnowledgeArticles` — kept aligned with the
+  // reader page, the PDP `decideKnowledgeArticle`, and the RLS policies.
+  if (!isAuthor && !canManageKnowledgeArticles(employee.role)) notFound();
 
   if (article.status === "ARCHIVED") {
     return (

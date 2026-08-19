@@ -164,6 +164,47 @@ export function canViewEmployeeDirectory(role: AnyDbEmployeeRole): boolean {
 }
 
 /**
+ * Roles authorized to manage knowledge base articles ACROSS AUTHORS —
+ * edit, publish, and archive rows they did not create. Authors always
+ * retain those rights on their own drafts regardless of this gate.
+ *
+ * The gate must stay in sync across three layers:
+ *   1. PDP `decideKnowledgeArticle` (`src/lib/security/pdp.ts`) —
+ *      admin bypass for update/submit/cancel verbs.
+ *   2. Reader `canManage` (`src/app/(app)/knowledge/[slug]/page.tsx`) —
+ *      whether the actions bar renders.
+ *   3. RLS SELECT / UPDATE policies on `knowledge_articles`
+ *      (`supabase/migrations/0097_...`) — hard gate at the DB layer.
+ *
+ * Legacy DB names are listed because the `employees.role` column may
+ * still hold pre-migration-0021 values on production tenants. The
+ * canonical `ADMIN` catches TENANT_ADMIN / HR_ADMIN after fold, and
+ * `DIRECTOR` catches HEAD_MANAGER / GENERAL_MANAGER. `roleInGate`
+ * (below) handles the fold at read time so callers just pass this
+ * constant.
+ *
+ * HR_ADMIN is included because HR staff maintain HR-domain articles
+ * (leave policy, disciplinary SOPs, onboarding) — treating them as
+ * knowledge editors even though they aren't tenant-wide admins.
+ */
+export const KNOWLEDGE_ADMIN_ROLES: readonly AnyDbEmployeeRole[] = [
+  "TENANT_ADMIN",
+  "HEAD_MANAGER",
+  "HR_ADMIN",
+  "ADMIN",
+] as const;
+
+/**
+ * Named capability predicate — `true` if the caller may edit / publish
+ * / archive knowledge base articles regardless of authorship. Follows
+ * the same design contract as `canViewBudget` and
+ * `canViewEmployeeDirectory`.
+ */
+export function canManageKnowledgeArticles(role: AnyDbEmployeeRole): boolean {
+  return roleInGate(role, KNOWLEDGE_ADMIN_ROLES);
+}
+
+/**
  * Roles allowed to read `/finance/petty-cash` (fund balances,
  * custodian assignments, voucher ledger). Sidebar entry already
  * gates the same list; the page redirect guard mirrors it so a

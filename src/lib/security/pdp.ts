@@ -24,6 +24,7 @@
  */
 
 import {
+  canManageKnowledgeArticles,
   isStaffRole,
   requiredApprovalChain,
   roleRank,
@@ -1439,10 +1440,14 @@ function decideKnowledgeArticle(
   action: ActionVerb,
   attrs: ResourceAttributes,
 ): Decision {
-  const isAdmin =
-    actor.role === "TENANT_ADMIN" ||
-    actor.role === "HEAD_MANAGER" ||
-    actor.role === "HR_ADMIN";
+  // Delegates to `canManageKnowledgeArticles` — the single source of
+  // truth for the KM admin gate (see rbac/roles.ts). Keeps this
+  // function, the reader `canManage` check, and the RLS SELECT /
+  // UPDATE policies aligned. `roleInGate` (via
+  // canManageKnowledgeArticles) handles the legacy → canonical fold
+  // so an actor seeded with the post-migration-0021 `ADMIN` value
+  // still matches the legacy `TENANT_ADMIN` entry.
+  const isAdmin = canManageKnowledgeArticles(actor.role);
   const isAuthor =
     attrs.ownerEmployeeId !== undefined &&
     attrs.ownerEmployeeId === actor.employeeId;
