@@ -107,6 +107,16 @@ export const createKnowledgeArticleAction = withSecureAction({
   handler: async (input: CreateKnowledgeArticleInput, ctx) => {
     const supabase = await createClient();
 
+    // Normalize side fields against the chosen visibility mode so
+    // the DB CHECK constraint (migration 0098) always passes and
+    // stale values from an aborted mode switch never linger.
+    const normalizedRoles =
+      input.visibility === "ROLE_GATED" ? (input.visibility_roles ?? []) : [];
+    const normalizedProjectId =
+      input.visibility === "PROJECT_SCOPED"
+        ? (input.visibility_project_id ?? null)
+        : null;
+
     const { data, error } = await supabase
       .from("knowledge_articles")
       .insert({
@@ -118,6 +128,8 @@ export const createKnowledgeArticleAction = withSecureAction({
         body_md: input.body_md,
         category: input.category,
         visibility: input.visibility,
+        visibility_roles: normalizedRoles,
+        visibility_project_id: normalizedProjectId,
         status: "DRAFT",
       })
       .select(
@@ -162,6 +174,9 @@ export const createKnowledgeArticleAction = withSecureAction({
         title: data.title,
         category: data.category,
         status: data.status,
+        visibility: data.visibility,
+        visibility_roles: data.visibility_roles,
+        visibility_project_id: data.visibility_project_id,
       },
     };
   },
@@ -205,7 +220,45 @@ export const updateKnowledgeArticleAction = withSecureAction({
     }
     if (input.body_md !== undefined) patch.body_md = input.body_md;
     if (input.category !== undefined) patch.category = input.category;
-    if (input.visibility !== undefined) patch.visibility = input.visibility;
+
+    // Visibility patching — three-way normalize. The DB CHECK
+    // constraint (0098) forbids "ROLE_GATED with empty roles" and
+    // "PROJECT_SCOPED with null project_id", so whenever visibility
+    // changes we recompute the side fields against the NEW mode.
+    // When visibility is unchanged, we only touch a side field if
+    // the input explicitly set it.
+    if (input.visibility !== undefined) {
+      const roles =
+        input.visibility === "ROLE_GATED"
+          ? (input.visibility_roles ?? current.visibility_roles ?? [])
+          : [];
+      const projectId =
+        input.visibility === "PROJECT_SCOPED"
+          ? (input.visibility_project_id !== undefined
+              ? input.visibility_project_id
+              : current.visibility_project_id) ?? null
+          : null;
+      patch.visibility = input.visibility;
+      patch.visibility_roles = roles;
+      patch.visibility_project_id = projectId;
+    } else {
+      // Visibility unchanged — side fields must still respect the
+      // current mode. Ignore side-field input for a mode that
+      // doesn't consume it (defense against a client that leaks
+      // stale form state).
+      if (
+        input.visibility_roles !== undefined &&
+        current.visibility === "ROLE_GATED"
+      ) {
+        patch.visibility_roles = input.visibility_roles;
+      }
+      if (
+        input.visibility_project_id !== undefined &&
+        current.visibility === "PROJECT_SCOPED"
+      ) {
+        patch.visibility_project_id = input.visibility_project_id ?? null;
+      }
+    }
 
     // Nothing changed — no-op. Skipping the write avoids an empty
     // revision row + a noisy audit entry.
@@ -283,12 +336,18 @@ export const updateKnowledgeArticleAction = withSecureAction({
         title: current.title,
         category: current.category,
         summary: current.summary,
+        visibility: current.visibility,
+        visibility_roles: current.visibility_roles,
+        visibility_project_id: current.visibility_project_id,
       },
       auditNewValues: {
         slug: data.slug,
         title: data.title,
         category: data.category,
         summary: data.summary,
+        visibility: data.visibility,
+        visibility_roles: data.visibility_roles,
+        visibility_project_id: data.visibility_project_id,
       },
     };
   },

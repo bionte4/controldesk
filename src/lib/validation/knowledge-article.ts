@@ -15,6 +15,8 @@
 
 import { z } from "zod";
 
+import { CANONICAL_ROLES, EMPLOYEE_ROLES } from "@/lib/rbac/roles";
+
 /**
  * Category taxonomy. First seven values MATCH the repo-authored
  * `HELP_CATEGORY_ORDER` constant in `src/lib/help/categories.ts` so
@@ -121,17 +123,44 @@ const category = z.enum(KNOWLEDGE_ARTICLE_CATEGORIES, {
 });
 
 /**
- * Visibility. In v1 we ONLY accept `TENANT_WIDE`. The DB column
- * accepts all three enum values so Fase 2 can widen this schema
- * without a migration. Rejecting `ROLE_GATED` / `PROJECT_SCOPED`
- * here (rather than in the PDP) gives a much clearer error to the
- * author — "Visibility not yet supported" — instead of a generic
- * FORBIDDEN.
+ * Visibility. Phase 2c widens this from the v1 hard-lock to
+ * `TENANT_WIDE` to the full three-way enum. Side fields
+ * (`visibility_roles`, `visibility_project_id`) live below and are
+ * cross-validated with `superRefine` on each of the schemas that
+ * accept them — that's where the "ROLE_GATED needs at least one
+ * role" and "PROJECT_SCOPED needs a project id" invariants are
+ * enforced, mirroring the DB CHECK constraint in migration 0098.
  */
-const visibility = z.enum(["TENANT_WIDE"], {
-  message:
-    "Role-based and project-scoped visibility will land in Fase 2 — use TENANT_WIDE for now.",
+const visibility = z.enum(KNOWLEDGE_ARTICLE_VISIBILITIES, {
+  message: "Choose a valid visibility mode.",
 });
+
+/**
+ * `visibility_roles` — array of role strings. Accepts BOTH legacy DB
+ * names (`TENANT_ADMIN`, `HEAD_MANAGER`, …) and canonical GAS names
+ * (`ADMIN`, `DIRECTOR`, …) via the union of `EMPLOYEE_ROLES` and
+ * `CANONICAL_ROLES`. `resolveVisibilityFilter()` in the data layer
+ * uses `roleInGate()` to match legacy ↔ canonical so a role can be
+ * declared in either dialect and still match the caller.
+ *
+ * Empty array is the "unset" signal; the cross-field refine in each
+ * schema requires ≥1 entry only when visibility is `ROLE_GATED`.
+ */
+const visibilityRoles = z
+  .array(z.enum([...EMPLOYEE_ROLES, ...CANONICAL_ROLES] as [string, ...string[]]))
+  .max(20, "At most 20 roles per article.")
+  .default([]);
+
+/**
+ * `visibility_project_id` — UUID of a project row. Nullable so
+ * TENANT_WIDE / ROLE_GATED can clear it. Refine requires a value
+ * when visibility is `PROJECT_SCOPED`.
+ */
+const visibilityProjectId = z
+  .string()
+  .uuid("Invalid project id.")
+  .nullable()
+  .optional();
 
 const editNote = z
   .string()
@@ -144,19 +173,63 @@ const editNote = z
 // ---------------------------------------------------------------------------
 
 /**
+ * Cross-field refine for visibility side fields. Kept in a helper
+ * because both create and update need identical semantics, and
+ * inlining it twice invites drift.
+ *
+ * Rules mirror the DB CHECK constraint added in migration 0098:
+ *   ROLE_GATED     ⇒ `visibility_roles.length >= 1`
+ *   PROJECT_SCOPED ⇒ `visibility_project_id` non-null
+ *   TENANT_WIDE    ⇒ side fields ignored (may be non-empty; the
+ *                    data layer treats them as unset)
+ */
+function refineVisibilitySideFields(
+  data: {
+    visibility?: KnowledgeArticleVisibility;
+    visibility_roles?: readonly string[] | undefined;
+    visibility_project_id?: string | null | undefined;
+  },
+  ctx: z.RefinementCtx,
+): void {
+  const v = data.visibility;
+  if (!v) return; // Field is optional on updates; skip when omitted.
+  if (v === "ROLE_GATED") {
+    if (!data.visibility_roles || data.visibility_roles.length === 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["visibility_roles"],
+        message: "Select at least one role for role-gated visibility.",
+      });
+    }
+  } else if (v === "PROJECT_SCOPED") {
+    if (!data.visibility_project_id) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["visibility_project_id"],
+        message: "Select a project for project-scoped visibility.",
+      });
+    }
+  }
+}
+
+/**
  * Create a new article — always starts in DRAFT. The author does NOT
  * pass status; use `publishKnowledgeArticleSchema` for the DRAFT →
  * PUBLISHED transition.
  */
-export const createKnowledgeArticleSchema = z.object({
-  slug,
-  title,
-  summary,
-  body_md: bodyMd,
-  category,
-  visibility: visibility.default("TENANT_WIDE"),
-  edit_note: editNote,
-});
+export const createKnowledgeArticleSchema = z
+  .object({
+    slug,
+    title,
+    summary,
+    body_md: bodyMd,
+    category,
+    visibility: visibility.default("TENANT_WIDE"),
+    visibility_roles: visibilityRoles,
+    visibility_project_id: visibilityProjectId,
+    edit_note: editNote,
+  })
+  .superRefine(refineVisibilitySideFields);
 export type CreateKnowledgeArticleInput = z.infer<
   typeof createKnowledgeArticleSchema
 >;
@@ -176,16 +249,23 @@ export type CreateKnowledgeArticleInput = z.infer<
  * revision row so a future redirect map can be built by scanning the
  * revisions table.
  */
-export const updateKnowledgeArticleSchema = z.object({
-  id: z.string().uuid("Invalid article id."),
-  slug: slug.optional(),
-  title: title.optional(),
-  summary,
-  body_md: bodyMd.optional(),
-  category: category.optional(),
-  visibility: visibility.optional(),
-  edit_note: editNote,
-});
+export const updateKnowledgeArticleSchema = z
+  .object({
+    id: z.string().uuid("Invalid article id."),
+    slug: slug.optional(),
+    title: title.optional(),
+    summary,
+    body_md: bodyMd.optional(),
+    category: category.optional(),
+    visibility: visibility.optional(),
+    // Side fields default to empty array / null so an update that
+    // ONLY toggles the visibility enum still passes `superRefine`
+    // — the check runs against the merged shape.
+    visibility_roles: visibilityRoles.optional(),
+    visibility_project_id: visibilityProjectId,
+    edit_note: editNote,
+  })
+  .superRefine(refineVisibilitySideFields);
 export type UpdateKnowledgeArticleInput = z.infer<
   typeof updateKnowledgeArticleSchema
 >;

@@ -3,6 +3,11 @@ import "server-only";
 import { cache } from "react";
 
 import { requireCurrentEmployee } from "@/lib/auth/session";
+import {
+  canManageKnowledgeArticles,
+  toCanonicalRole,
+  type AnyDbEmployeeRole,
+} from "@/lib/rbac/roles";
 import { createClient } from "@/lib/supabase/server";
 import type {
   KnowledgeArticleCategory,
@@ -62,6 +67,128 @@ const SELECT_WITH_AUTHOR = `
   )
 ` as const;
 
+// ---------------------------------------------------------------------------
+// Visibility ACL (Phase 2c) — app-layer enforcement.
+//
+// Migration 0095 shipped the columns and the enum but explicitly left
+// ROLE_GATED / PROJECT_SCOPED unenforced. The header comment named
+// this helper as the plumbing point: "Visibility ACL is handled at
+// the app layer — see resolveVisibilityFilter() in the data module."
+// The filter runs on every read path that lists / retrieves articles
+// (`loadKnowledgeArticles`, `loadRecentPublishedKnowledgeArticles`,
+// `loadPublishedKnowledgeGrouped`, `loadTenantSearchIndex`, and the
+// single-row lookups). Phase 2c-III will layer an RLS SELECT clause
+// on top for defense-in-depth; until then this helper is the ONLY
+// visibility check between the DB and the UI.
+//
+// Semantics (rows the caller is allowed to see, per branch):
+//   • Admin (canManageKnowledgeArticles(role) === true) — everything.
+//     No filter applied.
+//   • Author of the row — always, regardless of visibility. Author
+//     bypass sits inside the OR clause so it composes cleanly with
+//     the visibility branches instead of taking a separate query.
+//   • TENANT_WIDE — every tenant member.
+//   • ROLE_GATED — caller's DB role OR its canonical fold must be in
+//     `visibility_roles`. PostgREST `.ov.` = array overlap operator
+//     (`&&` in SQL), so we compare a 1- or 2-element set against the
+//     stored array.
+//   • PROJECT_SCOPED — caller must have an ACTIVE assignment on
+//     `visibility_project_id`. The set of active project ids is
+//     loaded once per request via `loadVisibilityContext` and passed
+//     into every call (React's `cache()` around the loader dedupes
+//     the DB round-trip across list + hero + palette in a single
+//     RSC render).
+// ---------------------------------------------------------------------------
+
+/**
+ * Snapshot of everything the visibility filter needs to know about
+ * the caller. Loaded once per request via `loadVisibilityContext`
+ * (which is `cache()`-memoised, so a page that reads three
+ * knowledge lists still runs the underlying assignment query once).
+ */
+export type KnowledgeVisibilityContext = {
+  employeeId: string;
+  role: AnyDbEmployeeRole;
+  /** Project ids the caller currently holds an ACTIVE assignment on. */
+  activeProjectIds: readonly string[];
+  /** True if `canManageKnowledgeArticles(role)` — skip the filter. */
+  isAdmin: boolean;
+};
+
+/**
+ * Load the caller's visibility context. Runs one query against
+ * `project_employee_assignments` to enumerate active project ids —
+ * empty result is normal (plain employees, or employees between
+ * projects). Wrapped in `cache()` so the layout + list + palette
+ * share the same round-trip.
+ */
+export const loadVisibilityContext = cache(
+  async (): Promise<KnowledgeVisibilityContext> => {
+    const employee = await requireCurrentEmployee();
+    const supabase = await createClient();
+    const { data: assignments } = await supabase
+      .from("project_employee_assignments")
+      .select("project_id")
+      .eq("employee_id", employee.id)
+      .eq("status", "ACTIVE");
+    return {
+      employeeId: employee.id,
+      role: employee.role,
+      activeProjectIds: (assignments ?? []).map((a) => a.project_id),
+      isAdmin: canManageKnowledgeArticles(employee.role),
+    };
+  },
+);
+
+/**
+ * Build the PostgREST `.or()` clause for the visibility ACL. Returns
+ * `null` when the caller is an admin — that path must NOT call
+ * `.or()` at all (an empty filter would be a no-op that admits every
+ * row anyway, but skipping the call spares a wire byte and reads
+ * clearer at the call site).
+ *
+ * The clause structure:
+ *
+ *   visibility.eq.TENANT_WIDE,
+ *   author_employee_id.eq.<uuid>,                                // author bypass
+ *   and(visibility.eq.ROLE_GATED,visibility_roles.ov.{R1,R2}),
+ *   and(visibility.eq.PROJECT_SCOPED,visibility_project_id.in.(uuid1,uuid2))
+ *
+ * The PROJECT_SCOPED branch is emitted only when the caller has ≥1
+ * active project — otherwise the `.in.()` list would be empty and
+ * PostgREST rejects the request.
+ */
+export function resolveVisibilityFilter(
+  ctx: KnowledgeVisibilityContext,
+): string | null {
+  if (ctx.isAdmin) return null;
+
+  // Role set: caller's DB role + its canonical fold. Handles both
+  // dialects — authors can store `PROJECT_MANAGER` (legacy) and a
+  // caller with `role='PM'` (canonical) still matches, or vice
+  // versa. `toCanonicalRole()` deduplicates automatically when the
+  // role IS canonical (returns the same value).
+  const canonical = toCanonicalRole(ctx.role);
+  const roleSet =
+    canonical === ctx.role ? [ctx.role] : [ctx.role, canonical];
+  const rolesLiteral = `{${roleSet.join(",")}}`;
+
+  const parts = [
+    "visibility.eq.TENANT_WIDE",
+    `author_employee_id.eq.${ctx.employeeId}`,
+    `and(visibility.eq.ROLE_GATED,visibility_roles.ov.${rolesLiteral})`,
+  ];
+
+  if (ctx.activeProjectIds.length > 0) {
+    const projectList = `(${ctx.activeProjectIds.join(",")})`;
+    parts.push(
+      `and(visibility.eq.PROJECT_SCOPED,visibility_project_id.in.${projectList})`,
+    );
+  }
+
+  return parts.join(",");
+}
+
 /**
  * Everything the current caller is allowed to see, newest first.
  *
@@ -77,6 +204,7 @@ export const loadKnowledgeArticles = cache(
     category?: KnowledgeArticleCategory;
   }): Promise<KnowledgeArticleWithAuthor[]> => {
     const supabase = await createClient();
+    const ctx = await loadVisibilityContext();
     let q = supabase
       .from("knowledge_articles")
       .select(SELECT_WITH_AUTHOR)
@@ -93,6 +221,9 @@ export const loadKnowledgeArticles = cache(
       q = q.eq("category", opts.category);
     }
 
+    const filter = resolveVisibilityFilter(ctx);
+    if (filter) q = q.or(filter);
+
     const { data, error } = await q;
     if (error || !data) return [];
     return data as unknown as KnowledgeArticleWithAuthor[];
@@ -108,11 +239,14 @@ export async function loadKnowledgeArticleBySlug(
   slug: string,
 ): Promise<KnowledgeArticleWithAuthor | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const ctx = await loadVisibilityContext();
+  let q = supabase
     .from("knowledge_articles")
     .select(SELECT_WITH_AUTHOR)
-    .eq("slug", slug)
-    .maybeSingle();
+    .eq("slug", slug);
+  const filter = resolveVisibilityFilter(ctx);
+  if (filter) q = q.or(filter);
+  const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
   return data as unknown as KnowledgeArticleWithAuthor;
 }
@@ -126,11 +260,14 @@ export async function loadKnowledgeArticleById(
   id: string,
 ): Promise<KnowledgeArticleWithAuthor | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const ctx = await loadVisibilityContext();
+  let q = supabase
     .from("knowledge_articles")
     .select(SELECT_WITH_AUTHOR)
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+  const filter = resolveVisibilityFilter(ctx);
+  if (filter) q = q.or(filter);
+  const { data, error } = await q.maybeSingle();
   if (error || !data) return null;
   return data as unknown as KnowledgeArticleWithAuthor;
 }
@@ -142,12 +279,16 @@ export async function loadKnowledgeArticleById(
 export const loadRecentPublishedKnowledgeArticles = cache(
   async (limit = 5): Promise<KnowledgeArticleWithAuthor[]> => {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const ctx = await loadVisibilityContext();
+    let q = supabase
       .from("knowledge_articles")
       .select(SELECT_WITH_AUTHOR)
       .eq("status", "PUBLISHED")
       .order("published_at", { ascending: false, nullsFirst: false })
       .limit(limit);
+    const filter = resolveVisibilityFilter(ctx);
+    if (filter) q = q.or(filter);
+    const { data, error } = await q;
     if (error || !data) return [];
     return data as unknown as KnowledgeArticleWithAuthor[];
   },
@@ -185,12 +326,16 @@ export type KnowledgeSearchArticle = {
 export const loadTenantSearchIndex = cache(
   async (): Promise<KnowledgeSearchArticle[]> => {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const ctx = await loadVisibilityContext();
+    let q = supabase
       .from("knowledge_articles")
       .select("slug, title, summary, category, body_md, updated_at")
       .eq("status", "PUBLISHED")
       .order("updated_at", { ascending: false })
       .limit(500);
+    const filter = resolveVisibilityFilter(ctx);
+    if (filter) q = q.or(filter);
+    const { data, error } = await q;
     if (error || !data) return [];
     return data.map((row) => ({
       slug: row.slug,
