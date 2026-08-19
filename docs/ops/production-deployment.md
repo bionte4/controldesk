@@ -274,6 +274,119 @@ gunzip -c *.sql.gz | psql -h staging-db -U postgres
 Rules §22: audit log retensi 7 tahun. Kolom `security_audit_logs` sudah
 retensi long-term di DB — backup jadi copy tambahan offsite.
 
+### 9. Enable SMTP (Resend) — password reset + magic link + notif email
+
+Stack sudah wired lengkap (Supabase Auth via `GOTRUE_SMTP_*` + app mailer
+via `src/lib/notify/mailer.ts`). Yang perlu dilakukan: verify domain di
+Resend, generate API key, isi 5 env var, restart 2 service.
+
+**Fase 9a — Resend account + verify domain (~15 menit di dashboard Resend)**
+
+1. Buka [resend.com](https://resend.com) → Sign up (free tier 100 email/hari,
+   3000 email/bulan — cukup untuk approval notif volume MVP).
+2. Dashboard → **Domains** → **Add Domain** → masukkan `controldesk.site`
+   (atau apapun `ROOT_DOMAIN` kamu di `.env.production`).
+3. Resend akan tampilkan 3-4 DNS record (SPF, DKIM x2, DMARC opsional).
+   Tambahkan semuanya sebagai **DNS-only** record di Cloudflare (jangan
+   proxy, biar SPF/DKIM lookup langsung reach Resend):
+
+   | Type | Name | Value | Proxy |
+   |---|---|---|---|
+   | TXT | `send` | `v=spf1 include:_spf.resend.com ~all` | DNS-only |
+   | TXT | `resend._domainkey` | (long DKIM public key dari Resend) | DNS-only |
+   | MX  | `send` | `feedback-smtp.us-east-1.amazonses.com` (priority 10) | DNS-only |
+
+   Optional tapi recommended:
+
+   | Type | Name | Value | Proxy |
+   |---|---|---|---|
+   | TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:admin@controldesk.site` | DNS-only |
+
+4. Klik **Verify DNS records** di Resend dashboard — biasanya ready dalam
+   1-2 menit setelah Cloudflare propagate. Kalau lambat, refresh
+   Cloudflare DNS dashboard untuk pastikan record sudah tersimpan.
+5. Setelah verified (icon centang hijau semua), **API Keys** → **Create
+   API Key** → nama `controldesk-prod`, permission `Sending access` +
+   scope ke domain `controldesk.site`. Copy key (`re_xxx...`) — ini yang
+   akan dipakai sebagai `SMTP_PASS`. Key ini hanya ditampilkan sekali.
+
+**Fase 9b — Isi env + restart (~2 menit di server)**
+
+```bash
+cd ~/controldesk
+
+# Backup .env sebelum edit (biar bisa rollback).
+cp .env.production .env.production.bak.$(date +%Y%m%d-%H%M%S)
+
+# Edit SMTP block — biasanya di sekitar baris 100-110.
+nano .env.production
+```
+
+Yang perlu di-set (ganti nilai placeholder):
+
+```env
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=587
+SMTP_USER=resend
+SMTP_PASS=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # ← API key dari Fase 9a #5
+SMTP_FROM=noreply@controldesk.site
+SMTP_ADMIN_EMAIL=admin@controldesk.site
+SMTP_SENDER_NAME=ControlDesk
+```
+
+Restart service yang baca env-vars ini:
+
+```bash
+# Supabase Auth (password reset, magic link, verify) baca GOTRUE_SMTP_*.
+dcp restart auth
+
+# App container (approval notif, digest cron, workspace signup) baca
+# SMTP_* env-global.
+dcp restart app
+
+# Cek log auth boot untuk verify SMTP config terbaca.
+dcp logs --tail 30 auth | grep -i smtp
+# Expected: "SMTP host: smtp.resend.com" atau tidak ada error terkait SMTP.
+```
+
+**Fase 9c — Smoke test (~3 menit)**
+
+1. **Password reset test** — buka `https://<tenant>.controldesk.site/login`
+   → klik "Lupa password?" → masukkan email yang terdaftar → cek inbox
+   (juga folder spam pertama kali). Email harus datang dalam 30 detik.
+   Kalau tidak masuk:
+
+   ```bash
+   dcp logs --tail 100 auth 2>&1 | grep -iE "smtp|mail|550|554"
+   ```
+
+2. **Approver notif test** — buat pengajuan expense/CA kecil → tunggu
+   ke approver → cek email approver. Ini akan lewat `src/lib/notify/
+   mailer.ts` env-path (bukan tenant path, karena tenant_smtp_configs
+   masih kosong).
+
+3. **Cek email_outbox** — semua send yang berhasil harus muncul di tabel:
+
+   ```bash
+   docker exec -i controldesk-db psql -U postgres -d postgres -c "
+     select id, subject, from_address, status, sent_at
+     from public.email_outbox
+     order by created_at desc limit 5;
+   "
+   ```
+
+   Kalau `status = SKIPPED` → mailer tidak dapat config (biasanya
+   `SMTP_HOST` kosong atau restart belum applied). Kalau `FAILED` →
+   kolom `last_error` isi detail (auth failed, connection refused, dst).
+
+**Fase 9d — Optional: per-tenant SMTP (nanti kalau dibutuhkan)**
+
+Kalau ada tenant premium yang ingin pakai relay sendiri (mis. Postmark
+dengan sender warmup lebih tinggi), TENANT_ADMIN bisa buka
+`/settings/integrations/smtp` di dashboard mereka, isi row baru di
+`tenant_smtp_configs`. Row aktif override env-global — lihat resolution
+order di `src/lib/notify/mailer.ts` docblock.
+
 ---
 
 ## Ops runbook — troubleshoot umum
