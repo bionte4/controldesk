@@ -21,6 +21,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   createClientPortalUserSchema,
   type CreateClientPortalUserInput,
 } from "@/lib/validation/client-portal-user";
@@ -56,6 +66,7 @@ export function PortalUsersManager(props: {
 // ---------------------------------------------------------------------------
 function CreateAction({ clientId }: { clientId: string }) {
   const t = useTranslations("clients.portalUsers.create");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
@@ -92,7 +103,7 @@ function CreateAction({ clientId }: { clientId: string }) {
 
   return (
     <>
-      <Dialog
+      <Sheet
         open={open}
         onOpenChange={(next) => {
           setOpen(next);
@@ -102,7 +113,7 @@ function CreateAction({ clientId }: { clientId: string }) {
           }
         }}
       >
-        <DialogTrigger
+        <SheetTrigger
           render={
             <Button>
               <Plus className="size-4" />
@@ -110,23 +121,32 @@ function CreateAction({ clientId }: { clientId: string }) {
             </Button>
           }
         />
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("title")}</DialogTitle>
-            <DialogDescription>{t("subtitle")}</DialogDescription>
-          </DialogHeader>
+        <SheetContent
+          side="right"
+          className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl"
+        >
+          <SheetHeader>
+            <SheetTitle>{t("title")}</SheetTitle>
+            <SheetDescription>{t("subtitle")}</SheetDescription>
+          </SheetHeader>
 
           {tempPassword ? (
-            <TempPasswordPanel
-              email={tempPassword.email}
-              password={tempPassword.password}
-              onClose={() => {
-                setTempPassword(null);
-                setOpen(false);
-              }}
-            />
+            <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5">
+              <TempPasswordPanel
+                email={tempPassword.email}
+                password={tempPassword.password}
+                onClose={() => {
+                  setTempPassword(null);
+                  setOpen(false);
+                }}
+              />
+            </div>
           ) : (
-            <form onSubmit={onSubmit} className="space-y-4" noValidate>
+            <form
+              onSubmit={onSubmit}
+              className="flex flex-1 flex-col gap-5 overflow-y-auto px-5"
+              noValidate
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cpu-name">{t("name")}</Label>
                 <Input
@@ -156,15 +176,22 @@ function CreateAction({ clientId }: { clientId: string }) {
                   </p>
                 ) : null}
               </div>
-              <DialogFooter>
+              <SheetFooter className="sticky bottom-0 mt-auto -mx-5 flex-row flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-popover px-5 py-3">
+                <SheetClose
+                  render={
+                    <Button type="button" variant="ghost" disabled={pending}>
+                      {tCommon("cancel")}
+                    </Button>
+                  }
+                />
                 <Button type="submit" disabled={pending}>
                   {pending ? t("submitting") : t("submit")}
                 </Button>
-              </DialogFooter>
+              </SheetFooter>
             </form>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
@@ -379,9 +406,9 @@ function TempPasswordPanel({
           </dd>
         </div>
       </dl>
-      <DialogFooter>
+      <SheetFooter className="sticky bottom-0 mt-auto -mx-5 flex-row flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-popover px-5 py-3">
         <Button onClick={onClose}>{t("done")}</Button>
-      </DialogFooter>
+      </SheetFooter>
     </div>
   );
 }

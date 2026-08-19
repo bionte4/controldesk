@@ -29,7 +29,7 @@ import { loadPostableAccounts } from "@/lib/data/coa";
 import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
 
 import { NewVoucherSheet, type CoaOption } from "../new-voucher-sheet";
-import { RequestReplenishmentDialog } from "../request-replenishment-sheet";
+import { RequestReplenishmentSheet } from "../request-replenishment-sheet";
 import { ReplenishmentActions } from "../replenishment-actions";
 import {
   ReplenishmentAttachmentList,
@@ -200,7 +200,7 @@ export default async function PettyCashFundDetailPage(props: {
             />
           ) : null}
           {canRequestRepl ? (
-            <RequestReplenishmentDialog fundId={fund.id} />
+            <RequestReplenishmentSheet fundId={fund.id} />
           ) : null}
         </div>
       </div>

@@ -26,14 +26,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   ALLOWED_MIME_TYPES,
   DEFAULT_MAX_BYTES,
@@ -51,7 +52,7 @@ type FormValues = {
   reason: string;
 };
 
-export function RequestReplenishmentDialog({ fundId }: { fundId: string }) {
+export function RequestReplenishmentSheet({ fundId }: { fundId: string }) {
   const t = useTranslations("pettyCash.replenishment");
   const tAttach = useTranslations("pettyCash.replenishment.attachments");
   const tCommon = useTranslations("common");
@@ -154,23 +155,26 @@ export function RequestReplenishmentDialog({ fundId }: { fundId: string }) {
   const busy = isPending || phase !== "idle";
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger
         render={
           <Button size="sm" variant="secondary">
             <PiggyBank className="size-4" /> {t("open")}
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription>{t("description")}</DialogDescription>
-        </DialogHeader>
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl"
+      >
+        <SheetHeader>
+          <SheetTitle>{t("title")}</SheetTitle>
+          <SheetDescription>{t("description")}</SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4"
+            className="flex flex-1 flex-col gap-5 overflow-y-auto px-5"
           >
             <FormField
               control={form.control}
@@ -288,25 +292,24 @@ export function RequestReplenishmentDialog({ fundId }: { fundId: string }) {
               </div>
             </section>
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setOpen(false)}
-                disabled={busy}
-              >
-                {tCommon("cancel")}
-              </Button>
+            <SheetFooter className="sticky bottom-0 mt-auto -mx-5 flex-row flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-popover px-5 py-3">
+              <SheetClose
+                render={
+                  <Button type="button" variant="ghost" disabled={busy}>
+                    {tCommon("cancel")}
+                  </Button>
+                }
+              />
               <Button type="submit" disabled={busy}>
                 {busy ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 {phase === "uploading" ? tAttach("uploading") : t("confirm")}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -11,14 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Form,
   FormControl,
@@ -519,14 +520,14 @@ export function EditBudgetLineItemButton({
   if (readOnly) return null;
 
   return (
-    <Dialog
+    <Sheet
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) form.reset(defaults);
       }}
     >
-      <DialogTrigger
+      <SheetTrigger
         render={
           <Button
             variant="ghost"
@@ -538,63 +539,75 @@ export function EditBudgetLineItemButton({
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{t("editTitle")}</DialogTitle>
-          <DialogDescription>{t("editDescription")}</DialogDescription>
-        </DialogHeader>
+      <SheetContent
+        side="right"
+        className="data-[side=right]:w-full data-[side=right]:sm:max-w-xl data-[side=right]:md:max-w-2xl"
+      >
+        <SheetHeader>
+          <SheetTitle>{t("editTitle")}</SheetTitle>
+          <SheetDescription>{t("editDescription")}</SheetDescription>
+        </SheetHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
-            className="grid gap-3 sm:grid-cols-2"
+            className="@container flex flex-1 flex-col gap-5 overflow-y-auto px-5"
           >
-            <FormField
-              control={form.control}
-              name="category"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-1">
-                  <FormLabel>{t("category")}</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
+            <div className="grid gap-4 @md:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("category")}</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue>
+                            {(value) => {
+                              const hit = effectiveCategories.find(
+                                (c) => c.code === value,
+                              );
+                              return hit ? hit.label : t("category");
+                            }}
+                          </SelectValue>
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {effectiveCategories.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="planned_amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t("plannedAmount")}</FormLabel>
                     <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
+                      <Input
+                        {...field}
+                        inputMode="numeric"
+                        placeholder="1000000"
+                      />
                     </FormControl>
-                    <SelectContent>
-                      {effectiveCategories.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="planned_amount"
-              render={({ field }) => (
-                <FormItem className="sm:col-span-1">
-                  <FormLabel>{t("plannedAmount")}</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      inputMode="numeric"
-                      placeholder="1000000"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             {coaEnabled ? (
               <FormField
                 control={form.control}
                 name="coa_id"
                 render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
+                  <FormItem>
                     <FormLabel>{t("coaAccount")}</FormLabel>
                     <Select
                       value={field.value || COA_NONE}
@@ -603,8 +616,19 @@ export function EditBudgetLineItemButton({
                       }
                     >
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder={t("coaPlaceholder")} />
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder={t("coaPlaceholder")}>
+                            {(value) => {
+                              if (!value || value === COA_NONE)
+                                return t("coaNone");
+                              const hit = coaOptions?.find(
+                                (c) => c.id === value,
+                              );
+                              return hit
+                                ? `${hit.code} · ${hit.name}`
+                                : t("coaPlaceholder");
+                            }}
+                          </SelectValue>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -625,12 +649,12 @@ export function EditBudgetLineItemButton({
               control={form.control}
               name="description"
               render={({ field }) => (
-                <FormItem className="sm:col-span-2">
+                <FormItem>
                   <FormLabel>{t("descriptionLabel")}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
-                      rows={2}
+                      rows={3}
                       placeholder={t("descriptionPlaceholder")}
                     />
                   </FormControl>
@@ -638,27 +662,25 @@ export function EditBudgetLineItemButton({
                 </FormItem>
               )}
             />
-            <DialogFooter className="sm:col-span-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-              >
-                {t("cancel")}
-              </Button>
-              <Button type="submit" size="sm" disabled={isPending}>
+            <SheetFooter className="sticky bottom-0 mt-auto -mx-5 flex-row flex-wrap items-center justify-end gap-2 border-t border-border/60 bg-popover px-5 py-3">
+              <SheetClose
+                render={
+                  <Button type="button" variant="ghost" disabled={isPending}>
+                    {t("cancel")}
+                  </Button>
+                }
+              />
+              <Button type="submit" disabled={isPending}>
                 {isPending ? (
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : null}
                 {t("save")}
               </Button>
-            </DialogFooter>
+            </SheetFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
 
