@@ -22,7 +22,7 @@ Sistem ini menggunakan kontainerisasi standar produksi:
 - **Next.js Standalone Build Config (`next.config.ts`)**:
   - `output: 'standalone'` diaktifkan agar Next.js menghasilkan server bundel independen tanpa ketergantungan `node_modules` penuh.
 - **Multi-Stage Dockerfile (`Dockerfile`)**:
-  - `Stage 1: base` -> Node.js 20 Alpine.
+ - `Stage 1: base` -> Node.js 22 Alpine (LTS "Jod" — bumped Aug 2026 from Node 20 to align with CI/E2E runners and silence `@supabase/supabase-js` deprecation warning).
   - `Stage 2: deps` -> Install `node_modules` menggunakan `npm ci`.
   - `Stage 3: builder` -> Build Next.js standalone (`npm run build`).
   - `Stage 4: runner` -> Menyalin bundel standalone, membuat non-root system user (`nextjs:nodejs`), mengekspos port 3000, dan mengaktifkan Healthcheck (`/api/health`).

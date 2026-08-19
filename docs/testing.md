@@ -146,7 +146,7 @@ Serial suites (all chain suites) mutate the seed. Re-run requires
 The [`e2e.yml`](../.github/workflows/e2e.yml) workflow does:
 
 1. Adds `demo.localhost` → `127.0.0.1` to `/etc/hosts`.
-2. Installs pnpm + Node 20 + Supabase CLI + Playwright browsers
+2. Installs pnpm + Node 22 + Supabase CLI + Playwright browsers
    (cached).
 3. Runs `supabase start`, extracts anon + service_role keys.
 4. Runs `pnpm db:reset` (migrations + seed).

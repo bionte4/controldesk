@@ -118,7 +118,7 @@ audience (business owner / end user / engineer / auditor / on-call).
 | Cache / Rate limit  | Redis (docker-compose service)                         |
 | Email               | Nodemailer + `email_outbox` audit trail                |
 | Testing             | Vitest + `@vitest/coverage-v8` + Playwright            |
-| Container           | Multi-stage Node 20 Alpine → standalone runtime        |
+| Container           | Multi-stage Node 22 Alpine → standalone runtime        |
 | Package manager     | pnpm 9                                                 |
 | Observability       | Structured JSON logs + Sentry / Axiom sink             |
 
@@ -190,7 +190,7 @@ and mismatches force a sign-out.
 ```text
 controldesk/
 ├── proxy.ts                            # Next 16 tenant guard + request-id
-├── Dockerfile                          # Multi-stage Node 20 Alpine → standalone
+├── Dockerfile                          # Multi-stage Node 22 Alpine → standalone
 ├── docker-compose.yml                  # app + redis + mailpit
 ├── vercel.json                         # Cron schedules
 ├── .github/                            # Workflows + templates + CODEOWNERS

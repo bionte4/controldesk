@@ -727,6 +727,22 @@ MUST include the `.cursorrules` section it maps to.
 
 ### Changed
 
+- **Runtime bump: Node.js 20 → 22 (LTS "Jod")** (rules §2). Production
+  Dockerfile (`FROM node:20-alpine` → `node:22-alpine`) now aligns with
+  the CI/E2E workflows that already targeted Node 22. Ripple effects:
+  - `package.json` — `@types/node` bumped `^20` → `^22` (resolves to
+    22.20.1). Kept below 26.x on purpose so we don't force a
+    `moduleResolution` bump in `tsconfig.json`.
+  - `.cursorrules` §2, `README.md` (architecture table + repo tree),
+    `docs/getting-started.md` (prereq table), `docs/testing.md`
+    (Playwright CI step) all updated to reflect the new runtime.
+  - Motivation: silence the `@supabase/supabase-js` startup warning
+    _"Node.js 20 and below are deprecated and will no longer be
+    supported…"_ and remove the drift between CI (Node 22) and
+    production (was Node 20). Node 22 is LTS through April 2027 and is
+    the version Next.js 16 recommends.
+  - Verified: `tsc --noEmit` clean, `pnpm lint` no new warnings,
+    `pnpm test` 2186/2186 green.
 - **Retention cron** now delegates to `purge_archived_audit_logs()` for
   audit-log purges so the immutability trigger stays in force. Only
   rows with a matching ARCHIVED `data_archives` row are eligible.

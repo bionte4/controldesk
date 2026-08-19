@@ -278,12 +278,84 @@ retensi long-term di DB — backup jadi copy tambahan offsite.
 
 ## Ops runbook — troubleshoot umum
 
+> **Gotcha #1 — Docker Compose butuh `--env-file .env.production` di SETIAP invokasi.**
+> Semua contoh command di bawah menyertakannya. Kalau lupa, Compose bakal error
+> "required variable X is missing a value" walaupun `.env.production` ada di
+> folder yang sama. Ini karena Compose default cuma baca file bernama persis
+> `.env` (bukan `.env.production`). Alias yang bisa kamu tambah ke shell
+> profile supaya tidak lupa:
+>
+> ```bash
+> echo "alias dcp='docker compose -f ~/controldesk/docker-compose.prod.yml --env-file ~/controldesk/.env.production'" >> ~/.bashrc
+> source ~/.bashrc
+> # Sekarang tinggal: `dcp build app`, `dcp up -d`, `dcp logs app`, dst.
+> ```
+
+### Deploy code update (pull latest branch)
+
+Skenario paling sering — ada commit baru di remote yang mau kamu bawa ke
+production tanpa restart penuh Supabase stack.
+
+```bash
+cd ~/controldesk
+
+git fetch origin feat/initial-controldesk-platform
+git log --oneline HEAD..origin/feat/initial-controldesk-platform  # preview
+
+git pull --ff-only origin feat/initial-controldesk-platform
+# Kalau tidak fast-forward-able, biasanya ada local commit di server —
+# lihat runbook "Server branch diverged" di bawah.
+
+# Rebuild HANYA image app (source code Next.js). Postgres/Kong/Auth/dst
+# tidak perlu di-rebuild karena mereka pakai upstream image.
+docker compose -f docker-compose.prod.yml --env-file .env.production build app
+
+# Recreate container app dengan image baru. Service lain tetap running.
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d app
+
+# Verify sehat
+docker compose -f docker-compose.prod.yml --env-file .env.production ps app
+docker compose -f docker-compose.prod.yml --env-file .env.production logs --tail 50 app
+```
+
+**Kalau ada migration baru** (`supabase/migrations/00XX_*.sql` yang belum
+applied), tambahkan step sebelum `up -d app`:
+
+```bash
+./deploy/scripts/apply-migrations.sh
+```
+
+Skrip ini idempotent — sudah punya `_migration_history` guard, tidak
+double-apply.
+
+### Server branch diverged (git pull --ff-only gagal)
+
+Skenario: kamu edit file di server (misal quick hotfix, atau merge commit
+buatan `git pull` biasa), lalu remote juga punya commit baru → history
+divergent. Pilihan aman:
+
+```bash
+# 1) Preview siapa punya commit apa
+git log --oneline HEAD ^origin/feat/initial-controldesk-platform  # commit local yang belum di-push
+git log --oneline origin/feat/initial-controldesk-platform ^HEAD  # commit remote yang belum di-pull
+
+# 2A) Kalau commit lokal masih ada value → merge (buat merge commit)
+git pull --no-rebase origin feat/initial-controldesk-platform
+git push origin feat/initial-controldesk-platform
+
+# 2B) Kalau commit lokal boleh dibuang → reset hard
+git fetch origin feat/initial-controldesk-platform
+git reset --hard origin/feat/initial-controldesk-platform
+# HATI-HATI: menghapus local commit yang tidak ada di remote.
+```
+
 ### VPS reboot — semua service auto-restart?
 `restart: unless-stopped` sudah diset di semua service. Kalau tidak jalan
 setelah reboot, cek Docker daemon:
 ```bash
 systemctl status docker
-docker compose -f ~/controldesk/docker-compose.prod.yml --env-file ~/controldesk/.env.production up -d
+docker compose -f ~/controldesk/docker-compose.prod.yml \
+  --env-file ~/controldesk/.env.production up -d
 ```
 
 ### RAM pressure — Postgres OOM

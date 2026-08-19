@@ -6,7 +6,7 @@ Boot ControlDesk locally in ~10 minutes.
 
 | Tool          | Minimum                | Install                                            |
 | ------------- | ---------------------- | -------------------------------------------------- |
-| Node.js       | 20.10                  | `brew install node@20` / [nvm](https://github.com/nvm-sh/nvm) |
+| Node.js       | 22.11 (LTS "Jod")      | `brew install node@22` / [nvm](https://github.com/nvm-sh/nvm) |
 | pnpm          | 9.0                    | `corepack enable && corepack prepare pnpm@9.12.0 --activate` |
 | Docker        | 24 (Docker Desktop, OrbStack, or Colima) | Vendor site — required for `supabase start`. |
 | Supabase CLI  | 2.20                   | `brew install supabase/tap/supabase`                |
@@ -14,7 +14,7 @@ Boot ControlDesk locally in ~10 minutes.
 Confirm they resolve:
 
 ```bash
-node --version   # v20.x
+node --version   # v22.x
 pnpm --version   # 9.x
 docker info      # daemon reachable
 supabase --version

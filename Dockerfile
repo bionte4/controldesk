@@ -1,11 +1,17 @@
 # syntax=docker/dockerfile:1.7
 # ControlDesk — production Dockerfile per rules §2.
-# Multi-stage build against Node 20 Alpine producing a Next.js standalone bundle.
+# Multi-stage build against Node 22 Alpine producing a Next.js standalone bundle.
+#
+# Node bump 20 → 22 (Aug 2026): aligns production runtime with CI/E2E workflows
+# (which have targeted Node 22 since early Aug 2026) and silences the
+# `@supabase/supabase-js` deprecation warning at container startup. Node 22 is
+# the current LTS ("Jod"), supported through April 2027, and is the version
+# Next.js 16 recommends. Alpine images ship for 22 in the same shape as 20.
 
 # -----------------------------------------------------------------------------
 # Stage 1: base — pinned Node runtime + system deps + Corepack (pnpm).
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 RUN apk add --no-cache libc6-compat curl \
   && corepack enable
 WORKDIR /app
