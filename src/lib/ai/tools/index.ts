@@ -9,8 +9,9 @@ import type {
   AnyDbEmployeeRole,
   CanonicalRole,
 } from "@/lib/rbac/roles";
-import { toCanonicalRole } from "@/lib/rbac/roles";
+import { CONTRACT_VIEWER_ROLES, roleInGate, toCanonicalRole } from "@/lib/rbac/roles";
 import type { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 /**
  * Level 2 ("Ask my data") tool registry.
@@ -664,8 +665,12 @@ async function runProjectStatus(
   const supabase = ctx.supabase;
   const { data: project } = await supabase
     .from("projects")
+    // `contract_value` is REVOKE'd from `authenticated` in migration
+    // 0102 — omit it from the user-JWT SELECT to avoid a `permission
+    // denied` error. The value is fetched separately below (via
+    // service role) ONLY when the caller is in `CONTRACT_VIEWER_ROLES`.
     .select(
-      "id, name, status, contract_value, start_date, end_date, progress, clients:client_id (name)",
+      "id, name, status, start_date, end_date, progress, clients:client_id (name)",
     )
     .eq("id", args.project_id)
     .maybeSingle();
@@ -689,8 +694,23 @@ async function runProjectStatus(
     if (e.amount != null) spent += parseMoneyFromDb(e.amount);
   }
 
-  const contractValue =
-    project.contract_value != null ? parseMoneyFromDb(project.contract_value) : null;
+  // Contract value is commercial data (rules §3) — gated on
+  // `CONTRACT_VIEWER_ROLES` (LEAD_FINANCE, HEAD_MANAGER, GENERAL_MANAGER,
+  // TENANT_ADMIN via canonical fold). Non-leader callers get `null`
+  // so the LLM has no chance to leak the figure through paraphrasing.
+  let contractValue: bigint | null = null;
+  if (roleInGate(ctx.dbRole, CONTRACT_VIEWER_ROLES)) {
+    const serviceClient = createServiceRoleClient();
+    const { data: cv } = await serviceClient
+      .from("projects")
+      .select("contract_value")
+      .eq("id", args.project_id)
+      .eq("tenant_id", ctx.tenantId)
+      .maybeSingle();
+    if (cv?.contract_value != null) {
+      contractValue = parseMoneyFromDb(cv.contract_value);
+    }
+  }
 
   return {
     id: project.id,

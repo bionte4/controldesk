@@ -33,7 +33,7 @@ import {
 import { authorize } from "@/lib/security/pdp";
 import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import { loadWorkload } from "@/lib/data/assignments";
 import { NewAssignmentSheet } from "@/app/(app)/assignments/new-assignment-sheet";
 import {
@@ -175,7 +175,19 @@ export default async function ProjectDetailPage(props: {
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("*, clients(id, name)")
+      // Explicit column list (WITHOUT `contract_value`) because that
+      // column is REVOKE'd from `authenticated` in migration 0102 —
+      // a `select("*")` would fail with `permission denied for column
+      // contract_value`. The value is fetched separately below via a
+      // service-role client, gated on `canEditProject`.
+      .select(
+        `id, tenant_id, code, project_number, name, description, priority,
+         project_type, status, progress, currency, location, start_date,
+         end_date, notes, sync_calendar, client_id, contract_id, created_by,
+         created_at, updated_at, bc_executive_summary, bc_sponsor_id,
+         bc_target_gm_pct, bc_approved_at, bc_approved_by,
+         clients(id, name)`,
+      )
       .eq("id", id)
       .eq("tenant_id", employee.tenant_id)
       .maybeSingle(),
@@ -300,6 +312,24 @@ export default async function ProjectDetailPage(props: {
       resource: "project",
       attributes: { tenantId: employee.tenant_id },
     }).effect === "ALLOW";
+
+  // Contract value (rules §3) — REVOKE'd from `authenticated` in
+  // migration 0102 so a plain-JWT SELECT would fail. Fetch via
+  // service role ONLY when the caller has passed `decideProject.update`
+  // above. `EditProjectSheet` is the only downstream consumer; if
+  // the caller can't edit, we don't touch the column at all (the value
+  // isn't rendered anywhere else on this page).
+  let projectContractValue: number | string | null = null;
+  if (canEditProject) {
+    const serviceClient = createServiceRoleClient();
+    const { data: cv } = await serviceClient
+      .from("projects")
+      .select("contract_value")
+      .eq("id", id)
+      .eq("tenant_id", employee.tenant_id)
+      .maybeSingle();
+    projectContractValue = (cv?.contract_value as number | string | null) ?? null;
+  }
   const canDeleteMilestones =
     canonicalRole === "OM" ||
     canonicalRole === "DIRECTOR" ||
@@ -463,8 +493,7 @@ export default async function ProjectDetailPage(props: {
                 location: (project.location as string | null) ?? null,
                 start_date: (project.start_date as string | null) ?? null,
                 end_date: (project.end_date as string | null) ?? null,
-                contract_value:
-                  (project.contract_value as string | number | null) ?? null,
+                contract_value: projectContractValue,
                 currency: (project.currency as string | null) ?? "IDR",
                 notes: (project.notes as string | null) ?? null,
                 sync_calendar:

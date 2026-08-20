@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 import type { ReportBaseFilters, ReportResult, ReportRow } from "../types";
 
@@ -26,11 +26,18 @@ import type { ReportBaseFilters, ReportResult, ReportRow } from "../types";
 export async function runProjectPortfolio(
   filters: ReportBaseFilters,
 ): Promise<ReportResult> {
-  const supabase = await createClient();
+  // Uses the service-role client because `projects.contract_value` is
+  // REVOKE'd from `authenticated` (migration 0102). The caller has
+  // already cleared both PDP `read:report` and the fine-grained
+  // `meta.allowedRoles.includes(dbRole)` gate in `runReport()` before
+  // this function is invoked, so bypassing RLS here is safe. Rows are
+  // still constrained to the caller's tenant via `.eq('tenant_id',
+  // filters.tenantId)` — see runner.ts where the tenant is resolved
+  // from `requireCurrentEmployee()`.
+  const supabase = createServiceRoleClient();
 
   // Base project select — join client + budgets so we can roll up the
-  // portfolio in a single round-trip. RLS auto-scopes rows to the
-  // caller (PM sees own, OM sees portfolio, Finance sees all).
+  // portfolio in a single round-trip.
   const query = supabase
     .from("projects")
     .select(

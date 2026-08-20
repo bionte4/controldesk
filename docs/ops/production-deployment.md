@@ -732,17 +732,116 @@ SQL
 - Run `await (window.__supabase || createBrowserClient(...)).from('employees').select('monthly_salary')`
 - Expected: `{ data: null, error: { code: '42501', message: 'permission denied for column monthly_salary' } }`
 
-**Deferred follow-up (not in this migration bundle):**
+**Deferred follow-up delivered in migrations 0102 + 0103** — see next
+section for the details + deploy steps.
 
-- **`projects.contract_value`** column-level REVOKE — 10+ read sites
-  (project list, detail, edit sheet, portfolio report, AI tools) would
-  need to move to service-role. Defer until we settle on the read
-  pattern (RPC vs service-role vs masked view). UI-level `view_contract`
-  capability still guards the visible surfaces.
-- **`project_expenses` + `cash_advances` RLS mirror** — the app-layer
-  approver-or-self scoping (`src/lib/security/project-scope.ts`) should
-  eventually be reproduced at the RLS layer. Requires porting
-  `resolveProjectScope` semantics into SECURITY DEFINER helpers.
+### Contract-value + project-scoped RLS (migrations 0102 + 0103)
+
+Migrations **0102** and **0103** finish the Fase A/B security audit
+bundle. Read this AFTER applying 0100 + 0101 above — they layer on top.
+
+**What changes:**
+
+- **0102** — column-level SELECT REVOKE on `projects.contract_value`
+  from the `authenticated` role (same DO-block pattern as 0100). Legit
+  read sites already switched to service-role in the same PR:
+  - `src/app/(app)/projects/[id]/page.tsx` — separate service-role
+    read only when `authorize({ action: "update", resource: "project" })`
+    is ALLOW (OM+/TENANT_ADMIN); the value flows to `EditProjectSheet`
+    and nowhere else on the page.
+  - `src/lib/reports/queries/project-portfolio.ts` — full query moved
+    to service-role because `runReport()` already gates by
+    `meta.allowedRoles.includes(dbRole)` (Finance + PM).
+  - `src/lib/ai/tools/index.ts` (`project_info` tool) — checks
+    `roleInGate(ctx.dbRole, CONTRACT_VIEWER_ROLES)`; non-leader
+    callers get `contract_value_label: null` so the LLM can't leak
+    the figure.
+
+- **0103** — SELECT RLS on `project_expenses` and `cash_advances`
+  rewritten from tenant-open to a three-way scope (`is_org_scope()`,
+  `is_approver_role() + current_visible_project_ids()`, or self via
+  `submitter_employee_id` / `requester_employee_id`). Ports the
+  app-layer `resolveProjectScope()` + `buildApproverOrSelfClause()`
+  semantics. New helpers: `public.is_org_scope()`,
+  `public.is_portfolio_scope()`, `public.is_approver_role()`,
+  `public.current_visible_project_ids()` (recursive CTE, 8-hop cap).
+  UPDATE policies stay tenant-open for now — approvers legitimately
+  UPDATE rows on other users' submissions to advance approval state;
+  tightening those is a separate follow-up.
+
+**Deploy steps:**
+
+```bash
+cd ~/controldesk
+git pull origin feat/initial-controldesk-platform
+./deploy/scripts/apply-migrations.sh
+```
+
+**If you hit `must be owner of relation projects` / `must be owner of
+relation project_expenses` / `must be owner of relation cash_advances`:**
+same fix as 0100 / 0101 — apply as `supabase_admin`:
+
+```bash
+docker exec -it controldesk-db psql -U supabase_admin -d postgres \
+  -f /docker-entrypoint-initdb.d/migrations/0102_projects_contract_value_column_privilege.sql
+
+docker exec -it controldesk-db psql -U supabase_admin -d postgres \
+  -f /docker-entrypoint-initdb.d/migrations/0103_expenses_ca_rls_project_scope.sql
+```
+
+Then mark them applied:
+
+```bash
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+INSERT INTO _migration_history (filename, sha256) VALUES
+  ('0102_projects_contract_value_column_privilege.sql', ''),
+  ('0103_expenses_ca_rls_project_scope.sql', '')
+ON CONFLICT DO NOTHING;
+SQL
+```
+
+**Smoke test after apply:**
+
+```bash
+# 1. Verify projects.contract_value stripped for authenticated
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT has_column_privilege(
+  'authenticated', 'public.projects', 'contract_value', 'SELECT'
+) AS auth_can_read_contract;
+-- Expected: f
+SQL
+
+# 2. Verify new scope helpers exist
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT proname FROM pg_proc
+WHERE proname IN (
+  'is_org_scope', 'is_portfolio_scope',
+  'is_approver_role', 'current_visible_project_ids'
+)
+ORDER BY proname;
+-- Expected: 4 rows
+SQL
+
+# 3. Verify new SELECT policies wired
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT tablename, policyname,
+  pg_get_expr(polqual, polrelid) LIKE '%current_visible_project_ids%'
+    AS is_scoped
+FROM pg_policies pol
+JOIN pg_policy pp ON pp.polname = pol.policyname
+WHERE tablename IN ('project_expenses', 'cash_advances')
+  AND policyname IN ('expenses_scoped_read', 'ca_scoped_read');
+-- Expected: is_scoped=t on both rows
+SQL
+```
+
+**Then test in browser (as EMPLOYEE role):**
+
+- Open devtools after logging in as an EMPLOYEE.
+- Run `await window.__supabase.from('projects').select('id, contract_value').limit(1)`
+- Expected: `{ data: null, error: { code: '42501', message: 'permission denied for column contract_value' } }`
+- Run `await window.__supabase.from('project_expenses').select('id').limit(20)`
+- Expected: only rows this employee submitted (previously returned all tenant rows).
 
 ### Known issues (non-blocking)
 
