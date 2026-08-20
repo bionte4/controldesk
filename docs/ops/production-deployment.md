@@ -644,6 +644,106 @@ theft — untuk itu, rotate `JWT_SECRET` per §22 rules (90 hari).
 di tab A, tab B (idle) tetap ter-reset. Semua tab logout bersamaan saat
 timer akhirnya jatuh.
 
+### Finance data RLS tightening (migrations 0100 + 0101)
+
+Migrations **0100** and **0101** close the tenant-wide read leak on salary
+and commercial finance data documented in the Fase A/B security audit.
+Read this section before applying — they touch RLS + column privileges,
+which historically hit the "must be owner of relation" gotcha on this
+deployment (see the Migration owner permission error section above).
+
+**What changes:**
+
+- **0100** — column-level SELECT REVOKE on `employees.monthly_salary` +
+  `hourly_rate` from the `authenticated` role. Legitimate consumers
+  (payroll cron, UPK auto-gen after OM approval) already switched to the
+  service-role client in the same PR; user-JWT queries via browser
+  devtools now get `permission denied for column monthly_salary`.
+- **0101** — SELECT policies on `bpo_contracts`, `budgets`,
+  `budget_details` rewritten to require `is_finance_leader()` (contracts)
+  or `is_finance_management()` / `is_project_member()` (budgets +
+  details). View `v_project_budget_lines` gains `security_invoker=true`
+  so it actually respects the underlying RLS.
+
+**Deploy steps:**
+
+```bash
+cd ~/controldesk
+git pull origin feat/initial-controldesk-platform
+./deploy/scripts/apply-migrations.sh
+```
+
+**If you hit `must be owner of relation employees` or `must be owner of
+relation bpo_contracts`:** the tables were originally created by
+`supabase_admin`, not `postgres`. Fix per the "Migration owner
+permission error" section above — apply as `supabase_admin`:
+
+```bash
+docker exec -it controldesk-db psql -U supabase_admin -d postgres \
+  -f /docker-entrypoint-initdb.d/migrations/0100_employees_salary_column_privilege.sql
+
+docker exec -it controldesk-db psql -U supabase_admin -d postgres \
+  -f /docker-entrypoint-initdb.d/migrations/0101_finance_data_rls_tighten.sql
+```
+
+Then manually mark them applied in `_migration_history`:
+
+```bash
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+INSERT INTO _migration_history (filename, sha256) VALUES
+  ('0100_employees_salary_column_privilege.sql', ''),
+  ('0101_finance_data_rls_tighten.sql', '')
+ON CONFLICT DO NOTHING;
+SQL
+```
+
+**Smoke test after apply:**
+
+```bash
+# 1. Verify column privilege stripped for authenticated
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT has_column_privilege('authenticated', 'public.employees', 'monthly_salary', 'SELECT')
+  AS auth_can_read_salary;
+-- Expected: f
+SQL
+
+# 2. Verify helpers exist
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT proname FROM pg_proc
+WHERE proname IN ('is_finance_leader', 'is_finance_management')
+ORDER BY proname;
+-- Expected: 2 rows
+SQL
+
+# 3. Verify tightened policies
+docker exec -i controldesk-db psql -U postgres -d postgres <<'SQL'
+SELECT tablename, policyname,
+  pg_get_expr(polqual, polrelid) LIKE '%is_finance%' AS is_tightened
+FROM pg_policies pol
+JOIN pg_policy pp ON pp.polname = pol.policyname
+WHERE tablename IN ('bpo_contracts', 'budgets', 'budget_details')
+  AND policyname LIKE '%_tenant_read';
+-- Expected: is_tightened=t on all three rows
+SQL
+```
+
+**Then test in browser (as EMPLOYEE role):**
+- Open devtools console after logging in to `/dashboard`
+- Run `await (window.__supabase || createBrowserClient(...)).from('employees').select('monthly_salary')`
+- Expected: `{ data: null, error: { code: '42501', message: 'permission denied for column monthly_salary' } }`
+
+**Deferred follow-up (not in this migration bundle):**
+
+- **`projects.contract_value`** column-level REVOKE — 10+ read sites
+  (project list, detail, edit sheet, portfolio report, AI tools) would
+  need to move to service-role. Defer until we settle on the read
+  pattern (RPC vs service-role vs masked view). UI-level `view_contract`
+  capability still guards the visible surfaces.
+- **`project_expenses` + `cash_advances` RLS mirror** — the app-layer
+  approver-or-self scoping (`src/lib/security/project-scope.ts`) should
+  eventually be reproduced at the RLS layer. Requires porting
+  `resolveProjectScope` semantics into SECURITY DEFINER helpers.
+
 ### Known issues (non-blocking)
 
 Backlog issues yang sudah muncul di prod tapi tidak mem-block operasi

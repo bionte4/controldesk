@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { withSecureAction } from "@/lib/security/action-wrapper";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import type { TablesUpdate } from "@/types/database";
 import { notifyRoles, notifyUser } from "@/lib/notifications/service";
 import { translatorFor } from "@/lib/notifications/localize";
@@ -1016,10 +1016,19 @@ export const decideEvaluationByOmAction = withSecureAction({
       parent.spv_recommendation === "NOT_EXTEND"
     ) {
       try {
-        const { data: emp } = await supabase
+        // `monthly_salary` is REVOKE'd from `authenticated` in migration
+        // 0100 — this read has to run on the service-role client. Safe
+        // here because we've already passed the `withSecureAction` PDP
+        // check that ensures the caller is the correct OM approver for
+        // this evaluation, and the read scopes to a single employee_id
+        // pulled from the parent evaluation row (no free-form
+        // enumeration risk).
+        const serviceClient = createServiceRoleClient();
+        const { data: emp } = await serviceClient
           .from("employees")
           .select("id, join_date, monthly_salary")
           .eq("id", parent.employee_id)
+          .eq("tenant_id", ctx.actor.tenantId)
           .maybeSingle();
         const monthlySalary = Number(emp?.monthly_salary ?? 0);
         const joinDate = emp?.join_date ? new Date(emp.join_date) : null;

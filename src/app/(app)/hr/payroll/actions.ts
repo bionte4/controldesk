@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { computePayroll } from "@/lib/payroll/compute";
 import { withSecureAction } from "@/lib/security/action-wrapper";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceRoleClient } from "@/lib/supabase/server";
 import {
   finalizePayrollPeriodSchema,
   generatePayrollPeriodSchema,
@@ -64,7 +64,16 @@ export const generatePayrollPeriodAction = withSecureAction({
     }
 
     // 2. Load all active employees.
-    const { data: employees, error: empErr } = await supabase
+    //
+    // Salary columns (`monthly_salary`, `hourly_rate`) are REVOKE'd from
+    // the `authenticated` role in migration 0100 — a user-JWT client here
+    // would get "permission denied for column monthly_salary". PDP has
+    // already vetted the caller as a payroll operator (§9 gate on this
+    // Server Action), so switching to service-role for this specific read
+    // is safe. The rest of the handler continues on the RLS-scoped client
+    // so any bug in the tenant-scope logic still falls closed.
+    const serviceClient = createServiceRoleClient();
+    const { data: employees, error: empErr } = await serviceClient
       .from("employees")
       .select("id, monthly_salary, hourly_rate")
       .eq("tenant_id", ctx.actor.tenantId)
