@@ -77,15 +77,27 @@ export function useIdleTimeout(options: IdleTimeoutOptions): {
     onTimeout: options.onTimeout,
     onActivity: options.onActivity,
   });
-  callbacksRef.current = {
-    onWarn: options.onWarn,
-    onTimeout: options.onTimeout,
-    onActivity: options.onActivity,
-  };
+  // Keep the callback stash current, but do it in commit phase (not render)
+  // so we satisfy the react-hooks/refs strict rule. Timers fire on the event
+  // loop AFTER commit, so they always see the freshest closure — the
+  // one-frame delay vs. old direct assignment is inconsequential for a
+  // multi-minute idle timer.
+  useEffect(() => {
+    callbacksRef.current = {
+      onWarn: options.onWarn,
+      onTimeout: options.onTimeout,
+      onActivity: options.onActivity,
+    };
+  });
 
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timeoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastActivityAtRef = useRef<number>(Date.now());
+  // Initialise to 0 (not `Date.now()`) so this useRef stays pure. The very
+  // first DOM activity event or `extend()` will overwrite it with a real
+  // timestamp; the throttle check tolerates a 0 baseline because
+  // `Date.now() - 0` is a huge delta that trivially exceeds the throttle
+  // window, so the first event always registers.
+  const lastActivityAtRef = useRef<number>(0);
   const broadcastRef = useRef<BroadcastChannel | null>(null);
 
   const clearTimers = useCallback(() => {

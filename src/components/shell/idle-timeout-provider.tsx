@@ -57,7 +57,12 @@ export function IdleTimeoutProvider({
   const [countdownSec, setCountdownSec] = useState(
     Math.ceil(warningMs / 1000),
   );
-  const [, startLogoutTransition] = useTransition();
+  // isPending covers the "logout in flight" window (button click → navigation)
+  // which is all we need for the JSX-side `disabled` prop. loggingOutRef stays
+  // as a separate latch inside event-loop callbacks below so we never double-
+  // fire signOut after the transition kicks off, even before React commits the
+  // pending state.
+  const [isLoggingOut, startLogoutTransition] = useTransition();
 
   const loggingOutRef = useRef(false);
 
@@ -151,7 +156,7 @@ export function IdleTimeoutProvider({
               type="button"
               variant="ghost"
               onClick={handleTimeout}
-              disabled={loggingOutRef.current}
+              disabled={isLoggingOut}
             >
               {t("logoutNow")}
             </Button>
