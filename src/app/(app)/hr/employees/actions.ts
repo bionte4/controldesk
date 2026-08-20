@@ -158,9 +158,16 @@ export const updateEmployeeAction = withSecureAction({
   handler: async (input, ctx) => {
     const supabase = await createClient();
 
+    // Explicit column list (was `select("*")` pre-migration 0100 which
+    // REVOKE'd table-level SELECT and forced column-level enumeration).
+    // Only the fields read below (`existing.<field>`) + `id` for the
+    // audit key. Adding a new consumed field? Add it here too.
     const { data: existing, error: readErr } = await supabase
       .from("employees")
-      .select("*")
+      .select(
+        `id, full_name, email, role, employment_type, contract_end_date,
+         availability, nik_enc, division, department, client_display_name`,
+      )
       .eq("id", input.id)
       .eq("tenant_id", ctx.actor.tenantId)
       .single();
