@@ -504,6 +504,7 @@
     "createAccount": "Create an account",
     "alreadyHaveWorkspace": "Already have a workspace?",
     "wrongTenant": "You were signed out because your account belongs to a different tenant.",
+    "idleTimeoutBanner": "Your session expired because there was no activity. Please sign in again.",
     "createWorkspace": "Create a workspace",
     "createWorkspaceSubtitle": "Spin up a new ControlDesk tenant. You'll be the first Tenant Admin.",
     "invitationOnly": "Invitation-only workspace",
@@ -536,6 +537,13 @@
       "ai": "AI-forecasted SLA & budget risk"
     },
     "trust": "Multi-tenant isolation · Immutable audit trail · RBAC/ABAC by design"
+  },
+  "session": {
+    "warnTitle": "Session About to Expire",
+    "warnBody": "Your session will expire in {seconds} seconds due to inactivity. Click \"Extend session\" to stay signed in.",
+    "extend": "Extend session",
+    "logoutNow": "Sign out now",
+    "bannerIdleTimeout": "Your session expired because there was no activity. Please sign in again."
   },
   "nav": {
     "openUserMenu": "Open user menu",

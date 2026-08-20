@@ -504,6 +504,7 @@
     "createAccount": "Buat akun",
     "alreadyHaveWorkspace": "Sudah punya ruang kerja?",
     "wrongTenant": "Anda telah keluar karena akun ini milik tenant lain.",
+    "idleTimeoutBanner": "Sesi Anda berakhir otomatis karena tidak ada aktivitas. Silakan login kembali.",
     "createWorkspace": "Buat ruang kerja",
     "createWorkspaceSubtitle": "Buat tenant ControlDesk baru. Anda akan menjadi Tenant Admin pertama.",
     "invitationOnly": "Ruang kerja hanya via undangan",
@@ -536,6 +537,13 @@
       "ai": "Prediksi risiko SLA & anggaran dengan AI"
     },
     "trust": "Isolasi multi-tenant · Audit trail permanen · RBAC/ABAC by design"
+  },
+  "session": {
+    "warnTitle": "Sesi Akan Berakhir",
+    "warnBody": "Sesi Anda akan berakhir dalam {seconds} detik karena tidak ada aktivitas. Klik \"Lanjutkan sesi\" untuk tetap login.",
+    "extend": "Lanjutkan sesi",
+    "logoutNow": "Logout sekarang",
+    "bannerIdleTimeout": "Sesi Anda berakhir otomatis karena tidak ada aktivitas. Silakan login kembali."
   },
   "nav": {
     "openUserMenu": "Buka menu pengguna",

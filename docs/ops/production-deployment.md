@@ -612,6 +612,38 @@ docker compose -f docker-compose.prod.yml --env-file .env.production \
   up -d --force-recreate app auth rest realtime storage kong
 ```
 
+### Idle timeout policy (session inactivity)
+
+Client-side idle timeout otomatis logout user setelah N menit tanpa
+aktivitas (mouse/keyboard/click/scroll). Warning modal muncul sebelum
+logout supaya user bisa "Lanjutkan sesi". Berlaku untuk **app** (tenant
+users) dan **portal** (external clients).
+
+**Env vars di `.env.production`:**
+
+```bash
+NEXT_PUBLIC_IDLE_TIMEOUT_MINUTES=30   # Default 30. Range [1, 1440].
+NEXT_PUBLIC_IDLE_WARNING_MINUTES=2    # Warning muncul di menit (TIMEOUT - WARNING). Range [1, TIMEOUT - 1].
+```
+
+**Kapan tune:**
+- Prod normal: `30 / 2` (default).
+- Tenant PII-heavy (mis. HR-only workspace): turunkan ke `15 / 2`.
+- Dev / demo: bisa naikkan ke `480 / 5` (8 jam) supaya tidak ganggu debugging.
+
+**Deploy setelah ubah:** kedua var ini `NEXT_PUBLIC_*` — di-inline saat
+build. WAJIB rebuild image (`docker compose ... build app`) dan
+`--force-recreate app`. Restart tanpa rebuild TIDAK berpengaruh.
+
+**Enforcement:** UX defense-in-depth di atas Supabase JWT expiry
+(`GOTRUE_JWT_EXP=3600` = 1 jam absolut). Idle timeout mengatasi kasus
+"laptop ditinggal unlocked" tapi tidak melindungi dari refresh-token
+theft — untuk itu, rotate `JWT_SECRET` per §22 rules (90 hari).
+
+**Cross-tab sync:** provider pakai `BroadcastChannel`. Kalau user aktif
+di tab A, tab B (idle) tetap ter-reset. Semua tab logout bersamaan saat
+timer akhirnya jatuh.
+
 ### Known issues (non-blocking)
 
 Backlog issues yang sudah muncul di prod tapi tidak mem-block operasi

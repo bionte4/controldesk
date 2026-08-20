@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -17,10 +18,21 @@ export const metadata: Metadata = {
   title: "Portal — Sign in",
 };
 
-export default async function PortalLoginPage() {
+export default async function PortalLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await getCurrentPortalSession();
   if (session) redirect("/portal");
-  const t = await getTranslations("portal.login");
+  const params = await searchParams;
+  const reasonParam = typeof params.reason === "string" ? params.reason : undefined;
+  const [t, tSession] = await Promise.all([
+    getTranslations("portal.login"),
+    getTranslations("session"),
+  ]);
+  const idleTimeoutMessage =
+    reasonParam === "idle_timeout" ? tSession("bannerIdleTimeout") : undefined;
 
   return (
     <div className="grid place-items-center py-10">
@@ -29,7 +41,12 @@ export default async function PortalLoginPage() {
           <CardTitle className="font-display text-2xl">{t("title")}</CardTitle>
           <CardDescription>{t("subtitle")}</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {idleTimeoutMessage ? (
+            <Alert>
+              <AlertDescription>{idleTimeoutMessage}</AlertDescription>
+            </Alert>
+          ) : null}
           <PortalLoginForm />
         </CardContent>
       </Card>

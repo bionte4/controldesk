@@ -10,8 +10,13 @@ import {
   CommandPalette,
   type KnowledgePaletteEntry,
 } from "@/components/shell/command-palette";
+import { IdleTimeoutProvider } from "@/components/shell/idle-timeout-provider";
 import { PageTransition } from "@/components/shell/page-transition";
 import { TrialBanner } from "@/components/shell/trial-banner";
+import {
+  resolveIdleTimeoutMinutes,
+  resolveIdleWarningMinutes,
+} from "@/lib/security/idle-timeout";
 import { isLocale } from "@/lib/i18n/config";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { CAPABILITY_IDS } from "@/lib/rbac/capabilities";
@@ -128,33 +133,39 @@ export default async function AppLayout({
     }));
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <CommandPalette knowledgeArticles={knowledgePaletteEntries}>
-        <AppSidebar
-          role={employee.role}
-          allowedCapabilities={allowedCapabilities}
-          tenantName={tenant?.name ?? "ControlDesk"}
-          tenantSlug={employee.tenant_slug}
-        />
-        <SidebarInset className="min-h-svh flex flex-col">
-          <AppTopbar
-            fullName={employee.full_name}
-            email={employee.email}
+    <IdleTimeoutProvider
+      variant="app"
+      timeoutMinutes={resolveIdleTimeoutMinutes()}
+      warningMinutes={resolveIdleWarningMinutes()}
+    >
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <CommandPalette knowledgeArticles={knowledgePaletteEntries}>
+          <AppSidebar
             role={employee.role}
+            allowedCapabilities={allowedCapabilities}
+            tenantName={tenant?.name ?? "ControlDesk"}
             tenantSlug={employee.tenant_slug}
-            userId={employee.user_id}
-            tenantId={employee.tenant_id}
-            notifications={notificationItems}
-            aiInsights={aiInsightItems}
-            locale={locale}
-            helpArticleSlugs={helpArticleSlugs}
           />
-          <TrialBanner tenantId={employee.tenant_id} />
-          <main className="flex-1 flex flex-col p-6 md:p-8">
-            <PageTransition>{children}</PageTransition>
-          </main>
-        </SidebarInset>
-      </CommandPalette>
-    </SidebarProvider>
+          <SidebarInset className="min-h-svh flex flex-col">
+            <AppTopbar
+              fullName={employee.full_name}
+              email={employee.email}
+              role={employee.role}
+              tenantSlug={employee.tenant_slug}
+              userId={employee.user_id}
+              tenantId={employee.tenant_id}
+              notifications={notificationItems}
+              aiInsights={aiInsightItems}
+              locale={locale}
+              helpArticleSlugs={helpArticleSlugs}
+            />
+            <TrialBanner tenantId={employee.tenant_id} />
+            <main className="flex-1 flex flex-col p-6 md:p-8">
+              <PageTransition>{children}</PageTransition>
+            </main>
+          </SidebarInset>
+        </CommandPalette>
+      </SidebarProvider>
+    </IdleTimeoutProvider>
   );
 }

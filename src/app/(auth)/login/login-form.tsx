@@ -46,7 +46,13 @@ function hydratedServerSnapshot() {
   return false;
 }
 
-export function LoginForm({ initialError }: { initialError?: string }) {
+export function LoginForm({
+  initialError,
+  initialInfo,
+}: {
+  initialError?: string;
+  initialInfo?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   // `?next=<path>` — the URL the user was trying to reach when the proxy
@@ -173,6 +179,10 @@ export function LoginForm({ initialError }: { initialError?: string }) {
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : initialInfo ? (
+        <Alert>
+          <AlertDescription>{initialInfo}</AlertDescription>
         </Alert>
       ) : null}
 

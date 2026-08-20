@@ -15,9 +15,17 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const errorParam = typeof params.error === "string" ? params.error : undefined;
+  const reasonParam = typeof params.reason === "string" ? params.reason : undefined;
   const t = await getTranslations("auth");
+
+  // Priority: explicit `error` param wins over the softer `reason` info.
+  // `reason=idle_timeout` renders as an informational banner (blue),
+  // not an error (red) — the user did nothing wrong, we just enforced
+  // the inactivity policy.
   const initialError =
     errorParam === "wrong_tenant" ? t("wrongTenant") : undefined;
+  const initialInfo =
+    reasonParam === "idle_timeout" ? t("idleTimeoutBanner") : undefined;
 
   return (
     <div className="space-y-8">
@@ -30,7 +38,7 @@ export default async function LoginPage({
         </p>
       </div>
 
-      <LoginForm initialError={initialError} />
+      <LoginForm initialError={initialError} initialInfo={initialInfo} />
 
       <p className="text-sm text-muted-foreground text-center">
         {t("newToControlDesk")}{" "}

@@ -221,3 +221,23 @@ export async function signOut(): Promise<void> {
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
+/**
+ * Sign out with a reason — clears the Supabase Auth session and redirects
+ * to `/login?reason=<reason>`.
+ *
+ * Split from `signOut()` because that one is bound to a `<form action={...}>`
+ * in `AppTopbar` and must keep the `(formData: FormData) => void` shape
+ * that React expects. This variant is invoked programmatically from client
+ * code (idle-timeout provider) via `startTransition`.
+ *
+ * @param reason Machine-readable slug rendered as a banner on `/login`.
+ * Currently only `"idle_timeout"` is used; add cases to the login page
+ * translation map as new reasons appear.
+ */
+export async function signOutWithReason(reason: string): Promise<void> {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect(`/login?reason=${encodeURIComponent(reason)}`);
+}
