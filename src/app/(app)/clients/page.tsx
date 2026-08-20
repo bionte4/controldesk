@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
+import { log } from "@/lib/observability/log";
 import { authorize } from "@/lib/security/pdp";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
@@ -95,10 +96,15 @@ type ClientRow = {
   project_count: number;
 };
 
-async function loadClients(): Promise<ClientRow[]> {
+async function loadClients(tenantId: string): Promise<ClientRow[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Primary query: single-shot fetch with `projects(count)` relational embed.
+  // If PostgREST cannot resolve the embed (stale schema cache, missing FK
+  // discovery, etc.) we fall back to a two-query path below so the page still
+  // renders instead of showing an empty state (rules §21 — never swallow
+  // errors silently).
+  const primary = await supabase
     .from("clients")
     .select(
       "id, name, industry, status, contact_name, contact_email, onboarded_at, contract_number, project_code, projects(count)",
@@ -106,11 +112,54 @@ async function loadClients(): Promise<ClientRow[]> {
     .order("name", { ascending: true })
     .limit(200);
 
-  if (error) {
+  if (!primary.error && primary.data) {
+    return primary.data.map((row) => ({
+      id: row.id,
+      name: row.name,
+      industry: row.industry,
+      status: row.status as ClientStatus,
+      contact_name: row.contact_name,
+      contact_email: row.contact_email,
+      onboarded_at: row.onboarded_at,
+      contract_number: row.contract_number,
+      project_code: row.project_code,
+      project_count:
+        (row.projects as unknown as { count: number }[] | null)?.[0]?.count ??
+        0,
+    }));
+  }
+
+  log.warn("loadClients primary query failed — falling back", {
+    tenant_id: tenantId,
+    err: primary.error,
+  });
+
+  const [clientsResult, projectsResult] = await Promise.all([
+    supabase
+      .from("clients")
+      .select(
+        "id, name, industry, status, contact_name, contact_email, onboarded_at, contract_number, project_code",
+      )
+      .order("name", { ascending: true })
+      .limit(200),
+    supabase.from("projects").select("client_id"),
+  ]);
+
+  if (clientsResult.error || !clientsResult.data) {
+    log.error("loadClients fallback query failed", {
+      tenant_id: tenantId,
+      err: clientsResult.error,
+    });
     return [];
   }
 
-  return (data ?? []).map((row) => ({
+  const countByClient = new Map<string, number>();
+  for (const p of projectsResult.data ?? []) {
+    if (!p.client_id) continue;
+    countByClient.set(p.client_id, (countByClient.get(p.client_id) ?? 0) + 1);
+  }
+
+  return clientsResult.data.map((row) => ({
     id: row.id,
     name: row.name,
     industry: row.industry,
@@ -120,8 +169,7 @@ async function loadClients(): Promise<ClientRow[]> {
     onboarded_at: row.onboarded_at,
     contract_number: row.contract_number,
     project_code: row.project_code,
-    project_count:
-      (row.projects as unknown as { count: number }[] | null)?.[0]?.count ?? 0,
+    project_count: countByClient.get(row.id) ?? 0,
   }));
 }
 
@@ -140,7 +188,7 @@ export default async function ClientsPage() {
   }
 
   const [clients, t, tStatus, tCols] = await Promise.all([
-    loadClients(),
+    loadClients(employee.tenant_id),
     getTranslations("clients"),
     getTranslations("clients.status"),
     getTranslations("clients.columns"),
