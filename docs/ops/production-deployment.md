@@ -524,6 +524,81 @@ DB state tetap konsisten, tidak ada partial apply.
 untuk detect ownership error dan auto-fallback ke `supabase_admin`. Sudah
 ada di roadmap.
 
+### Column-level REVOKE — post-mortem + author checklist
+
+**Post-mortem (Aug 2026, itps + demo redirect loop):** migration
+`0100_employees_salary_column_privilege.sql` REVOKE'd table-level SELECT
+on `public.employees` from `authenticated` (dynamic re-GRANT of every
+column except `monthly_salary` + `hourly_rate`). That silently broke
+`getCurrentEmployee()` in `src/lib/auth/session.ts` which used
+`.select('*')`. PostgREST rewrites `select('*')` to `SELECT *` — that
+needs the **table-level** SELECT, not column-level. Query returned
+`error: 42501 permission denied for relation employees`, helper
+returned `null`, `requireCurrentEmployee()` fired `redirect('/login')`,
+proxy still saw a valid session cookie → bounced `/login` → `/dashboard`,
+infinite loop (37+ nav attempts triggered Chrome throttle). Fixed in
+commit [`48e981b`](https://github.com/bontiharyanto/controldesk/commit/48e981b)
+by enumerating 30 explicit columns and narrowing `CurrentEmployee` type
+to `Omit<Tables<'employees'>, 'monthly_salary' | 'hourly_rate' | 'user_id'>`.
+
+Only caught in production because unit tests mock Supabase — real
+column-privilege errors don't surface. Adding an integration test for
+`getCurrentEmployee()` against a real Postgres role is in the follow-up
+backlog.
+
+**Author checklist — mandatory before landing any column-level REVOKE
+migration:**
+
+1. **Grep for `.select("*")` on the affected table:**
+
+   ```bash
+   rg "from\(([\"'\`])$TABLE\\1\\)[\\s\\S]{0,200}\\.select\\(([\"'\`])\\*" \
+     --multiline --multiline-dotall src/
+   ```
+
+   Every hit MUST be refactored to an explicit column list that excludes
+   the revoked column(s). Prefer just the columns the caller actually
+   uses (audit trail: name the fields in a comment above the `.select()`
+   so future edits know why the enumeration exists).
+
+2. **Grep for downstream `.monthly_salary` / `.contract_value` (or
+   whatever field was revoked) reads via user-JWT client:**
+
+   ```bash
+   rg "\\.$COLUMN\\b" src/ --type ts | grep -v service-role
+   ```
+
+   Anything hit here that isn't already service-role-gated MUST either
+   (a) be moved to the service-role client after PDP authorization, OR
+   (b) be conditionally omitted based on a role predicate (like
+   `CONTRACT_VIEWER_ROLES` for `contract_value`).
+
+3. **Narrow the type of any helper that returns the table row:**
+
+   Add the revoked columns to an `Omit<>` on the exported type, so
+   downstream consumers surface a TypeScript error when they reference
+   the removed field — the compiler now catches what the runtime would.
+
+   Example (`session.ts` post-fix):
+
+   ```typescript
+   export type CurrentEmployee = Omit<
+     Tables<"employees">,
+     "user_id" | "monthly_salary" | "hourly_rate"
+   > & { user_id: string; tenant_slug: string };
+   ```
+
+4. **Smoke test in an incognito browser BEFORE calling done:**
+
+   Log in as a plain EMPLOYEE role (not admin) after applying the
+   migration. Navigate to `/dashboard`, then to one page that reads the
+   affected table (`/hr/employees` for employees, `/projects/<id>` for
+   projects, etc). Empty screen or redirect loop = there's still a
+   `.select('*')` or column reference somewhere.
+
+5. **Update this runbook** with the migration number + which columns
+   were revoked + which read sites you migrated to service-role.
+
 ### Server branch diverged (git pull --ff-only gagal)
 
 Skenario: kamu edit file di server (misal quick hotfix, atau merge commit
