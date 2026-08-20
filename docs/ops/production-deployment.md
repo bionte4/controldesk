@@ -918,6 +918,88 @@ SQL
 - Run `await window.__supabase.from('project_expenses').select('id').limit(20)`
 - Expected: only rows this employee submitted (previously returned all tenant rows).
 
+### Budget visibility matrix — who sees what (rules §3 / §9)
+
+Budget data has **two orthogonal capability gates** so tenants can dial
+access without forking the codebase. Both live in
+`src/lib/rbac/capabilities.ts` and can be overridden per-tenant via the
+admin matrix at `/settings/capabilities`.
+
+| Capability            | What it controls                                                                                                | Default roles                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `view_budget`         | Access the **budget module** — list rows, detail page, project card, dashboard portfolio tiles, `/projects` list Budget column. | `PROJECT_MANAGER`, `OPERATIONS_MANAGER`, `HEAD_MANAGER`, `GENERAL_MANAGER`, `LEAD_FINANCE`, `TENANT_ADMIN` |
+| `view_budget_amount`  | Render the **rupiah figures** (Rp X.XXX.XXX) verbatim. When denied, every amount cell renders as `Rp ******`. Nested: `!view_budget → !view_budget_amount`. | `HEAD_MANAGER`, `GENERAL_MANAGER`, `LEAD_FINANCE`, `TENANT_ADMIN`   |
+
+**Effective visibility by canonical role (default settings):**
+
+| Role                | Section visible? | Amounts visible?          |
+| ------------------- | ---------------- | ------------------------- |
+| `EMPLOYEE`          | no               | n/a                       |
+| `SUPERVISOR`        | no               | n/a                       |
+| `PROJECT_MANAGER`   | yes              | **no — masked `Rp ******`** |
+| `OPERATIONS_MANAGER`| yes              | **no — masked `Rp ******`** |
+| `HEAD_MANAGER`      | yes              | yes                       |
+| `GENERAL_MANAGER`   | yes              | yes                       |
+| `LEAD_FINANCE`      | yes              | yes                       |
+| `TENANT_ADMIN`      | yes              | yes                       |
+
+**Where the mask renders:**
+
+- `/finance/budgets` — `Total Planned` column.
+- `/finance/budgets/[id]` — four summary tiles + line-item Planned /
+  Realized / Outstanding / Remaining columns. Progress bar visible but
+  numeric utilisation percentage dropped under mask.
+- `/projects/[id]` — budget summary card (`Spent` / `Of`), recent
+  expense amounts.
+- `/projects` — Budget column.
+- `/dashboard` — `Approved Budget` KPI, portfolio totals strip
+  (planned / realised / outstanding), per-tile planned / realised /
+  outstanding trio.
+
+**How to override per-tenant** — e.g. tenant wants OM to see nominal
+amounts too:
+
+1. Log in as `TENANT_ADMIN` → `/settings/capabilities`.
+2. Locate `view_budget_amount` row (high-sensitivity, will confirm
+   before applying).
+3. Check the `OPERATIONS_MANAGER` cell → toggle grants.
+4. Cell state changes from `default-deny` to `override-allow`
+   (green). Audit log records who + when in `security_audit_logs`.
+5. All OM sessions refresh capability set on next request (React
+   cache invalidates per-request).
+
+**Reverse case** — tenant wants PM to still see amounts for their own
+projects: currently NOT supported at Phase 1. Would require join-based
+data-layer masking (see roadmap below). Workaround: grant PM
+`view_budget_amount` via override → they see all budget amounts
+tenant-wide. Only recommended for small tenants where PM ~= OM in
+practice.
+
+**Phase 1 scope (delivered):**
+
+- UI-only mask. Data mentah **masih** flow ke client bundle via RSC
+  payload — a savvy PM inspecting DevTools Network tab can still see
+  the raw amounts. `Rp ******` protects casual observation (e.g.
+  screen-share, over-shoulder) but not adversarial inspection.
+
+**Phase 2 (data-layer strip) — TODO backlog:**
+
+Server-side sanitize `budget.total_planned_amount` /
+`budget_details.planned_amount` etc. → `null` when caller lacks
+`view_budget_amount`, before returning from Server Component /
+`getPortfolioSnapshot()`. Would close the RSC payload leak. Estimated
+~3-4 hours. Track in project TODO.
+
+**Phase 3 (RLS column mask) — TODO backlog:**
+
+DB-level REVOKE SELECT on `budgets.total_planned_amount` +
+`budget_details.planned_amount` + `..realized_amount` +
+`..outstanding_amount` from `authenticated`, mirroring the salary
+Phase A pattern (migration 0100). Would close REST snoop / devtools
+Supabase-client bypass. New RLS helper `is_finance_management_amount()`
+gates the re-GRANT. Estimated ~3 hours plus one migration + refactor
+of `select('*')` sites to explicit columns. Track in project TODO.
+
 ### Known issues (non-blocking)
 
 Backlog issues yang sudah muncul di prod tapi tidak mem-block operasi

@@ -23,8 +23,8 @@ import {
 } from "./roles";
 
 describe("CAPABILITY_CATALOG", () => {
-  it("has 11 distinct capabilities with unique ids", () => {
-    expect(CAPABILITY_CATALOG.length).toBe(11);
+  it("has 12 distinct capabilities with unique ids", () => {
+    expect(CAPABILITY_CATALOG.length).toBe(12);
     const ids = new Set(CAPABILITY_CATALOG.map((c) => c.id));
     expect(ids.size).toBe(CAPABILITY_CATALOG.length);
   });
@@ -76,6 +76,39 @@ describe("CAPABILITY_CATALOG", () => {
       expect(new Set(defaults)).toEqual(new Set(legacy));
     },
   );
+
+  // `view_budget_amount` is stricter than `view_budget` (list access)
+  // — PM/OM see the list but not the nominal figures. Pin the default
+  // roles so a future admin refactor that grants PM this capability
+  // is caught immediately (rules §3 / §9 audit trail sensitivity).
+  it("view_budget_amount defaults to Finance-leader tier only", () => {
+    const defaults = defaultRolesFor("view_budget_amount");
+    expect(new Set(defaults)).toEqual(
+      new Set([
+        "HEAD_MANAGER",
+        "GENERAL_MANAGER",
+        "LEAD_FINANCE",
+        "TENANT_ADMIN",
+      ]),
+    );
+    // Must be a proper subset of view_budget — you can't have amount
+    // access without list access by default.
+    const listRoles = new Set(defaultRolesFor("view_budget"));
+    for (const role of defaults) {
+      expect(listRoles.has(role)).toBe(true);
+    }
+    // PM and OM are the two roles this capability was introduced to
+    // exclude — pin them so tenant defaults never regress.
+    expect(defaults).not.toContain("PROJECT_MANAGER");
+    expect(defaults).not.toContain("OPERATIONS_MANAGER");
+  });
+
+  it("view_budget_amount is flagged high-sensitivity", () => {
+    // Admins toggling this in the matrix should see the "are you sure?"
+    // confirm dialog (rules §3) — pin the sensitivity so a future
+    // catalog edit doesn't accidentally downgrade it.
+    expect(getCapability("view_budget_amount").sensitivity).toBe("high");
+  });
 });
 
 describe("isCapabilityId", () => {

@@ -33,6 +33,10 @@
       "title": "View budgets",
       "description": "Budget figures across dashboard, project list, and project detail."
     },
+    "view_budget_amount": {
+      "title": "View budget amounts",
+      "description": "Rupiah figures on budget list, detail, project cards, and dashboard portfolio. When revoked, PM/OM still see the budget list + categories, but nominal columns render as 'Rp ******'."
+    },
     "view_contract": {
       "title": "View BPO contracts",
       "description": "MRR, contract value, and commercial SLA terms."

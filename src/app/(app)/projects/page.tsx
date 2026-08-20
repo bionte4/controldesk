@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
-import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
+import { formatIDRWithMask, parseMoneyFromDb } from "@/lib/format/money";
 import { authorize } from "@/lib/security/pdp";
 import { resolveProjectScope } from "@/lib/security/project-scope";
 import { requireCurrentEmployee } from "@/lib/auth/session";
@@ -210,6 +210,13 @@ export default async function ProjectsPage() {
   const dbRole = employee.role as AnyDbEmployeeRole;
   const capabilities = await resolveCapabilitiesFor();
   const showBudget = capabilities.can("view_budget");
+  // Nested gate — mirrors dashboard behaviour. PM/OM keep the
+  // Budget *column* (they need to know which projects have an
+  // approved budget) but the values themselves render as
+  // `Rp ******`. See `src/lib/rbac/capabilities.ts` for the role
+  // matrix.
+  const canViewBudgetAmount =
+    showBudget && capabilities.can("view_budget_amount");
   const [
     projects,
     clientOptions,
@@ -356,9 +363,11 @@ export default async function ProjectsPage() {
                       {showBudget ? (
                         <td className="px-4 py-3 text-right tabular-nums">
                           {p.budget_amount_db
-                            ? formatIDR(parseMoneyFromDb(p.budget_amount_db), {
-                                compact: true,
-                              })
+                            ? formatIDRWithMask(
+                                parseMoneyFromDb(p.budget_amount_db),
+                                canViewBudgetAmount,
+                                { compact: true },
+                              )
                             : "—"}
                         </td>
                       ) : null}

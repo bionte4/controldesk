@@ -33,6 +33,10 @@
       "title": "Lihat anggaran",
       "description": "Angka anggaran di dashboard, list proyek, dan detail proyek."
     },
+    "view_budget_amount": {
+      "title": "Lihat nominal anggaran",
+      "description": "Nilai rupiah pada budget list, detail, project card, dan dashboard portfolio. Kalau di-revoke, PM/OM tetap lihat daftar anggaran + kategori, tapi kolom nominal ditampilkan sebagai 'Rp ******'."
+    },
     "view_contract": {
       "title": "Lihat kontrak BPO",
       "description": "MRR, nilai kontrak, dan SLA komersial klien."

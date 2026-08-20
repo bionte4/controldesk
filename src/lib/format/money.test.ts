@@ -5,6 +5,8 @@ import {
   applyBasisPoints,
   formatIDR,
   formatIDRRange,
+  formatIDRWithMask,
+  IDR_MASK_PLACEHOLDER,
   moneyToDbString,
   mulMoney,
   parseMoneyFromDb,
@@ -100,5 +102,25 @@ describe("money — display", () => {
   it("formatIDRRange has an en-dash separator", () => {
     const s = formatIDRRange(5_000_000n, 25_000_000n);
     expect(s).toContain("–");
+  });
+});
+
+describe("money — mask (view_budget_amount gate)", () => {
+  it("renders formatted IDR when caller CAN view", () => {
+    const s = formatIDRWithMask(1_500_000_000n, true, { compact: true });
+    expect(s).toMatch(/Rp/);
+    expect(s).not.toBe(IDR_MASK_PLACEHOLDER);
+  });
+
+  it("renders the mask placeholder when caller CANNOT view", () => {
+    expect(formatIDRWithMask(1_500_000_000n, false)).toBe(IDR_MASK_PLACEHOLDER);
+    expect(formatIDRWithMask(0n, false, { compact: true })).toBe(
+      IDR_MASK_PLACEHOLDER,
+    );
+  });
+
+  it("mask placeholder starts with Rp so it aligns with unmasked rows", () => {
+    // UI depends on this to keep tabular alignment in tables.
+    expect(IDR_MASK_PLACEHOLDER.startsWith("Rp")).toBe(true);
   });
 });

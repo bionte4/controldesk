@@ -45,6 +45,7 @@ export type CapabilityId =
   | "view_performance"
   | "view_payroll"
   | "view_budget"
+  | "view_budget_amount"
   | "view_employee_directory"
   | "view_petty_cash"
   | "view_upk"
@@ -102,6 +103,24 @@ const FINANCE_MGMT: readonly EmployeeRole[] = [
   "TENANT_ADMIN",
 ] as const;
 
+// Stricter subset — roles allowed to see the *nominal amounts* on
+// budget surfaces (list + detail + dashboard + project card). Everyone
+// in FINANCE_MGMT can see the *list* (categories, status, project
+// linkage) via `view_budget`; only the Finance-leader tier and above
+// see the actual IDR figures. PM / OM in a tenant that toggles this
+// on will see rows like "Rp ******" instead of "Rp 1.500.000.000",
+// so they can still submit expenses against a MA without knowing the
+// exact budget headroom. Admin can override per-tenant via the
+// capability matrix (`/settings/capabilities`) — e.g. a tenant that
+// wants OM to see nominal amounts can grant `view_budget_amount` to
+// OPERATIONS_MANAGER without touching PM.
+const FINANCE_MGMT_AMOUNT: readonly EmployeeRole[] = [
+  "HEAD_MANAGER",
+  "GENERAL_MANAGER",
+  "LEAD_FINANCE",
+  "TENANT_ADMIN",
+] as const;
+
 export const CAPABILITY_CATALOG: readonly CapabilityDescriptor[] = [
   {
     id: "view_budget",
@@ -110,6 +129,14 @@ export const CAPABILITY_CATALOG: readonly CapabilityDescriptor[] = [
     titleKey: "capabilities.view_budget.title",
     descriptionKey: "capabilities.view_budget.description",
     defaultRoles: FINANCE_MGMT,
+  },
+  {
+    id: "view_budget_amount",
+    category: "finance",
+    sensitivity: "high",
+    titleKey: "capabilities.view_budget_amount.title",
+    descriptionKey: "capabilities.view_budget_amount.description",
+    defaultRoles: FINANCE_MGMT_AMOUNT,
   },
   {
     id: "view_contract",

@@ -127,6 +127,40 @@ export function formatIDR(
 }
 
 /**
+ * Placeholder yang dirender saat caller TIDAK punya kapabilitas
+ * `view_budget_amount` (rules §9). Menjaga "shape" tetap konsisten
+ * dengan `formatIDR()` — punya "Rp" prefix, glyph asterisks untuk
+ * hint bahwa ada nilai yang di-mask. UI yang menampilkan angka
+ * tabular sebaiknya tetap pakai `tabular-nums` supaya kolom rata.
+ *
+ * Stabil sebagai konstan (bukan i18n key) karena "Rp" adalah bagian
+ * dari nilai uang IDR — bahkan di locale `en`, ControlDesk selalu
+ * merender "Rp" (bukan "IDR" / "$"). Kalau tenant butuh custom
+ * placeholder, ganti string ini bukan bikin i18n key baru.
+ */
+export const IDR_MASK_PLACEHOLDER = "Rp ******";
+
+/**
+ * Convenience wrapper: render angka bila `canView === true`,
+ * kalau tidak render `IDR_MASK_PLACEHOLDER`. Dipakai di halaman
+ * budget list/detail, project detail budget card, dan dashboard
+ * portfolio snapshot supaya PM/OM yang tidak punya
+ * `view_budget_amount` melihat "Rp ******" alih-alih nilai asli.
+ *
+ * NOTE: ini strictly UI-layer mask. Data mentah tetap sampai ke
+ * client bundle (perlu Phase 2 = server sanitize) dan tetap
+ * accessible via REST (perlu Phase 3 = RLS column-level REVOKE).
+ * Runbook memuat follow-up untuk kedua phase tersebut.
+ */
+export function formatIDRWithMask(
+  value: Money | number,
+  canView: boolean,
+  options: FormatIDROptions = {},
+): string {
+  return canView ? formatIDR(value, options) : IDR_MASK_PLACEHOLDER;
+}
+
+/**
  * Range-form untuk chart tooltip atau summary card (mis. `Rp 5jt – 25jt`).
  */
 export function formatIDRRange(min: Money, max: Money): string {

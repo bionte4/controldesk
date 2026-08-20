@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
-import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
+import { formatIDRWithMask, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadPostableAccounts } from "@/lib/data/coa";
 import { loadLookupOptions } from "@/lib/data/lookups";
@@ -201,6 +201,12 @@ export default async function BudgetDetailPage(props: {
   if (!capabilities.can("view_budget")) {
     redirect("/dashboard?error=forbidden");
   }
+  // Rules §3 / rules §9 — see /finance/budgets/page.tsx docstring. PM
+  // & OM see the detail page (line items, MA CoA mapping, status
+  // banner, approval trail) but the four summary tiles and each line
+  // item's Planned/Realized/Outstanding/Remaining columns render as
+  // `Rp ******` when `view_budget_amount` is denied.
+  const canViewAmount = capabilities.can("view_budget_amount");
 
   const [
     budget,
@@ -382,26 +388,31 @@ export default async function BudgetDetailPage(props: {
       <section className="grid gap-4 md:grid-cols-4">
         <SummaryTile
           label={t("totalPlanned")}
-          value={formatIDR(totalPlanned)}
+          value={formatIDRWithMask(totalPlanned, canViewAmount)}
           accent="text-foreground"
         />
         <SummaryTile
           label={t("totalRealized")}
-          value={formatIDR(totalRealized)}
+          value={formatIDRWithMask(totalRealized, canViewAmount)}
           accent="text-emerald-500 dark:text-emerald-400"
         />
         <SummaryTile
           label={t("totalOutstanding")}
-          value={formatIDR(totalOutstanding)}
+          value={formatIDRWithMask(totalOutstanding, canViewAmount)}
           accent="text-amber-500 dark:text-amber-400"
         />
         <SummaryTile
           label={t("totalRemaining")}
-          value={formatIDR(totalRemaining)}
+          value={formatIDRWithMask(totalRemaining, canViewAmount)}
           accent={
-            totalRemaining < 0n
-              ? "text-rose-500 dark:text-rose-400"
-              : "text-indigo-500 dark:text-indigo-400"
+            // Colour still leaks a signed hint even under mask (over-
+            // budget = rose). We keep colour-neutral when masked so
+            // approvers can't infer overrun state from styling alone.
+            !canViewAmount
+              ? "text-muted-foreground"
+              : totalRemaining < 0n
+                ? "text-rose-500 dark:text-rose-400"
+                : "text-indigo-500 dark:text-indigo-400"
           }
         />
       </section>
@@ -497,25 +508,44 @@ export default async function BudgetDetailPage(props: {
                         {l.description ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatIDR(parseMoneyFromDb(l.planned_amount_db), {
-                          compact: true,
-                        })}
+                        {formatIDRWithMask(
+                          parseMoneyFromDb(l.planned_amount_db),
+                          canViewAmount,
+                          { compact: true },
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-emerald-500 dark:text-emerald-400">
-                        {formatIDR(parseMoneyFromDb(l.realized_amount_db), {
-                          compact: true,
-                        })}
+                      <td
+                        className={`px-4 py-3 text-right tabular-nums ${
+                          canViewAmount
+                            ? "text-emerald-500 dark:text-emerald-400"
+                            : ""
+                        }`}
+                      >
+                        {formatIDRWithMask(
+                          parseMoneyFromDb(l.realized_amount_db),
+                          canViewAmount,
+                          { compact: true },
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-amber-500 dark:text-amber-400">
-                        {formatIDR(
+                      <td
+                        className={`px-4 py-3 text-right tabular-nums ${
+                          canViewAmount
+                            ? "text-amber-500 dark:text-amber-400"
+                            : ""
+                        }`}
+                      >
+                        {formatIDRWithMask(
                           parseMoneyFromDb(l.outstanding_amount_db),
+                          canViewAmount,
                           { compact: true },
                         )}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatIDR(parseMoneyFromDb(l.remaining_amount_db), {
-                          compact: true,
-                        })}
+                        {formatIDRWithMask(
+                          parseMoneyFromDb(l.remaining_amount_db),
+                          canViewAmount,
+                          { compact: true },
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">

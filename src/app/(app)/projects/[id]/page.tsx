@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { formatInTz } from "@/lib/format/date";
-import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
+import { formatIDRWithMask, parseMoneyFromDb } from "@/lib/format/money";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import {
   formatRole,
@@ -118,6 +118,12 @@ export default async function ProjectDetailPage(props: {
   // effect here too.
   const capabilities = await resolveCapabilitiesFor();
   const showBudget = capabilities.can("view_budget");
+  // Rules §3 / rules §9 — PM & OM keep the budget summary card and
+  // the recent-expenses list (they still need to know an approved
+  // budget exists + submit expenses against a MA), but the spent-of
+  // pair renders as `Rp ******`. Expense amounts on this page follow
+  // the same gate. Full nominal only for Finance-leader tier.
+  const canViewAmount = capabilities.can("view_budget_amount");
 
   const supabase = await createClient();
 
@@ -568,21 +574,35 @@ export default async function ProjectDetailPage(props: {
                     <div>
                       <p className="label-meta">{t("budgetSpent")}</p>
                       <p className="font-display text-2xl font-semibold">
-                        {formatIDR(budget.spent, { compact: true })}
+                        {formatIDRWithMask(budget.spent, canViewAmount, {
+                          compact: true,
+                        })}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="label-meta">{t("budgetOf")}</p>
                       <p className="font-mono text-sm text-muted-foreground">
-                        {formatIDR(budget.amount, { compact: true })}
+                        {formatIDRWithMask(budget.amount, canViewAmount, {
+                          compact: true,
+                        })}
                       </p>
                     </div>
                   </div>
                   <div className="mt-3">
+                    {/*
+                     * Progress bar visually conveys utilisation, which
+                     * itself leaks rough budget headroom (e.g. a
+                     * near-full bar reveals over-budget risk). Under
+                     * mask we still render the bar but drop the
+                     * numeric percent — approvers who lack amount
+                     * access get a hint but not the precise ratio.
+                     */}
                     <Progress value={Math.min(100, spentPct)} />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {spentPct.toFixed(1)}% {t("budgetUsed")}
-                    </p>
+                    {canViewAmount ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {spentPct.toFixed(1)}% {t("budgetUsed")}
+                      </p>
+                    ) : null}
                   </div>
                 </>
               )}
@@ -872,9 +892,11 @@ export default async function ProjectDetailPage(props: {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="tabular-nums text-sm">
-                          {formatIDR(parseMoneyFromDb(e.amount), {
-                            compact: true,
-                          })}
+                          {formatIDRWithMask(
+                            parseMoneyFromDb(e.amount),
+                            canViewAmount,
+                            { compact: true },
+                          )}
                         </span>
                         <Badge
                           variant="outline"

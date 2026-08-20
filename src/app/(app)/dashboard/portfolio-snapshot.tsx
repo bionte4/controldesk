@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatIDR } from "@/lib/format/money";
+import { formatIDRWithMask } from "@/lib/format/money";
 import { cn } from "@/lib/utils";
 
 import type { PortfolioSnapshot, PortfolioTile } from "./actions";
@@ -120,7 +120,11 @@ export async function PortfolioSnapshotSection({
   // Rules §3 — hide monetary aggregates when the caller lacks the
   // `view_budget` capability. Active-project count and average
   // progress are non-monetary and always shown, so an Employee
-  // still sees a meaningful portfolio header.
+  // still sees a meaningful portfolio header. When view_budget is
+  // granted but the stricter view_budget_amount is not, the totals
+  // strip is still rendered but each rupiah value is masked as
+  // `Rp ******` — so PM/OM see the *shape* of the header without
+  // the exact figures (rules §9).
   const totalsItems: Array<{ key: string; label: string; value: string }> = [
     {
       key: "active",
@@ -133,17 +137,29 @@ export async function PortfolioSnapshotSection({
       {
         key: "planned",
         label: labels.totals.totalPlanned,
-        value: formatIDR(snapshot.totalPlannedAll, { compact: true }),
+        value: formatIDRWithMask(
+          snapshot.totalPlannedAll,
+          snapshot.showBudgetAmount,
+          { compact: true },
+        ),
       },
       {
         key: "realised",
         label: labels.totals.totalRealised,
-        value: formatIDR(snapshot.totalRealizedAll, { compact: true }),
+        value: formatIDRWithMask(
+          snapshot.totalRealizedAll,
+          snapshot.showBudgetAmount,
+          { compact: true },
+        ),
       },
       {
         key: "outstanding",
         label: labels.totals.totalOutstanding,
-        value: formatIDR(snapshot.totalOutstandingAll, { compact: true }),
+        value: formatIDRWithMask(
+          snapshot.totalOutstandingAll,
+          snapshot.showBudgetAmount,
+          { compact: true },
+        ),
       },
     );
   }
@@ -188,6 +204,7 @@ export async function PortfolioSnapshotSection({
               tile={tile}
               labels={labels}
               showBudget={snapshot.showBudget}
+              showBudgetAmount={snapshot.showBudgetAmount}
             />
           ))}
         </div>
@@ -200,10 +217,12 @@ function ProjectTile({
   tile,
   labels,
   showBudget,
+  showBudgetAmount,
 }: {
   tile: PortfolioTile;
   labels: Labels;
   showBudget: boolean;
+  showBudgetAmount: boolean;
 }) {
   const progress = Math.max(0, Math.min(100, tile.progressPct));
   const budgetPct = tile.budget.exists ? tile.budget.utilizationPct : 0;
@@ -289,7 +308,11 @@ function ProjectTile({
                       {labels.labels.planned}
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatIDR(tile.budget.planned, { compact: true })}
+                      {formatIDRWithMask(
+                        tile.budget.planned,
+                        showBudgetAmount,
+                        { compact: true },
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2 truncate">
@@ -297,7 +320,11 @@ function ProjectTile({
                       {labels.labels.realised}
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatIDR(tile.budget.realized, { compact: true })}
+                      {formatIDRWithMask(
+                        tile.budget.realized,
+                        showBudgetAmount,
+                        { compact: true },
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2 truncate">
@@ -305,7 +332,11 @@ function ProjectTile({
                       {labels.labels.outstanding}
                     </span>
                     <span className="font-medium tabular-nums">
-                      {formatIDR(tile.budget.outstanding, { compact: true })}
+                      {formatIDRWithMask(
+                        tile.budget.outstanding,
+                        showBudgetAmount,
+                        { compact: true },
+                      )}
                     </span>
                   </div>
                 </>

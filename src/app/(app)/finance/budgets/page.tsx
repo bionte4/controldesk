@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatInTz } from "@/lib/format/date";
-import { formatIDR, parseMoneyFromDb } from "@/lib/format/money";
+import { formatIDRWithMask, parseMoneyFromDb } from "@/lib/format/money";
 import { requireCurrentEmployee } from "@/lib/auth/session";
 import { loadFieldOpsFormLookups } from "@/lib/data/lookups";
 import { loadAllowedUnitsForProjects } from "@/lib/data/project-allowed-units";
@@ -87,6 +87,11 @@ export default async function BudgetsPage() {
   if (!capabilities.can("view_budget")) {
     redirect("/dashboard?error=forbidden");
   }
+  // Rules §3 / rules §9 — PM & OM may see the budget *list* (routing
+  // + status + categories) but not the nominal figures. Amount cells
+  // render as `Rp ******` via `formatIDRWithMask()`. Admin can toggle
+  // the reverse per-tenant via `/settings/capabilities`.
+  const canViewAmount = capabilities.can("view_budget_amount");
 
   const [budgets, projectOptions, lookups, t] = await Promise.all([
     loadBudgets(),
@@ -173,9 +178,11 @@ export default async function BudgetsPage() {
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums">
-                        {formatIDR(parseMoneyFromDb(b.total_planned_amount_db), {
-                          compact: true,
-                        })}
+                        {formatIDRWithMask(
+                          parseMoneyFromDb(b.total_planned_amount_db),
+                          canViewAmount,
+                          { compact: true },
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <FinanceStatusBadge

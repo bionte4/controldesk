@@ -1,7 +1,11 @@
 "use server";
 
 import { requireCurrentEmployee } from "@/lib/auth/session";
-import { formatIDR, parseMoneyFromDb, type Money } from "@/lib/format/money";
+import {
+  formatIDRWithMask,
+  parseMoneyFromDb,
+  type Money,
+} from "@/lib/format/money";
 import { budgetPendingForRole } from "@/lib/budgets/state";
 import { resolveCapabilitiesFor } from "@/lib/rbac/capability-resolver";
 import {
@@ -65,6 +69,17 @@ export type PortfolioSnapshot = CorePortfolioSnapshot & {
    * `canViewBudget()` at fetch time.
    */
   showBudget: boolean;
+  /**
+   * Rules §3 / rules §9 — stricter gate that controls whether the
+   * rupiah figures are rendered verbatim or masked as `Rp ******`.
+   * PM & OM default to `showBudget=true, showBudgetAmount=false`:
+   * they still see the header (active projects + progress),
+   * per-tile budget ring, and the planned/realised/outstanding
+   * strip — but each nominal cell renders as the mask placeholder.
+   * Finance-leader tier and above default to both `true`. Admin
+   * can toggle per-tenant via `/settings/capabilities`.
+   */
+  showBudgetAmount: boolean;
 };
 
 export type { PortfolioTile };
@@ -83,7 +98,7 @@ function flatSparkline(): KpiPoint[] {
  */
 function emptyMetrics(
   scope: ProjectScope["kind"],
-  opts: { showBudget: boolean },
+  opts: { showBudget: boolean; showBudgetAmount: boolean },
 ): DashboardMetrics {
   const zeroKpi = (id: string, label: string, formatted = "0"): Kpi => ({
     id,
@@ -102,7 +117,9 @@ function emptyMetrics(
       zeroKpi(
         "approved_budget",
         "dashboard.kpis.approvedBudget",
-        formatIDR(0n as Money, { compact: true }),
+        formatIDRWithMask(0n as Money, opts.showBudgetAmount, {
+          compact: true,
+        }),
       ),
     );
   }
@@ -149,6 +166,12 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
   });
   const capabilities = await resolveCapabilitiesFor();
   const showBudget = capabilities.can("view_budget");
+  // Nested gate — `view_budget_amount` is only meaningful when
+  // `view_budget` is granted. If the caller can't see the budget
+  // section at all, they obviously can't see the amounts either.
+  // Fold the two so the renderer only has to check one boolean per
+  // amount cell.
+  const showBudgetAmount = showBudget && capabilities.can("view_budget_amount");
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {
@@ -163,6 +186,7 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
       tenantId: employee.tenant_id,
       scope: scope.kind,
       showBudget,
+      showBudgetAmount,
     };
   }
 
@@ -238,6 +262,7 @@ export async function getPortfolioSnapshot(): Promise<PortfolioSnapshot> {
     tenantId: employee.tenant_id,
     scope: scope.kind,
     showBudget,
+    showBudgetAmount,
   };
 }
 
@@ -265,10 +290,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   });
   const capabilities = await resolveCapabilitiesFor();
   const showBudget = capabilities.can("view_budget");
+  // See `getPortfolioSnapshot` — nested gate so a caller with view_budget
+  // but not view_budget_amount still sees the KPI tile but with a masked
+  // rupiah string ("Rp ******"). Preserves layout across roles while
+  // hiding the actual figure.
+  const showBudgetAmount = showBudget && capabilities.can("view_budget_amount");
   const supabase = await createClient();
 
   if (scope.kind !== "org" && scope.empty) {
-    return emptyMetrics(scope.kind, { showBudget });
+    return emptyMetrics(scope.kind, { showBudget, showBudgetAmount });
   }
 
   const isScoped = scope.kind !== "org";
@@ -546,8 +576,15 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     kpis.push({
       id: "approved_budget",
       label: "dashboard.kpis.approvedBudget",
-      value: Number(totalApprovedPlanned),
-      formatted: formatIDR(totalApprovedPlanned, { compact: true }),
+      // Rules §3 / rules §9 — `value` is used only by widgets that
+      // read the raw number (e.g. sparkline scaling); the displayed
+      // string is `formatted`. When amount access is denied we keep
+      // `value=0` so a masked tile can't leak the actual figure via
+      // devtools inspection either.
+      value: showBudgetAmount ? Number(totalApprovedPlanned) : 0,
+      formatted: formatIDRWithMask(totalApprovedPlanned, showBudgetAmount, {
+        compact: true,
+      }),
       delta: 0,
       trend: "flat",
       sparkline: flatSparkline(),
