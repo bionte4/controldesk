@@ -279,6 +279,109 @@ Budget (project_id=X, status=ACTIVE, total_planned=100.000.000)
 system flag warning; kalau > 100%, blocking (PM harus submit Budget
 Request Increase dulu).
 
+### Visibility matrix — siapa yang bisa lihat budget?
+
+Dua lapisan yang menentukan siapa lihat apa: **UI capability** (bisa
+buka menu/halaman) + **RLS DB** (row apa yang benar-benar keluar dari
+query). Design defense-in-depth per rules §3 — kapabilitas UI bisa
+di-override admin di `/settings/capabilities`, tapi RLS tetap gate
+final.
+
+**Lapisan 1 — Capability `view_budget` (default catalog).**
+
+`src/lib/rbac/capabilities.ts:107-113` → `defaultRoles = FINANCE_MGMT`.
+Sensitivity: medium. Roles yang default-on:
+
+| DB role | Kanonikal | Default `view_budget` |
+| ------------------------- | ---------- | :-------------------: |
+| `TENANT_ADMIN`            | ADMIN      | ✅                    |
+| `GENERAL_MANAGER`         | DIRECTOR   | ✅                    |
+| `HEAD_MANAGER`            | DIRECTOR   | ✅                    |
+| `OPERATIONS_MANAGER`      | OM         | ✅                    |
+| `PROJECT_MANAGER`         | PM         | ✅                    |
+| `LEAD_FINANCE`            | FINANCE    | ✅                    |
+| `SUPERVISOR`              | SUPERVISOR | ❌ (grantable)         |
+| `HR_ADMIN`                | ADMIN      | ❌                     |
+| `EMPLOYEE`                | EMPLOYEE   | ❌                     |
+| `PETTY_CASH_CUSTODIAN`    | (deprecated) | ❌                   |
+
+Tenant admin bisa grant `view_budget` ke SUPERVISOR (atau role lain)
+per-tenant lewat matrix di `/settings/capabilities` — override
+disimpan di `tenant_capability_overrides` (migration 0081).
+
+**Lapisan 2 — RLS DB (migration 0101, defense-in-depth).**
+
+`SELECT` policy pada `public.budgets` + `public.budget_details`:
+
+```sql
+tenant_id = current_tenant_id()
+AND (
+  is_finance_management()             -- 6 roles above
+  OR is_project_member(project_id)    -- ACTIVE row di project_employee_assignments
+)
+```
+
+`is_finance_management()` mirror ke FINANCE_MGMT list (menerima both
+legacy + canonical fold per rules §6). `is_project_member()` cek
+`project_employee_assignments.status = 'ACTIVE'` — jadi employee yang
+sudah dipindahkan dari project otomatis kehilangan visibility.
+
+**Konsekuensi kombinasi caller × RLS:**
+
+| Kombinasi caller | Bisa lihat apa? |
+| --- | --- |
+| ADMIN / DIRECTOR / FINANCE / OM / PM | Semua budget di tenant, semua status |
+| SUPERVISOR / EMPLOYEE (tanpa capability override) | Budget dari **projects yang mereka assigned** saja — untuk populate MA dropdown di form expense; menu Budget tidak muncul di sidebar |
+| SUPERVISOR / EMPLOYEE + `view_budget` di-grant admin | Menu Budget muncul, tapi rows tetap terbatas ke projects mereka (RLS tidak dilonjakkan) |
+| Non-active employee (`is_active=false`) | Tidak masuk `is_project_member` — tidak lihat apa-apa |
+| Cross-tenant | Tolak di step pertama (`tenant_id` mismatch) |
+| Client portal user | Tidak masuk ke `public.employees` sama sekali — RLS langsung tolak (di layer terpisah lewat `client_users` per rules §28) |
+
+**Filter "anggaran yang disetujui" (`status = 'APPROVED'`).**
+
+`budgets.status` enum lifecycle (migration 0025):
+
+```
+DRAFT → PENDING_FINANCE → PENDING_DIRECTOR → APPROVED
+                                            → REJECTED (parking)
+```
+
+Bukan tabel/policy terpisah — visibility sama dengan matrix di atas.
+Yang membedakan hanya **surface layer** yang menambah filter
+`.eq('status', 'APPROVED')`:
+
+| Surface | Status filter |
+| --- | --- |
+| Expense form MA dropdown (`v_project_budget_lines`) | `DRAFT \| PENDING_FINANCE \| PENDING_DIRECTOR \| APPROVED` — buang REJECTED |
+| `/finance/budgets` list + `/projects/[id]` detail | Semua status (approver butuh lihat DRAFT untuk review) |
+| Dashboard KPI (portfolio realized vs planned) | Agregasi semua status; RLS auto-scope caller |
+| `runProjectPortfolio` report | Semua status; report gate di `runReport()` (`FINANCE_PLUS_PM` allowedRoles) |
+
+**Ringkasan siapa lihat apa:**
+
+| Skenario | Yang bisa lihat |
+| --- | --- |
+| Semua budget tenant (draft → approved) | TENANT_ADMIN, GENERAL_MANAGER, HEAD_MANAGER, LEAD_FINANCE, OPERATIONS_MANAGER, PROJECT_MANAGER |
+| Budget project yang di-assigned saja | SUPERVISOR + EMPLOYEE + PCC yang punya row aktif di `project_employee_assignments`; menu Budget tidak muncul, tapi bisa isi MA dropdown di expense |
+| Budget `APPROVED` saja (di expense form) | Sama seperti di atas, tapi `budget_status` di-filter di `v_project_budget_lines` |
+| Tidak lihat sama sekali | HR_ADMIN, external client portal users, employees non-assigned |
+
+**Hands-on verify.** Login sebagai role tertentu, buka DevTools console:
+
+```js
+// Semua budget yang RLS izinkan lihat
+await window.__supabase
+  .from('budgets')
+  .select('id, project_id, status, total_planned_amount')
+  .limit(20);
+
+// Source dropdown MA di expense form
+await window.__supabase.from('v_project_budget_lines').select('*').limit(20);
+```
+
+Compare `admin@demo` vs `bagas@demo` (regular EMPLOYEE di seed) — RLS
+gate langsung terlihat.
+
 ### Budget Requests
 
 **Route**: `/finance/budget-requests`. Tabel:
