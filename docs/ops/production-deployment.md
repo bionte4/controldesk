@@ -418,6 +418,32 @@ production tanpa restart penuh Supabase stack.
 > vs `docker inspect <image>:<tag> --format '{{.Id}}'` untuk konfirmasi
 > drift.
 
+> **Gotcha #3 — `docker compose build app` TANPA `-f docker-compose.prod.yml`
+> membangun image untuk COMPOSE FILE LAIN, bukan production.** Kalau kamu
+> jalankan `docker compose build app` (bare, tanpa flag `-f`), Compose
+> default gabungin `docker-compose.yml` + `docker-compose.override.yml` di
+> repo — image di-tag `controldesk/app:latest`. Sementara production stack
+> di `docker-compose.prod.yml` line 360 pakai `image: controldesk/app:prod`.
+> Konsekuensinya: build "sukses", tapi container prod **tetap running dari
+> image `:prod` yang lama** — kode baru sama sekali tidak masuk production.
+>
+> Kejadian nyata (Aug 2026 debugging session `/clients` empty di itps):
+> user rebuild 3× tanpa flag `-f`, StartedAt container tetap dari deploy
+> berjam-jam lalu. Waktu terbuang ~40 menit sebelum ketahuan. Alias `dcp`
+> di Gotcha #1 mencegah ini karena selalu embed `-f docker-compose.prod.yml`.
+>
+> **Sanity check wajib setelah setiap deploy:**
+>
+> ```bash
+> docker inspect controldesk-app --format 'Image:     {{.Config.Image}}
+> StartedAt: {{.State.StartedAt}}
+> Health:    {{.State.Health.Status}}'
+> ```
+>
+> Baris `Image:` HARUS `controldesk/app:prod`. Kalau `:latest` → kamu pakai
+> compose salah. `StartedAt` HARUS dalam menit terakhir setelah `up -d
+> --force-recreate`. Kalau timestamp jam lalu → deploy tidak jalan sama sekali.
+
 ```bash
 cd ~/controldesk
 
