@@ -112,7 +112,20 @@ async function loadClients(tenantId: string): Promise<ClientRow[]> {
     .order("name", { ascending: true })
     .limit(200);
 
-  if (!primary.error && primary.data) {
+  // Diagnostic: always log outcome (row count, error) so we can distinguish
+  // between three failure modes that all render as an empty state:
+  //   (a) PostgREST error → error object populated → fallback path runs.
+  //   (b) RLS filtered all rows → data: [], error: null → visible in logs.
+  //   (c) Success with N rows → confirms deployed code is running.
+  // Log level is `info` on success and `warn` on suspicious zero-row result;
+  // strip volume by removing this block once the itps-tenant issue is
+  // resolved (rules §21 observability, keep hot path clean).
+  const primaryRowCount = primary.data?.length ?? 0;
+  if (!primary.error && primary.data && primaryRowCount > 0) {
+    log.info("loadClients primary query ok", {
+      tenant_id: tenantId,
+      row_count: primaryRowCount,
+    });
     return primary.data.map((row) => ({
       id: row.id,
       name: row.name,
@@ -129,9 +142,11 @@ async function loadClients(tenantId: string): Promise<ClientRow[]> {
     }));
   }
 
-  log.warn("loadClients primary query failed — falling back", {
+  log.warn("loadClients primary query returned no usable data — falling back", {
     tenant_id: tenantId,
+    row_count: primaryRowCount,
     err: primary.error,
+    has_error: !!primary.error,
   });
 
   const [clientsResult, projectsResult] = await Promise.all([
@@ -152,6 +167,12 @@ async function loadClients(tenantId: string): Promise<ClientRow[]> {
     });
     return [];
   }
+
+  log.info("loadClients fallback query result", {
+    tenant_id: tenantId,
+    row_count: clientsResult.data.length,
+    projects_count: projectsResult.data?.length ?? 0,
+  });
 
   const countByClient = new Map<string, number>();
   for (const p of projectsResult.data ?? []) {
