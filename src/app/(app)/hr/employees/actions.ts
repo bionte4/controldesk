@@ -15,6 +15,7 @@ import {
   setEmployeeAvailabilitySchema,
   updateEmployeeSchema,
 } from "@/lib/validation/employee";
+import { assertTenantCapacity } from "@/lib/ops/entitlements";
 
 /**
  * Compose the display full_name column from first/last. Keeps the legacy
@@ -42,6 +43,14 @@ export const createEmployeeAction = withSecureAction({
   resolveAttributes: async (_input, ctx) => ({ tenantId: ctx.actor.tenantId }),
   handler: async (input, ctx) => {
     const supabase = await createClient();
+
+    await assertTenantCapacity({
+      client: supabase,
+      tenantId: ctx.actor.tenantId,
+      capability: "active_users",
+      table: "employees",
+      activeFilter: { column: "is_active", equals: true },
+    });
 
     const fullName = composeFullName(input.first_name, input.last_name);
     if (!fullName) {

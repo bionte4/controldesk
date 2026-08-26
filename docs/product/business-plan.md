@@ -337,3 +337,20 @@ dari submit hingga approved/settled.
 5. Perubahan workflow inti masuk product roadmap, bukan janji sales per tenant.
 6. Tidak memperluas industri sebelum ICP awal menghasilkan pola penjualan dan
    onboarding yang dapat diulang.
+
+## Implementasi tenant management fase 1–5
+
+Commercial operating model di atas dipetakan ke tenant management melalui
+`supabase/migrations/0104_saas_commercial_control_plane.sql` dan surface
+`/super-admin/tenants/{id}`. Cakupan yang tersedia:
+
+- commercial profile, owner, buyer, champion, dan segment;
+- paid pilot, onboarding checklist, success criteria, dan activation;
+- subscription/contract manual, renewal, grace, cancellation, dan invoice ledger;
+- katalog paket, entitlement, usage limit, serta time-bound override;
+- rules-based health snapshot dan alasan yang dapat dijelaskan;
+- read-only access sebelum suspension, dengan audit platform-admin.
+
+Payment gateway, invoice delivery, tax document, dan automated billing tidak
+termasuk fase ini. Status tenant, subscription, onboarding, dan health tidak
+boleh digabung menjadi satu field lifecycle.

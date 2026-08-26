@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth/platform-admin-session";
+import { IdleTimeoutProvider } from "@/components/shell/idle-timeout-provider";
+import { resolveIdleTimeoutMinutes, resolveIdleWarningMinutes } from "@/lib/security/idle-timeout";
 
 /**
  * Layout for /super-admin/* (Fase 2, migration 0077).
@@ -21,6 +23,12 @@ export default async function SuperAdminLayout({
   const admin = await requirePlatformAdmin();
 
   return (
+    <IdleTimeoutProvider
+      variant="app"
+      timeoutMinutes={resolveIdleTimeoutMinutes()}
+      warningMinutes={resolveIdleWarningMinutes()}
+      absoluteMinutes={480}
+    >
     <div className="flex min-h-svh flex-col bg-zinc-50 dark:bg-zinc-950">
       <header className="border-b border-zinc-200 bg-white/95 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
@@ -108,5 +116,6 @@ export default async function SuperAdminLayout({
         </div>
       </footer>
     </div>
+    </IdleTimeoutProvider>
   );
 }

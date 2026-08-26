@@ -477,6 +477,7 @@
     "ctaOpenDashboard": "Buka dashboard",
     "ctaCreateWorkspace": "Buat ruang kerja",
     "signIn": "Masuk",
+    "pricing": "Paket & Harga",
     "cards": {
       "approvals": {
         "title": "Approval Dinamis",
@@ -509,6 +510,7 @@
     "alreadyHaveWorkspace": "Sudah punya ruang kerja?",
     "wrongTenant": "Anda telah keluar karena akun ini milik tenant lain.",
     "idleTimeoutBanner": "Sesi Anda berakhir otomatis karena tidak ada aktivitas. Silakan login kembali.",
+    "absoluteTimeoutBanner": "Batas maksimum sesi Anda telah tercapai. Silakan login kembali untuk keamanan.",
     "createWorkspace": "Buat ruang kerja",
     "createWorkspaceSubtitle": "Buat tenant ControlDesk baru. Anda akan menjadi Tenant Admin pertama.",
     "invitationOnly": "Ruang kerja hanya via undangan",
@@ -547,7 +549,8 @@
     "warnBody": "Sesi Anda akan berakhir dalam {seconds} detik karena tidak ada aktivitas. Klik \"Lanjutkan sesi\" untuk tetap login.",
     "extend": "Lanjutkan sesi",
     "logoutNow": "Logout sekarang",
-    "bannerIdleTimeout": "Sesi Anda berakhir otomatis karena tidak ada aktivitas. Silakan login kembali."
+    "bannerIdleTimeout": "Sesi Anda berakhir otomatis karena tidak ada aktivitas. Silakan login kembali.",
+    "bannerAbsoluteTimeout": "Batas maksimum sesi Anda telah tercapai. Silakan login kembali untuk keamanan."
   },
   "nav": {
     "openUserMenu": "Buka menu pengguna",

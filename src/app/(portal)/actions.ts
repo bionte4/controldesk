@@ -16,6 +16,7 @@ import {
   PORTAL_SESSION_TTL_SECONDS,
   getCurrentPortalSession,
 } from "@/lib/portal/session";
+import { SESSION_ACTIVITY_COOKIE, SESSION_STARTED_COOKIE } from "@/lib/security/session-timeout-cookie";
 import { portalLoginSchema } from "@/lib/validation/portal-auth";
 import { portalChangePasswordSchema } from "@/lib/validation/portal-change-password";
 
@@ -424,6 +425,8 @@ export async function portalLogoutAction(reason?: string): Promise<void> {
     path: "/",
     maxAge: 0,
   });
+  jar.delete(SESSION_ACTIVITY_COOKIE);
+  jar.delete(SESSION_STARTED_COOKIE);
   const query = reason ? `?reason=${encodeURIComponent(reason)}` : "";
   redirect(`/portal/login${query}`);
 }

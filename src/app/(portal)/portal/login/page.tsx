@@ -31,8 +31,11 @@ export default async function PortalLoginPage({
     getTranslations("portal.login"),
     getTranslations("session"),
   ]);
-  const idleTimeoutMessage =
-    reasonParam === "idle_timeout" ? tSession("bannerIdleTimeout") : undefined;
+  const idleTimeoutMessage = reasonParam === "idle_timeout"
+    ? tSession("bannerIdleTimeout")
+    : reasonParam === "absolute_timeout"
+      ? tSession("bannerAbsoluteTimeout")
+      : undefined;
 
   return (
     <div className="grid place-items-center py-10">

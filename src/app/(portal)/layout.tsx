@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 
 import { Logo } from "@/components/brand/logo";
 import { LanguageToggle } from "@/components/i18n/language-toggle";
@@ -26,6 +27,13 @@ export default async function PortalLayout({
     getCurrentPortalSession(),
     getTranslations("portal"),
   ]);
+  const policy = session
+    ? await createServiceRoleClient()
+        .from("tenants")
+        .select("idle_timeout_minutes, idle_warning_minutes, absolute_session_minutes")
+        .eq("id", session.client.tenant_id)
+        .maybeSingle()
+    : { data: null };
 
   const shell = (
     <div className="relative min-h-svh flex flex-col bg-background">
@@ -83,8 +91,9 @@ export default async function PortalLayout({
   return (
     <IdleTimeoutProvider
       variant="portal"
-      timeoutMinutes={resolveIdleTimeoutMinutes()}
-      warningMinutes={resolveIdleWarningMinutes()}
+      timeoutMinutes={policy.data?.idle_timeout_minutes ?? resolveIdleTimeoutMinutes()}
+      warningMinutes={policy.data?.idle_warning_minutes ?? resolveIdleWarningMinutes()}
+      absoluteMinutes={policy.data?.absolute_session_minutes ?? 480}
     >
       {shell}
     </IdleTimeoutProvider>

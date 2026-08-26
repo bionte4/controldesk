@@ -7332,8 +7332,11 @@ export type Database = {
       }
       tenants: {
         Row: {
+          absolute_session_minutes: number
           created_at: string
           id: string
+          idle_timeout_minutes: number
+          idle_warning_minutes: number
           name: string
           plan: string
           provisioned_via: string
@@ -7344,8 +7347,11 @@ export type Database = {
           trial_ends_at: string | null
         }
         Insert: {
+          absolute_session_minutes?: number
           created_at?: string
           id?: string
+          idle_timeout_minutes?: number
+          idle_warning_minutes?: number
           name: string
           plan?: string
           provisioned_via?: string
@@ -7356,8 +7362,11 @@ export type Database = {
           trial_ends_at?: string | null
         }
         Update: {
+          absolute_session_minutes?: number
           created_at?: string
           id?: string
+          idle_timeout_minutes?: number
+          idle_warning_minutes?: number
           name?: string
           plan?: string
           provisioned_via?: string
@@ -9404,4 +9413,3 @@ export const Constants = {
     },
   },
 } as const
-

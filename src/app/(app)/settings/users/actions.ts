@@ -11,6 +11,7 @@ import {
   inviteUserSchema,
   setUserStatusSchema,
 } from "@/lib/validation/user-admin";
+import { assertTenantCapacity } from "@/lib/ops/entitlements";
 
 /**
  * Server actions for the `/settings/users` admin surface (Fase 2 + 3).
@@ -47,6 +48,14 @@ export const inviteUserAction = withSecureAction({
   }),
   handler: async (input, ctx) => {
     const service = createServiceRoleClient();
+
+    await assertTenantCapacity({
+      client: service,
+      tenantId: ctx.actor.tenantId,
+      capability: "active_users",
+      table: "employees",
+      activeFilter: { column: "is_active", equals: true },
+    });
 
     // 1. Reject if there's already an active employees row for this email in
     //    this tenant — otherwise a rogue admin could shadow an existing user.

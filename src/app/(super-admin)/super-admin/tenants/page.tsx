@@ -13,10 +13,12 @@ export const dynamic = "force-dynamic";
  */
 export default async function TenantsListPage() {
   const supabase = createServiceRoleClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const commercialDb = supabase as any;
 
   const { data: tenants, error } = await supabase
     .from("tenants")
-    .select("id, slug, name, status, created_at")
+    .select("id, slug, name, status, plan, trial_ends_at, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -35,7 +37,7 @@ export default async function TenantsListPage() {
   // aggregate view if the list grows above ~200 rows.
   const enriched = await Promise.all(
     rows.map(async (t) => {
-      const [emp, projects] = await Promise.all([
+      const [emp, projects, subscription, onboarding, health] = await Promise.all([
         supabase
           .from("employees")
           .select("id", { count: "exact", head: true })
@@ -44,11 +46,17 @@ export default async function TenantsListPage() {
           .from("projects")
           .select("id", { count: "exact", head: true })
           .eq("tenant_id", t.id),
+        commercialDb.from("tenant_subscriptions").select("plan_code,status,renewal_date,grace_ends_at,read_only_at,suspend_at").eq("tenant_id", t.id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+        commercialDb.from("tenant_onboarding").select("status,pilot_end_date,decision_date").eq("tenant_id", t.id).maybeSingle(),
+        commercialDb.from("tenant_health_snapshots").select("status,score").eq("tenant_id", t.id).order("calculated_at", { ascending: false }).limit(1).maybeSingle(),
       ]);
       return {
         ...t,
         employee_count: emp.count ?? 0,
         project_count: projects.count ?? 0,
+        subscription: subscription.data,
+        onboarding: onboarding.data,
+        health: health.data,
       };
     }),
   );
@@ -68,6 +76,9 @@ export default async function TenantsListPage() {
             {enriched.length} total · {active} active · {suspended} suspended ·{" "}
             {terminated} terminated
           </p>
+          <p className="mt-1 text-xs text-zinc-400">
+            Commercial, onboarding, health, renewal, dan access lifecycle dalam satu control plane.
+          </p>
         </div>
         <Link
           href="/super-admin/tenants/new"
@@ -84,6 +95,9 @@ export default async function TenantsListPage() {
               <th className="px-4 py-3">Slug</th>
               <th className="px-4 py-3">Nama</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Subscription</th>
+              <th className="px-4 py-3">Onboarding</th>
+              <th className="px-4 py-3">Health</th>
               <th className="px-4 py-3 text-right">Employees</th>
               <th className="px-4 py-3 text-right">Projects</th>
               <th className="px-4 py-3">Created</th>
@@ -94,7 +108,7 @@ export default async function TenantsListPage() {
             {enriched.length === 0 && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={10}
                   className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400"
                 >
                   Belum ada tenant. Klik{" "}
@@ -124,6 +138,14 @@ export default async function TenantsListPage() {
                 <td className="px-4 py-3 font-medium">{t.name}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={t.status} />
+                </td>
+                <td className="px-4 py-3 text-xs">
+                  <div className="font-medium">{t.subscription?.plan_code ?? t.plan}</div>
+                  <div className="text-zinc-500">{t.subscription?.status ?? (t.plan === "trial" ? "trialing" : "active")}</div>
+                </td>
+                <td className="px-4 py-3 text-xs">{t.onboarding?.status ?? "new"}</td>
+                <td className="px-4 py-3 text-xs">
+                  {t.health ? `${t.health.status} · ${t.health.score}` : "not calculated"}
                 </td>
                 <td className="px-4 py-3 text-right tabular-nums">
                   {t.employee_count}

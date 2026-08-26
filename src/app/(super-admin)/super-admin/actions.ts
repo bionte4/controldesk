@@ -595,6 +595,323 @@ export async function getCurrentPlatformAdminIdAction() {
 }
 
 // ---------------------------------------------------------------------------
+// SaaS commercial control plane (migration 0104, business phases 1–5).
+// Billing is deliberately ledger-only: no payment provider side effects.
+// ---------------------------------------------------------------------------
+const nullableDate = z.union([z.iso.date(), z.literal(""), z.null()]).optional();
+const nullableDateTime = z
+  .union([z.iso.datetime({ offset: true }), z.literal(""), z.null()])
+  .optional();
+const optionalEmail = z.union([z.email(), z.literal(""), z.null()]).optional();
+
+const updateCommercialControlSchema = z.object({
+  tenant_id: z.string().uuid(),
+  profile: z.object({
+    stage: z.enum(["lead", "qualified", "trial", "pilot", "customer", "churned"]),
+    industry_segment: z.string().max(120).optional(),
+    acquisition_source: z.string().max(120).optional(),
+    sales_owner: z.string().max(160).optional(),
+    customer_success_owner: z.string().max(160).optional(),
+    economic_buyer_name: z.string().max(160).optional(),
+    economic_buyer_email: optionalEmail,
+    champion_name: z.string().max(160).optional(),
+    champion_email: optionalEmail,
+    engineer_count: z.number().int().min(0).nullable().optional(),
+    estimated_active_projects: z.number().int().min(0).nullable().optional(),
+    notes: z.string().max(4000).optional(),
+  }),
+  onboarding: z.object({
+    status: z.enum(["new", "configuring", "activated", "stalled"]),
+    pilot_start_date: nullableDate,
+    pilot_end_date: nullableDate,
+    decision_date: nullableDate,
+    blocker: z.string().max(2000).optional(),
+    technical_activated_at: nullableDateTime,
+    business_activated_at: nullableDateTime,
+    success_criteria: z.array(z.string().min(1).max(500)).max(20),
+    checklist: z.record(z.string(), z.boolean()),
+  }),
+  subscription: z.object({
+    plan_code: z.enum(["trial", "field_control", "project_margin", "service_governance", "custom"]),
+    status: z.enum(["trialing", "active", "past_due", "canceled", "expired"]),
+    billing_interval: z.enum(["monthly", "quarterly", "annual", "one_time"]),
+    recurring_price_idr: z.number().int().min(0),
+    implementation_fee_idr: z.number().int().min(0),
+    contract_start_date: nullableDate,
+    contract_end_date: nullableDate,
+    renewal_date: nullableDate,
+    payment_terms_days: z.number().int().min(0).max(365),
+    grace_ends_at: nullableDateTime,
+    read_only_at: nullableDateTime,
+    suspend_at: nullableDateTime,
+    cancellation_reason: z.string().max(2000).optional(),
+    auto_renew: z.boolean(),
+  }),
+  session_policy: z.object({
+    idle_timeout_minutes: z.number().int().min(5).max(1440),
+    idle_warning_minutes: z.number().int().min(1).max(60),
+    absolute_session_minutes: z.number().int().min(30).max(10080),
+  }).refine((v) => v.idle_warning_minutes < v.idle_timeout_minutes, {
+    message: "Warning harus lebih kecil dari idle timeout.",
+  }).refine((v) => v.absolute_session_minutes >= v.idle_timeout_minutes, {
+    message: "Absolute lifetime harus >= idle timeout.",
+  }),
+}).strict();
+
+function emptyToNull<T>(value: T | "" | undefined): T | null {
+  return value === "" || value === undefined ? null : value;
+}
+
+export const updateCommercialControlAction = withPlatformAdminAction({
+  schema: updateCommercialControlSchema,
+  auditAction: "UPDATE",
+  resourceName: "tenant_commercial_control",
+  handler: async (input, ctx) => {
+    // New tables intentionally use a migration-forward client until generated
+    // Supabase types are refreshed against an environment with migration 0104.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = ctx.supabase as any;
+    const before = await db
+      .from("tenant_subscriptions")
+      .select("id, plan_code, status, recurring_price_idr, read_only_at")
+      .eq("tenant_id", input.tenant_id)
+      .in("status", ["trialing", "active", "past_due"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const profile = {
+      tenant_id: input.tenant_id,
+      ...input.profile,
+      economic_buyer_email: emptyToNull(input.profile.economic_buyer_email),
+      champion_email: emptyToNull(input.profile.champion_email),
+      updated_at: new Date().toISOString(),
+    };
+    const onboarding = {
+      tenant_id: input.tenant_id,
+      ...input.onboarding,
+      pilot_start_date: emptyToNull(input.onboarding.pilot_start_date),
+      pilot_end_date: emptyToNull(input.onboarding.pilot_end_date),
+      decision_date: emptyToNull(input.onboarding.decision_date),
+      technical_activated_at: emptyToNull(input.onboarding.technical_activated_at),
+      business_activated_at: emptyToNull(input.onboarding.business_activated_at),
+      last_reviewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    const subscription = {
+      tenant_id: input.tenant_id,
+      ...input.subscription,
+      contract_start_date: emptyToNull(input.subscription.contract_start_date),
+      contract_end_date: emptyToNull(input.subscription.contract_end_date),
+      renewal_date: emptyToNull(input.subscription.renewal_date),
+      grace_ends_at: emptyToNull(input.subscription.grace_ends_at),
+      read_only_at: emptyToNull(input.subscription.read_only_at),
+      suspend_at: emptyToNull(input.subscription.suspend_at),
+      cancellation_reason: emptyToNull(input.subscription.cancellation_reason),
+      canceled_at:
+        input.subscription.status === "canceled" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const profileResult = await db
+      .from("tenant_commercial_profiles")
+      .upsert(profile, { onConflict: "tenant_id" });
+    if (profileResult.error) throw new Error(profileResult.error.message);
+    const onboardingResult = await db
+      .from("tenant_onboarding")
+      .upsert(onboarding, { onConflict: "tenant_id" });
+    if (onboardingResult.error) throw new Error(onboardingResult.error.message);
+    const policyResult = await db.from("tenants").update(input.session_policy).eq("id", input.tenant_id);
+    if (policyResult.error) throw new Error(policyResult.error.message);
+
+    let subscriptionId = before.data?.id as string | undefined;
+    if (subscriptionId) {
+      const updated = await db
+        .from("tenant_subscriptions")
+        .update(subscription)
+        .eq("id", subscriptionId);
+      if (updated.error) throw new Error(updated.error.message);
+    } else {
+      const inserted = await db
+        .from("tenant_subscriptions")
+        .insert(subscription)
+        .select("id")
+        .single();
+      if (inserted.error) throw new Error(inserted.error.message);
+      subscriptionId = inserted.data.id;
+    }
+
+    // Explainable health snapshot: recalculated on every business review.
+    // This intentionally uses deterministic rules, not AI.
+    const usageResult = await db
+      .from("tenant_current_usage")
+      .select("active_users,cash_advances_total")
+      .eq("tenant_id", input.tenant_id)
+      .maybeSingle();
+    if (usageResult.error) throw new Error(usageResult.error.message);
+    const reasons: string[] = [];
+    let score = 100;
+    if (Number(usageResult.data?.active_users ?? 0) < 5) {
+      score -= 25;
+      reasons.push("Kurang dari 5 pengguna aktif");
+    }
+    if (Number(usageResult.data?.cash_advances_total ?? 0) === 0) {
+      score -= 20;
+      reasons.push("Belum ada cash advance diproses");
+    }
+    if (input.onboarding.status === "stalled") {
+      score -= 30;
+      reasons.push("Onboarding stalled");
+    }
+    if (input.onboarding.status !== "activated") {
+      score -= 10;
+      reasons.push("Business activation belum selesai");
+    }
+    if (input.subscription.status === "past_due") {
+      score -= 25;
+      reasons.push("Subscription past due");
+    }
+    score = Math.max(0, score);
+    const healthResult = await db.from("tenant_health_snapshots").insert({
+      tenant_id: input.tenant_id,
+      status: score >= 75 ? "healthy" : score >= 45 ? "attention" : "at_risk",
+      score,
+      reasons: reasons.length ? reasons : ["Seluruh rule dasar terpenuhi"],
+      activity_14d: 0,
+      calculated_by: `platform-review:${ctx.admin.email}`,
+    });
+    if (healthResult.error) throw new Error(healthResult.error.message);
+
+    revalidatePath("/super-admin/tenants");
+    revalidatePath(`/super-admin/tenants/${input.tenant_id}`);
+    return {
+      result: { tenant_id: input.tenant_id, subscription_id: subscriptionId },
+      auditResourceId: input.tenant_id,
+      auditTargetTenantId: input.tenant_id,
+      auditOldValues: before.data ?? null,
+      auditNewValues: {
+        stage: input.profile.stage,
+        onboarding_status: input.onboarding.status,
+        subscription_status: input.subscription.status,
+        plan_code: input.subscription.plan_code,
+        read_only_at: subscription.read_only_at,
+        suspend_at: subscription.suspend_at,
+        session_policy: input.session_policy,
+      },
+    };
+  },
+});
+
+const entitlementOverrideSchema = z.object({
+  tenant_id: z.string().uuid(),
+  capability_key: z.string().trim().min(2).max(100),
+  enabled: z.boolean().nullable(),
+  limit_value: z.number().int().min(0).nullable(),
+  reason: z.string().trim().min(3).max(500),
+  expires_at: nullableDateTime,
+}).strict();
+
+export const upsertEntitlementOverrideAction = withPlatformAdminAction({
+  schema: entitlementOverrideSchema,
+  auditAction: "UPDATE",
+  resourceName: "tenant_entitlement_overrides",
+  handler: async (input, ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = ctx.supabase as any;
+    const row = {
+      ...input,
+      expires_at: emptyToNull(input.expires_at),
+      updated_by: ctx.admin.user_id,
+      updated_at: new Date().toISOString(),
+    };
+    const result = await db.from("tenant_entitlement_overrides").upsert(row, {
+      onConflict: "tenant_id,capability_key",
+    });
+    if (result.error) throw new Error(result.error.message);
+    revalidatePath(`/super-admin/tenants/${input.tenant_id}`);
+    return {
+      result: { tenant_id: input.tenant_id, capability_key: input.capability_key },
+      auditResourceId: `${input.tenant_id}:${input.capability_key}`,
+      auditTargetTenantId: input.tenant_id,
+      auditNewValues: row,
+    };
+  },
+});
+
+const invoiceSchema = z.object({
+  tenant_id: z.string().uuid(),
+  subscription_id: z.string().uuid().nullable().optional(),
+  invoice_number: z.string().trim().min(2).max(80),
+  status: z.enum(["draft", "issued", "paid", "overdue", "void"]),
+  amount_idr: z.number().int().min(0),
+  issued_at: nullableDate,
+  due_at: nullableDate,
+  payment_reference: z.string().max(200).optional(),
+  notes: z.string().max(1000).optional(),
+}).strict();
+
+export const createManualInvoiceAction = withPlatformAdminAction({
+  schema: invoiceSchema,
+  auditAction: "CREATE",
+  resourceName: "tenant_invoices",
+  handler: async (input, ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = ctx.supabase as any;
+    const row = {
+      ...input,
+      subscription_id: input.subscription_id ?? null,
+      issued_at: emptyToNull(input.issued_at),
+      due_at: emptyToNull(input.due_at),
+      paid_at: input.status === "paid" ? new Date().toISOString() : null,
+      payment_reference: emptyToNull(input.payment_reference),
+      notes: emptyToNull(input.notes),
+    };
+    const inserted = await db.from("tenant_invoices").insert(row).select("id").single();
+    if (inserted.error) throw new Error(inserted.error.message);
+    revalidatePath(`/super-admin/tenants/${input.tenant_id}`);
+    return {
+      result: { id: inserted.data.id },
+      auditResourceId: inserted.data.id,
+      auditTargetTenantId: input.tenant_id,
+      auditNewValues: { invoice_number: input.invoice_number, status: input.status, amount_idr: input.amount_idr },
+    };
+  },
+});
+
+const updateInvoiceStatusSchema = z.object({
+  tenant_id: z.string().uuid(),
+  invoice_id: z.string().uuid(),
+  status: z.enum(["draft", "issued", "paid", "overdue", "void"]),
+}).strict();
+
+export const updateManualInvoiceStatusAction = withPlatformAdminAction({
+  schema: updateInvoiceStatusSchema,
+  auditAction: "UPDATE",
+  resourceName: "tenant_invoices",
+  handler: async (input, ctx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = ctx.supabase as any;
+    const before = await db.from("tenant_invoices").select("id,status,invoice_number").eq("id", input.invoice_id).eq("tenant_id", input.tenant_id).maybeSingle();
+    if (!before.data) throw new Error("Invoice tidak ditemukan untuk tenant ini.");
+    const updated = await db.from("tenant_invoices").update({
+      status: input.status,
+      paid_at: input.status === "paid" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", input.invoice_id).eq("tenant_id", input.tenant_id);
+    if (updated.error) throw new Error(updated.error.message);
+    revalidatePath(`/super-admin/tenants/${input.tenant_id}`);
+    return {
+      result: { id: input.invoice_id, status: input.status },
+      auditResourceId: input.invoice_id,
+      auditTargetTenantId: input.tenant_id,
+      auditOldValues: { status: before.data.status },
+      auditNewValues: { status: input.status },
+      auditMetadata: { invoice_number: before.data.invoice_number },
+    };
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Bulk feature-flag toggle (Fase 6.2). Applies one feature flag to a
 // selection of tenants in a single audit event. Selection modes:
 //

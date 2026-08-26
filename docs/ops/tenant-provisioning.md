@@ -58,6 +58,51 @@ ulang**, **tidak butuh migrasi baru**, **tidak butuh restart container**.
 Cukup 6 langkah SQL + DNS di bawah, atau **1 command CLI** untuk
 langkah 1–4.
 
+## SaaS commercial control plane — fase 1–5
+
+Migration `0104_saas_commercial_control_plane.sql` memperluas tenant
+management dari lifecycle teknis menjadi control plane komersial. Surface
+utamanya tetap `/super-admin/tenants/{id}` dan hanya dapat diubah platform
+admin. Seluruh mutasi melewati `withPlatformAdminAction()` dan masuk ke
+`platform_admin_audit_logs`.
+
+Empat dimensi wajib dikelola secara terpisah:
+
+| Dimensi | Nilai |
+| --- | --- |
+| Tenant access | `active` / `suspended` / `terminated` |
+| Subscription | `trialing` / `active` / `past_due` / `canceled` / `expired` |
+| Onboarding | `new` / `configuring` / `activated` / `stalled` |
+| Customer health | `healthy` / `attention` / `at_risk` |
+
+Workflow operator untuk paid pilot:
+
+1. Set commercial stage ke `pilot`, isi owner, buyer, champion, dan scope.
+2. Isi pilot start/end, decision date, success criteria, dan checklist.
+3. Pilih paket serta nilai subscription dan implementation fee yang disepakati.
+4. Review usage dan entitlement; override wajib memiliki alasan dan optional expiry.
+5. Catat invoice manual. Tidak ada payment gateway atau side effect eksternal.
+6. Pada business review, simpan form untuk menghasilkan health snapshot baru.
+7. Jika `past_due`, tentukan grace period lebih dulu. Set `read_only_at` sebelum
+   `suspend_at` agar pelanggan tetap dapat membaca dan mengekspor data. Kedua
+   timestamp berlaku otomatis pada request pertama setelah waktunya tercapai.
+
+`read_only` bukan nilai `tenants.status`. Ia dihitung oleh
+`resolve_tenant_access_by_slug()` dari subscription. Proxy mengizinkan request
+GET/HEAD/OPTIONS, tetapi menolak mutasi aplikasi dengan HTTP `423` dan kode
+`TENANT_READ_ONLY`. Suspend tetap merupakan tindakan teknis yang memblokir
+seluruh workspace.
+
+Entitlement juga berbeda dari feature flag:
+
+- entitlement menyatakan hak kontraktual dan limit paket;
+- feature flag mengatur rollout teknis;
+- capability efektif memerlukan entitlement dan feature flag sama-sama aktif;
+- limit `active_users` dan `active_projects` diperiksa saat mutasi create/invite.
+
+Invoice di fase ini hanya ledger manual. Rekonsiliasi pembayaran, pajak,
+pengiriman invoice, dan payment gateway tetap dilakukan di luar aplikasi.
+
 ## Cara cepat — 4 pintu masuk (CLI · Super-Admin UI · Self-signup · SQL manual)
 
 Sejak Fase 6 landed (migration 0078), Anda punya **4 cara** provision
@@ -302,16 +347,14 @@ Migration 0078 menambah tiga kolom baru di `public.tenants`:
 | `trial_ends_at`    | timestamptz   | NULL      | Kapan trial berakhir. NULL = tidak on trial (paid / perpetual).      |
 | `provisioned_via`  | text (check)  | `'unknown'` | Audit label: `super-admin-ui` / `ops-cli` / `self-signup` / `seed` / `unknown`. |
 
-**Enforcement saat ini**: banner-only. `TrialBanner`
+**Enforcement setelah migration 0104**: `TrialBanner`
 (`src/components/shell/trial-banner.tsx`) dirender di app shell
 (`src/app/(app)/layout.tsx`), auto-refresh tiap request. Kalau
 customer masih pakai app setelah `trial_ends_at`, banner berubah
 menjadi warning rose dan mengarahkan ke `sales@controldesk.app`.
-
-**Fase 6.3 (planned)**: cron / scheduled function untuk auto-suspend
-tenant `plan='trial'` dengan `trial_ends_at < now() - interval '7 days'`
-(7-day grace period). Untuk sekarang ops manual suspend via
-Super-Admin UI.
+Subscription trial otomatis masuk read-only pada `trial_ends_at` dan
+commercial suspension tujuh hari kemudian. Evaluasi dilakukan request-time
+oleh `resolve_tenant_access_by_slug()`, sehingga tidak bergantung pada cron.
 
 **Query trial status semua tenant**:
 
@@ -400,12 +443,13 @@ otomatis 14-day trial. Alur dua fase:
   `provision_tenant()`, tidak ada row `platform_admin_audit_logs` —
   self-signup bukan aksi platform admin).
 
-**Enforcement expired trial (belum di-automate)**:
-- Trial expiry saat ini **banner-only**. App tetap fungsional.
-- Ops perlu manual suspend tenant expired via
-  `/super-admin/tenants/{id}` panel Suspend/Reactivate.
-- Roadmap 6.3: auto-suspend via cron + integration Stripe untuk
-  konversi trial → paid.
+**Enforcement expired trial**:
+- Sampai `trial_ends_at`, workspace berfungsi penuh.
+- Setelah expiry, workspace read-only selama tujuh hari agar data dapat dilihat
+  dan diekspor.
+- Sesudah grace period, proxy memperlakukan workspace sebagai suspended.
+- Konversi ke paid dilakukan platform admin dengan mengaktifkan subscription;
+  payment provider tidak termasuk fase 1–5.
 
 **Rate limits (tune di `src/lib/ops/tenant-signup.ts`)**:
 ```ts
@@ -945,8 +989,8 @@ Status roadmap tenant lifecycle:
 | 5    | **Platform admin management UI** — tambah / promote / nonaktifkan platform admin. Self-demote di-block. Chicken-egg: admin pertama tetap SQL. | ✅ Shipped — `src/app/(super-admin)/super-admin/admins/`  |
 | 6.1  | **Tenant self-signup** — public form di `/register-org` (apex) → email verification → auto-provision + 14-day trial. Rate-limited (5/IP/jam + 50 global/jam) | ✅ Shipped — migration 0078 + `src/app/register-org/` |
 | 6.2  | **Bulk feature-flag toggle** — panel `/super-admin/features` untuk flip ON/OFF ke semua/aktif/canary list per feature key                 | ✅ Shipped — `bulkToggleFeatureFlagAction` + `/super-admin/features` |
-| 6.3  | **Stripe billing integration** — convert trial → paid, subscription webhook, dunning saat trial expired                                    | ⏳ Planned                                          |
-| 6.3  | **Auto-suspend expired trials** — cron/scheduler yang men-suspend tenant `plan=trial` dengan `trial_ends_at < now() − grace_period`         | ⏳ Planned                                          |
+| 6.3  | **Payment-provider integration** — subscription webhook dan automated payment collection                                                  | ⏸ Di luar fase 1–5; billing tetap manual           |
+| 7    | **Commercial control plane** — pilot, onboarding, subscription manual, entitlement, usage, health, invoice, read-only + scheduled suspend | ✅ Shipped — migration 0104 + tenant detail UI      |
 
 Rekomendasi pattern:
 

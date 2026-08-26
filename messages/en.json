@@ -477,6 +477,7 @@
     "ctaOpenDashboard": "Open dashboard",
     "ctaCreateWorkspace": "Create workspace",
     "signIn": "Sign in",
+    "pricing": "Plans & Pricing",
     "cards": {
       "approvals": {
         "title": "Dynamic Approvals",
@@ -509,6 +510,7 @@
     "alreadyHaveWorkspace": "Already have a workspace?",
     "wrongTenant": "You were signed out because your account belongs to a different tenant.",
     "idleTimeoutBanner": "Your session expired because there was no activity. Please sign in again.",
+    "absoluteTimeoutBanner": "Your maximum session lifetime was reached. Please sign in again for security.",
     "createWorkspace": "Create a workspace",
     "createWorkspaceSubtitle": "Spin up a new ControlDesk tenant. You'll be the first Tenant Admin.",
     "invitationOnly": "Invitation-only workspace",
@@ -547,7 +549,8 @@
     "warnBody": "Your session will expire in {seconds} seconds due to inactivity. Click \"Extend session\" to stay signed in.",
     "extend": "Extend session",
     "logoutNow": "Sign out now",
-    "bannerIdleTimeout": "Your session expired because there was no activity. Please sign in again."
+    "bannerIdleTimeout": "Your session expired because there was no activity. Please sign in again.",
+    "bannerAbsoluteTimeout": "Your maximum session lifetime was reached. Please sign in again for security."
   },
   "nav": {
     "openUserMenu": "Open user menu",

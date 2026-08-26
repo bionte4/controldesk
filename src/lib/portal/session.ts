@@ -26,6 +26,11 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
 import { hashToken } from "./crypto";
+import {
+  SESSION_ACTIVITY_COOKIE,
+  SESSION_STARTED_COOKIE,
+  verifySessionTimestamp,
+} from "@/lib/security/session-timeout-cookie";
 
 export const PORTAL_COOKIE_NAME = "cd_portal_session";
 export const PORTAL_SESSION_TTL_SECONDS = 60 * 60 * 8;
@@ -67,6 +72,22 @@ export const getCurrentPortalSession = cache(
 
     if (session.revoked_at) return null;
     if (new Date(session.expires_at).getTime() <= Date.now()) return null;
+
+    // Signed-cookie timeout is enforced server-side for portal RSC/actions.
+    // Missing timestamps are allowed for the first request; the provider's
+    // authenticated heartbeat establishes them immediately.
+    const [startedAt, activeAt] = await Promise.all([
+      verifySessionTimestamp(jar.get(SESSION_STARTED_COOKIE)?.value),
+      verifySessionTimestamp(jar.get(SESSION_ACTIVITY_COOKIE)?.value),
+    ]);
+    const { data: policy } = await supabase
+      .from("tenants")
+      .select("idle_timeout_minutes,absolute_session_minutes")
+      .eq("id", session.tenant_id)
+      .maybeSingle();
+    const now = Date.now();
+    if (activeAt && policy && now - activeAt >= policy.idle_timeout_minutes * 60_000) return null;
+    if (startedAt && policy && now - startedAt >= policy.absolute_session_minutes * 60_000) return null;
 
     const { data: user, error: userErr } = await supabase
       .from("client_users")

@@ -736,10 +736,18 @@ NEXT_PUBLIC_IDLE_WARNING_MINUTES=2    # Warning muncul di menit (TIMEOUT - WARNI
 build. WAJIB rebuild image (`docker compose ... build app`) dan
 `--force-recreate app`. Restart tanpa rebuild TIDAK berpengaruh.
 
-**Enforcement:** UX defense-in-depth di atas Supabase JWT expiry
-(`GOTRUE_JWT_EXP=3600` = 1 jam absolut). Idle timeout mengatasi kasus
-"laptop ditinggal unlocked" tapi tidak melindungi dari refresh-token
-theft — untuk itu, rotate `JWT_SECRET` per §22 rules (90 hari).
+**Enforcement enterprise (migration 0105):** setiap tenant memiliki
+`idle_timeout_minutes`, `idle_warning_minutes`, dan
+`absolute_session_minutes`. Proxy memverifikasi dua cookie HttpOnly yang
+ditandatangani HMAC: waktu mulai sesi dan aktivitas manusia terakhir. Cookie
+tidak dapat diperpanjang atau dipalsukan oleh JavaScript. Aktivitas mengirim
+heartbeat maksimal sekali per 30 detik; polling/notifikasi background tidak
+dihitung sebagai aktivitas. Absolute lifetime tidak sliding dan selalu
+memerlukan login ulang.
+
+Set `SESSION_TIMEOUT_SECRET` ke secret acak minimal 32 byte. Jika tidak diisi,
+implementasi menggunakan `CRON_SECRET` sebagai fallback. Per-tenant policy
+dikelola di Super Admin → tenant detail → Enterprise session policy.
 
 **Cross-tab sync:** provider pakai `BroadcastChannel`. Kalau user aktif
 di tab A, tab B (idle) tetap ter-reset. Semua tab logout bersamaan saat

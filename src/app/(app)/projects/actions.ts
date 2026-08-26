@@ -26,6 +26,7 @@ import {
   hasApprovedBudget,
   hasActivePmAssignment,
 } from "@/lib/data/projects";
+import { assertTenantCapacity } from "@/lib/ops/entitlements";
 
 /**
  * Create a new project via the wizard (rules §7). PDP: OM+ / TENANT_ADMIN.
@@ -49,6 +50,14 @@ export const createProjectAction = withSecureAction({
   resolveAttributes: async (_input, ctx) => ({ tenantId: ctx.actor.tenantId }),
   handler: async (input: CreateProjectInput, ctx) => {
     const supabase = await createClient();
+
+    await assertTenantCapacity({
+      client: supabase,
+      tenantId: ctx.actor.tenantId,
+      capability: "active_projects",
+      table: "projects",
+      activeFilter: { column: "status", values: ["PLANNING", "ACTIVE"] },
+    });
 
     // Validate the target client belongs to the same tenant. RLS already
     // guards this — this SELECT surfaces a friendlier error than a raw

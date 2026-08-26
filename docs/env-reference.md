@@ -44,6 +44,7 @@ and `proxy.ts` prefer `SUPABASE_SERVER_URL` when set.
 | -------------------------------- | ----------- | -------- | -------- | ----- |
 | `APP_ENCRYPTION_KEY`             | server only | ✅       | 90d      | ≥32 hex chars. Used by `pgcrypto` for HRIS PII at rest. Rotation requires a re-encryption migration — see `docs/ops/secret-rotation.md`. |
 | `CRON_SECRET`                    | server only | ✅       | 90d      | Bearer token for all `/api/cron/*` endpoints. |
+| `SESSION_TIMEOUT_SECRET`         | server only | recommended | 90d   | HMAC key for enterprise session timestamps; falls back to `CRON_SECRET`. |
 
 ## Rate limiting
 

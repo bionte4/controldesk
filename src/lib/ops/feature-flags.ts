@@ -116,6 +116,27 @@ export const isFeatureEnabled = cache(
     if (!tenantId) return defaultFor(key);
     try {
       const supabase = await createClient();
+      // Commercial entitlement and operational feature flag are independent:
+      // the customer must be entitled AND the rollout flag must allow it.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const entitlementResult = await (supabase as any).rpc(
+        "resolve_tenant_entitlement",
+        { p_tenant: tenantId, p_capability: key },
+      );
+      if (!entitlementResult.error) {
+        const entitlement = Array.isArray(entitlementResult.data)
+          ? entitlementResult.data[0]
+          : entitlementResult.data;
+        if (!entitlement?.enabled) return false;
+      } else {
+        // Migration-forward compatibility: deployments rolling app before DB
+        // keep prior flag behaviour instead of taking down tenant navigation.
+        log.warn("isFeatureEnabled: entitlement lookup unavailable", {
+          tenant_id: tenantId,
+          feature_key: key,
+          error: entitlementResult.error.message,
+        });
+      }
       const { data, error } = await supabase
         .from("tenant_feature_flags")
         .select("enabled")

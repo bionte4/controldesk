@@ -41,6 +41,8 @@ type IdleTimeoutProviderProps = {
   variant: "app" | "portal";
   timeoutMinutes: number;
   warningMinutes: number;
+  absoluteMinutes?: number;
+  sessionStartedAt?: number;
 };
 
 export function IdleTimeoutProvider({
@@ -48,6 +50,8 @@ export function IdleTimeoutProvider({
   variant,
   timeoutMinutes,
   warningMinutes,
+  absoluteMinutes = 480,
+  sessionStartedAt,
 }: IdleTimeoutProviderProps) {
   const t = useTranslations("session");
   const timeoutMs = timeoutMinutes * 60 * 1000;
@@ -65,17 +69,33 @@ export function IdleTimeoutProvider({
   const [isLoggingOut, startLogoutTransition] = useTransition();
 
   const loggingOutRef = useRef(false);
+  const lastHeartbeatRef = useRef(0);
 
-  const handleTimeout = useCallback(() => {
+  const sendActivityHeartbeat = useCallback(() => {
+    const now = Date.now();
+    if (now - lastHeartbeatRef.current < 30_000) return;
+    lastHeartbeatRef.current = now;
+    const endpoint = variant === "portal"
+      ? "/portal/api/session/activity"
+      : "/api/session/activity";
+    void fetch(endpoint, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "x-session-activity": "human" },
+      cache: "no-store",
+    });
+  }, [variant]);
+
+  const performLogout = useCallback((reason: "idle_timeout" | "absolute_timeout") => {
     if (loggingOutRef.current) return;
     loggingOutRef.current = true;
     setWarnOpen(false);
     startLogoutTransition(async () => {
       try {
         if (variant === "portal") {
-          await portalLogoutAction("idle_timeout");
+          await portalLogoutAction(reason);
         } else {
-          await signOutWithReason("idle_timeout");
+          await signOutWithReason(reason);
         }
       } catch {
         // Server actions throw internally on `redirect()` — that's expected.
@@ -83,11 +103,13 @@ export function IdleTimeoutProvider({
       }
       const loginUrl =
         variant === "portal"
-          ? "/portal/login?reason=idle_timeout"
-          : "/login?reason=idle_timeout";
+          ? `/portal/login?reason=${reason}`
+          : `/login?reason=${reason}`;
       window.location.assign(loginUrl);
     });
   }, [variant]);
+  const handleTimeout = useCallback(() => performLogout("idle_timeout"), [performLogout]);
+  const handleAbsoluteTimeout = useCallback(() => performLogout("absolute_timeout"), [performLogout]);
 
   const handleWarn = useCallback(() => {
     if (loggingOutRef.current) return;
@@ -98,7 +120,8 @@ export function IdleTimeoutProvider({
   const handleActivity = useCallback(() => {
     if (loggingOutRef.current) return;
     if (warnOpen) setWarnOpen(false);
-  }, [warnOpen]);
+    sendActivityHeartbeat();
+  }, [warnOpen, sendActivityHeartbeat]);
 
   const { extend } = useIdleTimeout({
     timeoutMs,
@@ -108,6 +131,24 @@ export function IdleTimeoutProvider({
     onActivity: handleActivity,
     enabled: true,
   });
+
+  // Establish the signed server-side timestamps immediately. The endpoint
+  // never treats polling as activity; only this human-event-driven provider
+  // invokes it.
+  useEffect(() => sendActivityHeartbeat(), [sendActivityHeartbeat]);
+
+  // Absolute lifetime is non-sliding. Server proxy is authoritative; this
+  // client timer provides immediate UX even when no navigation occurs.
+  useEffect(() => {
+    const started = sessionStartedAt ?? Date.now();
+    const remaining = started + absoluteMinutes * 60_000 - Date.now();
+    if (remaining <= 0) {
+      handleAbsoluteTimeout();
+      return;
+    }
+    const id = window.setTimeout(handleAbsoluteTimeout, remaining);
+    return () => window.clearTimeout(id);
+  }, [absoluteMinutes, handleAbsoluteTimeout, sessionStartedAt]);
 
   // Countdown tick while modal is open. Independent of the underlying
   // timeout — this is display only. Actual logout is guaranteed by

@@ -24,8 +24,11 @@ export default async function LoginPage({
   // the inactivity policy.
   const initialError =
     errorParam === "wrong_tenant" ? t("wrongTenant") : undefined;
-  const initialInfo =
-    reasonParam === "idle_timeout" ? t("idleTimeoutBanner") : undefined;
+  const initialInfo = reasonParam === "idle_timeout"
+    ? t("idleTimeoutBanner")
+    : reasonParam === "absolute_timeout"
+      ? t("absoluteTimeoutBanner")
+      : undefined;
 
   return (
     <div className="space-y-8">

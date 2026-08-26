@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -67,7 +67,7 @@ export default async function AppLayout({
     await Promise.all([
       supabase
         .from("tenants")
-        .select("name, slug")
+        .select("name, slug, idle_timeout_minutes, idle_warning_minutes, absolute_session_minutes")
         .eq("id", employee.tenant_id)
         .single(),
       supabase
@@ -107,6 +107,8 @@ export default async function AppLayout({
   }));
 
   const cookieStore = await cookies();
+  const requestHeaders = await headers();
+  const sessionStartedAt = Number(requestHeaders.get("x-session-started-at")) || undefined;
   const defaultOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   const rawLocale = await getLocale();
@@ -135,8 +137,10 @@ export default async function AppLayout({
   return (
     <IdleTimeoutProvider
       variant="app"
-      timeoutMinutes={resolveIdleTimeoutMinutes()}
-      warningMinutes={resolveIdleWarningMinutes()}
+      timeoutMinutes={tenant?.idle_timeout_minutes ?? resolveIdleTimeoutMinutes()}
+      warningMinutes={tenant?.idle_warning_minutes ?? resolveIdleWarningMinutes()}
+      absoluteMinutes={tenant?.absolute_session_minutes ?? 480}
+      sessionStartedAt={sessionStartedAt}
     >
       <SidebarProvider defaultOpen={defaultOpen}>
         <CommandPalette knowledgeArticles={knowledgePaletteEntries}>

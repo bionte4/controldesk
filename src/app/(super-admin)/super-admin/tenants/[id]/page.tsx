@@ -9,6 +9,7 @@ import {
 } from "@/lib/ops/feature-flags";
 import { TenantStatusPanel } from "@/components/super-admin/tenant-status-panel";
 import { FeatureFlagToggle } from "@/components/super-admin/feature-flag-toggle";
+import { CommercialControlPanel } from "@/components/super-admin/commercial-control-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,15 @@ export default async function TenantDetailPage({
 }) {
   const { id } = await params;
   const supabase = createServiceRoleClient();
+  // Migration-forward client for the commercial control-plane tables added
+  // in 0104. Generated Supabase types can be refreshed after DB migration.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const commercialDb = supabase as any;
 
   const [{ data: tenant }, { data: flagsRaw }] = await Promise.all([
     supabase
       .from("tenants")
-      .select("id, slug, name, status, created_at")
+      .select("id, slug, name, status, plan, trial_ends_at, idle_timeout_minutes, idle_warning_minutes, absolute_session_minutes, created_at")
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -40,6 +45,13 @@ export default async function TenantDetailPage({
     { count: clientCount },
     { count: caCount },
     { data: recentAudit },
+    { data: commercialProfile },
+    { data: onboarding },
+    { data: subscription },
+    { data: usage },
+    { data: overrides },
+    { data: invoices },
+    { data: storedHealth },
   ] = await Promise.all([
     supabase
       .from("employees")
@@ -65,7 +77,37 @@ export default async function TenantDetailPage({
       .eq("target_tenant_id", tenant.id)
       .order("created_at", { ascending: false })
       .limit(10),
+    commercialDb.from("tenant_commercial_profiles").select("*").eq("tenant_id", id).maybeSingle(),
+    commercialDb.from("tenant_onboarding").select("*").eq("tenant_id", id).maybeSingle(),
+    commercialDb.from("tenant_subscriptions").select("*").eq("tenant_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    commercialDb.from("tenant_current_usage").select("*").eq("tenant_id", id).maybeSingle(),
+    commercialDb.from("tenant_entitlement_overrides").select("*").eq("tenant_id", id).order("capability_key"),
+    commercialDb.from("tenant_invoices").select("*").eq("tenant_id", id).order("created_at", { ascending: false }).limit(20),
+    commercialDb.from("tenant_health_snapshots").select("*").eq("tenant_id", id).order("calculated_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+
+  const effectivePlan = subscription?.plan_code ??
+    (tenant.plan === "starter" ? "field_control" : tenant.plan === "pro" ? "project_margin" : tenant.plan === "enterprise" ? "service_governance" : "trial");
+  const { data: planEntitlements } = await commercialDb
+    .from("saas_plan_entitlements")
+    .select("*")
+    .eq("plan_code", effectivePlan)
+    .order("capability_key");
+
+  const activeUsers = Number(usage?.active_users ?? 0);
+  const onboardingStatus = onboarding?.status ?? "new";
+  const liveReasons: string[] = [];
+  let liveScore = 100;
+  if (activeUsers < 5) { liveScore -= 25; liveReasons.push("Kurang dari 5 pengguna aktif"); }
+  if (Number(usage?.cash_advances_total ?? 0) === 0) { liveScore -= 20; liveReasons.push("Belum ada cash advance diproses"); }
+  if (onboardingStatus === "stalled") { liveScore -= 30; liveReasons.push("Onboarding stalled"); }
+  if (onboardingStatus !== "activated") { liveScore -= 10; liveReasons.push("Business activation belum selesai"); }
+  if (subscription?.status === "past_due") { liveScore -= 25; liveReasons.push("Subscription past due"); }
+  const liveHealth = storedHealth ?? {
+    score: Math.max(0, liveScore),
+    status: liveScore >= 75 ? "healthy" : liveScore >= 45 ? "attention" : "at_risk",
+    reasons: liveReasons.length ? liveReasons : ["Seluruh rule dasar terpenuhi"],
+  };
 
   const flagsByKey = new Map(
     (flagsRaw ?? []).map((r) => [r.feature_key, r]),
@@ -108,6 +150,25 @@ export default async function TenantDetailPage({
         tenantId={tenant.id}
         tenantSlug={tenant.slug}
         status={tenant.status}
+      />
+
+      <CommercialControlPanel
+        data={{
+          tenantId: tenant.id,
+          profile: commercialProfile,
+          onboarding,
+          subscription,
+          usage,
+          entitlements: planEntitlements ?? [],
+          overrides: overrides ?? [],
+          invoices: invoices ?? [],
+          health: liveHealth,
+          sessionPolicy: {
+            idle_timeout_minutes: tenant.idle_timeout_minutes,
+            idle_warning_minutes: tenant.idle_warning_minutes,
+            absolute_session_minutes: tenant.absolute_session_minutes,
+          },
+        }}
       />
 
       <section className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">

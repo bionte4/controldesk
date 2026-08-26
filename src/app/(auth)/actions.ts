@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 import { decodeJwtPayload } from "@/lib/auth/jwt-claims";
@@ -16,6 +16,13 @@ import {
   type LoginInput,
   type MagicLinkInput,
 } from "@/lib/validation/auth";
+import { SESSION_ACTIVITY_COOKIE, SESSION_STARTED_COOKIE } from "@/lib/security/session-timeout-cookie";
+
+async function clearEnterpriseSessionCookies() {
+  const jar = await cookies();
+  jar.delete(SESSION_ACTIVITY_COOKIE);
+  jar.delete(SESSION_STARTED_COOKIE);
+}
 
 export type ActionState =
   | { status: "idle" }
@@ -218,6 +225,7 @@ export async function sendMagicLink(input: MagicLinkInput): Promise<ActionState>
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  await clearEnterpriseSessionCookies();
   revalidatePath("/", "layout");
   redirect("/login");
 }
@@ -238,6 +246,7 @@ export async function signOut(): Promise<void> {
 export async function signOutWithReason(reason: string): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  await clearEnterpriseSessionCookies();
   revalidatePath("/", "layout");
   redirect(`/login?reason=${encodeURIComponent(reason)}`);
 }
