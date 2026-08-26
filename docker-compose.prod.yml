@@ -391,6 +391,8 @@ services:
       CRON_SECRET: ${CRON_SECRET:?WAJIB (generate via `openssl rand -base64 32`)}
       # Encryption untuk data HRIS sensitif (salary, bank_account).
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?WAJIB (rules §22 rotate 90 hari; generate via `openssl rand -base64 32`)}
+      # HMAC key for signed enterprise idle/absolute session policy cookies.
+      SESSION_TIMEOUT_SECRET: ${SESSION_TIMEOUT_SECRET:?WAJIB (generate via `openssl rand -hex 32`)}
       # AI providers (opsional — kalau tidak diisi, AI Insights disabled).
       GOOGLE_GENERATIVE_AI_API_KEY: ${GOOGLE_GENERATIVE_AI_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
