@@ -48,6 +48,7 @@ yang dilakukan ControlDesk dan KENAPA sebelum masuk ke kode.
 | Doc                                                                              | Isi                                                                        |
 | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | [`product/overview.md`](product/overview.md)                                     | Product overview, personas, feature matrix, non-goals, tech overview.     |
+| [`product/business-plan.md`](product/business-plan.md)                           | Fokus pasar, positioning, pricing hypothesis, GTM, dan tenant-management SaaS. |
 | [`product/glossary.md`](product/glossary.md)                                     | Istilah bisnis + teknis + akronim (bilingual EN/ID).                       |
 | [`product/roles-and-permissions.md`](product/roles-and-permissions.md)           | 10-role legacy vs 7-role canonical, capability matrix per resource.        |
 | [`product/approval-workflows.md`](product/approval-workflows.md)                 | Threshold matrix, approval chains, state machines per module.              |
