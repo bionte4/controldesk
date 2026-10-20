@@ -54,6 +54,67 @@ export const inviteUserSchema = z.object({
 export type InviteUserInput = z.infer<typeof inviteUserSchema>;
 
 /**
+ * Manual create (alternative to invite). The tenant admin creates the
+ * Supabase Auth account directly with `email_confirm: true`, so no magic-link
+ * email is sent. `password` is optional: when omitted, the server generates a
+ * cryptographically-random temporary password and returns it to the admin
+ * exactly once. When supplied, it is the admin-chosen temporary password —
+ * still never persisted in plaintext (Supabase hashes it) and never written
+ * to the audit log.
+ */
+export const createUserManuallySchema = z
+  .object({
+    email: emailSchema,
+    full_name: fullNameSchema,
+    role: canonicalRoleSchema.default("EMPLOYEE"),
+    password: z
+      .string()
+      .min(12, "Password must be at least 12 characters")
+      .max(128, "Password is too long")
+      .optional(),
+  })
+  .strict();
+export type CreateUserManuallyInput = z.infer<typeof createUserManuallySchema>;
+
+/**
+ * UI form shape for manual creation. Extends the server payload with the
+ * password-mode toggle and confirmation field, which never leave the
+ * browser. Conditional rules (custom password length + confirmation match)
+ * live here so the admin gets inline errors before the server round-trip;
+ * the server schema above re-validates the final payload independently.
+ */
+export const createUserManuallyFormSchema = z
+  .object({
+    email: emailSchema,
+    full_name: fullNameSchema,
+    role: canonicalRoleSchema.default("EMPLOYEE"),
+    password_mode: z.enum(["auto", "custom"]),
+    password: z.string().max(128, "Password is too long"),
+    password_confirmation: z.string().max(128, "Password is too long"),
+  })
+  .strict()
+  .superRefine((value, ctx) => {
+    if (value.password_mode !== "custom") return;
+    if (value.password.length < 12) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password"],
+        message: "Password must be at least 12 characters",
+      });
+    }
+    if (value.password !== value.password_confirmation) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["password_confirmation"],
+        message: "Password confirmation does not match",
+      });
+    }
+  });
+export type CreateUserManuallyFormInput = z.infer<
+  typeof createUserManuallyFormSchema
+>;
+
+/**
  * Change the role of an existing user (Fase 3). Guardrails at the server
  * layer:
  *   - actor cannot change their own role

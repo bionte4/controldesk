@@ -426,13 +426,35 @@ Kalau ada correction dibutuhkan setelah lock:
   - Cek `/settings/archives` → verify cold archive integrity.
   - Cek `/dashboard` → executive metrics.
 
-### Invite user internal
+### Tambah user internal
 
-`/team` → **Invite user**
+Login sebagai `TENANT_ADMIN` → `/settings/users` → **Tambah pengguna**.
+Tersedia dua metode:
 
-1. Isi **email** kerja, **role**, **name**, **reports_to**.
-2. Sistem create `employees` row + kirim invitation email.
-3. User klik link di email → set password sendiri → login.
+**A. Kirim undangan (default, direkomendasikan)**
+
+1. Pilih tab **Kirim undangan**.
+2. Isi **email** kerja, **nama lengkap**, dan **role**.
+3. Sistem membuat `employees` row + mengirim invitation email.
+4. User klik link di email → set password sendiri → login melalui subdomain tenant.
+
+**B. Buat manual (tanpa undangan)**
+
+1. Pilih tab **Buat manual**.
+2. Isi **email**, **nama lengkap**, dan **role**.
+3. Pilih password sementara:
+   - **Auto-generate** (direkomendasikan) — sistem membuat password acak 32 karakter.
+   - **Custom** — admin mengisi password sementara minimal 12 karakter + konfirmasi.
+4. Klik **Buat akun**. Akun langsung aktif (`email_confirm`) dan `employees` row dibuat dalam langkah yang sama; tidak ada email yang dikirim.
+5. Panel sukses menampilkan URL login, email, dan password **satu kali**. Salin kredensial, serahkan melalui kanal aman, lalu centang konfirmasi sebelum menutup panel.
+6. Minta user login melalui `https://<slug>.<root-domain>/login` dan mengganti password melalui **Profil → Ganti Password**.
+
+Catatan keamanan mode manual:
+
+- Hanya `TENANT_ADMIN` yang dapat memakai kedua metode (PDP `user_admin`).
+- Password tidak pernah ditulis ke audit log; yang tercatat hanya email, nama, role, dan metode pembuatan.
+- Satu email hanya dapat terdaftar satu kali di Supabase Auth. Email yang sudah dipakai di tenant lain akan ditolak.
+- Jangan membuat user lebih dulu melalui HR → Karyawan dengan email yang sama — pembuatan login akan ditolak sebagai duplikat. Buat login terlebih dahulu, lalu lengkapi data HR pada row `employees` yang terbentuk.
 
 ### Invite client portal user
 
